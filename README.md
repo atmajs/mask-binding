@@ -6,9 +6,9 @@ All possible bindings for MaskJS
 
 	<li> Custom Tag Handler: <code>:bind ...;</code><br\>
 		Binds Model Properties to parents node
-		```css
-		div > :bind attr='data-name' value='name';
-		```
+````css
+div > :bind attr='data-name' value='name';
+````
 		<div>Attributes</div>
 		<ul>
 			<li> <code>value</code> - path to the value in a model</li>
@@ -21,7 +21,7 @@ All possible bindings for MaskJS
 	<li>
 		Inline Binding Utility: <code> "Users name is #{bind:name}"</code>
 		<div>
-			Can be used in Literals and Attributes Values
+			Can be used in literals and attribute values
 		</div>
 	</li>
 </ul>
@@ -30,9 +30,9 @@ All possible bindings for MaskJS
 <ul>
 	<li> Custom Tag Handler: <code>:dualbind ...;</code><br\>
 	Binds Model to parents node, and update model on parent node change
-	```css
-	input type=text > :dualbind value='currentUser.name';
-	```
+````css
+input type=text > :dualbind value='currentUser.name';
+````
 	<div>Attributes</div>
 
 	<ul>
@@ -49,12 +49,12 @@ All possible bindings for MaskJS
 <ul>
 	<li> Usually you want to validate user input data before setting them into model and this custom tag used in dualbind control keeps your model valid</li>
 	Binds Model to parents node, and update model on parent node change
-	```css
-	div > input type=text > :dualbind value='currentUser.name' {
-		:validate validatorName='validatorProperties' message='some message on invalid';
-		:validate maxLength=20 message='Max Length is 20 Characters'
-	}
-	```
+````css
+div > input type=text > :dualbind value='currentUser.name' {
+	:validate validatorName='validatorProperties' message='some message on invalid';
+	:validate maxLength=20 message='Max Length is 20 Characters'
+}
+````
 	<div>Attributes</div>
 
 	<ul>
@@ -73,9 +73,9 @@ All possible bindings for MaskJS
 
 <h4>Events Bindings</h4>
 <code>x-on</code> - Custom Attribute that binds dom/custom events to custom tags functions. 
-```css
+````css
 div x-on='click: myClickHandler; mousemove: onmouseMove'
-```
+````
 
 
 
