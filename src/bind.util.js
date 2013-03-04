@@ -1,6 +1,6 @@
 
 /**
- *	Mask Custom Utility - for use in node values and attribute values
+ *	Mask Custom Utility - for use in textContent and attribute values
  */
 
 

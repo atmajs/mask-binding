@@ -5,7 +5,9 @@ function ValidateGroup() {}
 ValidateGroup.prototype = {
 	constructor: ValidateGroup,
 	render: function(model, container, cntx) {
-		mask.render(this.nodes, model, container, cntx);
+		if (this.firstChild){
+			mask.render(this.firstChild, model, container, cntx);
+		}
 	},
 	validate: function() {
 		var validations = getValidations(this);

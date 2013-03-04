@@ -20,8 +20,8 @@ mask.registerHandler(':dualbind', DualbindHandler);
 function DualbindHandler() {}
 
 DualbindHandler.prototype.render = function(model, container, cntx) {
-	if (this.nodes) {
-		mask.render(this.nodes, model, container, cntx);
+	if (this.firstChild) {
+		mask.render(this.firstChild, model, container, cntx);
 	}
 
 	if (cntx.components) {

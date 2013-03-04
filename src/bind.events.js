@@ -12,6 +12,7 @@ mask.registerAttrHandler('x-on', function(node, model, value, element, cntx){
 		var event = x.substring(0, x.indexOf(':')),
 			handler = x.substring(x.indexOf(':') + 1).trim(),
 			Handler = getHandler(cntx, handler);
+			
 		if (Handler){
 			addEventListener(element, event, Handler);
 		}

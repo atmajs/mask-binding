@@ -7,8 +7,13 @@ mask.registerBinding = function(type, binding) {
 
 mask.BindingProvider = BindingProvider;
 
-function BindingProvider(model, element, node){
+function BindingProvider(model, element, node, bindingType){
 	if (this.constructor == BindingProvider) {
+
+		/** Initialize custom provider.
+		 * That could be defined by customName or by tagName
+		 */
+
 		var type = node.attr.bindingProvider || element.tagName.toLowerCase();
 
 		if (Providers[type] instanceof Function) {
@@ -17,20 +22,27 @@ function BindingProvider(model, element, node){
 			extendObject(this, Providers[type]);
 		}
 	}
+
+	if (bindingType == null){
+		bindingType = node.compoName === ':bind' ? 'single' : 'dual';
+	}
+
+
 	this.node = node;
 	this.model = model;
 	this.element = element;
-	this.property = node.attr.property || 'element.value';
+	this.property = node.attr.property || (bindingType === 'single' ? 'element.innerHTML' : 'element.value');
 	this.setter = node.attr.setter;
 	this.getter = node.attr.getter;
 	this.dismiss = 0;
 
-	var event = node.attr.changeEvent || 'change';
 
 	addObjectObserver(model, node.attr.value, this.objectChanged.bind(this));
 
 
-	addEventListener(element, event, this.domChanged.bind(this));
+	if (bindingType !== 'single'){
+		addEventListener(element, node.attr.changeEvent || 'change', this.domChanged.bind(this));
+	}
 
 	this.objectChanged();
 	return this;
@@ -74,6 +86,11 @@ BindingProvider.prototype = {
 	},
 	objectWay: {
 		get: function(obj, property) {
+
+			if (property[0] === ':'){
+				return mask.Util.ConditionUtil.condition(property.substring(1));
+			}
+
 			return getProperty(obj, property);
 		},
 		set: function(obj, property, value) {

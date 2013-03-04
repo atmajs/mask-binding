@@ -1,5 +1,10 @@
-var files =	[
-	'src/intro.js.txt',
+/**
+ *	IncludeJSBuild
+ *
+ *	``` $ includejs build.js ```
+ **/
+
+var sources = [
 	'src/vars.js',
 	'src/helpers.js',
 	'src/visible.handler.js',
@@ -10,22 +15,40 @@ var files =	[
 	'src/validate.js',
 	'src/validate.group.js',
 	'src/bind.events.js',
-	'src/outro.js.txt'
 	];
 
-global.config = [{
+
+var builds = {
+	'mask.binding': ['src/intro.js.txt'].concat(sources).concat('src/outro.js.txt'),
+	'mask.binding.embeded': ['src/plugin.intro.js.txt'].concat(sources).concat('src/plugin.outro.js.txt'),
+};
+
+
+var config = [{
 	action: 'settings',
 	io: {
 		extensions: {
-			js: ['condcomments:read', 'hint:write', 'uglify:write']
+			js: ['condcomments:read']
 		}
 	}
-},{
-	action: "concat",
-	files: files,
-	dist: 'lib/mask.binding.js',
+}];
+
+for(var build in builds){
+	config.push({
+		action: 'concat',
+		files: builds[build],
+		dist: 'lib/' + build + '.js'
+	})
+}
+
+
+
+
+config.push({
+	action: 'jshint',
+	files: ['lib/mask.binding.js'],
 	jshint: {
-			options: {
+		options: {
 				"curly": true,
 				"eqeqeq": false,
 				"immed": true,
@@ -48,19 +71,24 @@ global.config = [{
 				"window": false,
 				"document": false,
 				"XMLHttpRequest": false,
-				"IncludeRewrites": false,
-				"Class": false,
-				"Compo": false,
-				"CompoUtils": false,
 				"mask": false,
-				"ruqq": false,
-				"include": false,
-				"$": false
-			},
+				"$": false,
+				"Mask": false
+			}
 		}
-},{
-	action: "concat",
-	files: files,
-	minify: true,
-	dist: 'lib/mask.binding.min.js'
-}];
+});
+
+
+config.push({
+	action: 'uglify',
+	files: 'lib/mask.binding.js'
+});
+
+config.push({
+	action: 'copy',
+	files: {
+		'lib/mask.binding.embeded.js': '../mask/src/handlers/mask.binding.js'
+	}
+})
+
+global.config = config;
