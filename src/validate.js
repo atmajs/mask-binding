@@ -61,11 +61,11 @@
 					console.error('Unknown Validator:', key, this);
 					continue;
 				}
-				var validator = Validators[key];
-				if (typeof validator === 'function') {
-					validator = new validator(this);
+				var Validator = Validators[key];
+				if (typeof Validator === 'function') {
+					Validator = new Validator(this);
 				}
-				this.validators.push(validator);
+				this.validators.push(Validator);
 			}
 		}
 	};
@@ -115,12 +115,8 @@
 			validate: function(node, str) {
 				return str.length <= parseInt(node.attr.maxLength, 10);
 			}
-		},
-		check: {
-			validate: function(node, str) {
-				//...
-			}
 		}
+
 	};
 
 

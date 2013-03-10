@@ -98,7 +98,7 @@ function removeObjectObserver(obj, property, callback) {
 	}
 
 	var currentValue = getProperty(obj, property);
-	if (arguments.length == 2) {
+	if (arguments.length === 2) {
 		setProperty(obj, property, currentValue);
 		delete obj.__observers[property];
 		return;
@@ -108,7 +108,7 @@ function removeObjectObserver(obj, property, callback) {
 		length = arr.length,
 		i = 0;
 	for (; i < length; i++) {
-		if (callback == arr[i]) {
+		if (callback === arr[i]) {
 			arr.split(i, 1);
 			i--;
 			length--;

@@ -6,7 +6,7 @@
  *    bind - listen for a property change
  */
 
-function VisibleHandler() {};
+function VisibleHandler() {}
 
 mask.registerHandler(':visible', VisibleHandler);
 

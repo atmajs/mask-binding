@@ -4,91 +4,76 @@
  *	``` $ includejs build.js ```
  **/
 
-var sources = [
-	'src/vars.js',
-	'src/helpers.js',
-	'src/visible.handler.js',
-	'src/bind.handler.js',
-	'src/bind.util.js',
-	'src/bindingProvider.js',
-	'src/dualbind.handler.js',
-	'src/validate.js',
-	'src/validate.group.js',
-	'src/bind.events.js',
-	];
 
+global.config = {
+	'settings': {
+		io: {
+			extensions: {
+				js: ['condcomments:read', 'importer:read']
+			}
+		}
+	},
+	'import': {
+		files: 'builds/**',
+		output: 'lib/'
+	},
+	'jshint': {
+		files: ['lib/mask.binding.js'],
+		jshint: JSHint()
+	},
+	'uglify': {
+		files: 'lib/mask.binding.js'
+	},
 
-var builds = {
-	'mask.binding': ['src/intro.js.txt'].concat(sources).concat('src/outro.js.txt'),
-	'mask.binding.embeded': ['src/plugin.intro.js.txt'].concat(sources).concat('src/plugin.outro.js.txt'),
+	'copy': {
+		files: {
+			'lib/mask.binding.embed.js': '../mask/src/handlers/mask.binding.js'
+		}
+	},
+
+	'watch': {
+		files: 'src/**',
+		config: '#[import]'
+	},
+
+	'defaults': ['import', 'jshint', 'uglify']
 };
 
 
-var config = [{
-	action: 'settings',
-	io: {
-		extensions: {
-			js: ['condcomments:read']
-		}
-	}
-}];
-
-for(var build in builds){
-	config.push({
-		action: 'concat',
-		files: builds[build],
-		dist: 'lib/' + build + '.js'
-	})
-}
 
 
+function JSHint() {
 
-
-config.push({
-	action: 'jshint',
-	files: ['lib/mask.binding.js'],
-	jshint: {
+	return {
 		options: {
-				"curly": true,
-				"eqeqeq": false,
-				"immed": true,
-				"latedef": true,
-				"newcap": false,
-				"noarg": true,
-				"sub": true,
-				"undef": true,
-				"boss": false,
-				"eqnull": true,
-				"node": true,
-				"es5": true,
-				"strict": false,
-				"smarttabs": true,
-				"expr": true,
-				"evil": true
-			},
+			curly: true,
+			eqeqeq: true,
+			forin: true,
+			immed: true,
+			latedef: true,
+			newcap: true,
+			noarg: true,
+			noempty: true,
+			nonew: true,
+			regexp: true,
+			undef: true,
+			unused: true,
+			strict: true,
+			trailing: true,
 
-			"globals": {
-				"window": false,
-				"document": false,
-				"XMLHttpRequest": false,
-				"mask": false,
-				"$": false,
-				"Mask": false
-			}
+			boss: true,
+			eqnull: true,
+			es5: true,
+			lastsemic: true,
+			browser: true,
+			node: true,
+			onevar: false,
+			evil: true,
+			sub: true,
+		},
+		globals: {
+			define: true,
+			require: true,
 		}
-});
-
-
-config.push({
-	action: 'uglify',
-	files: 'lib/mask.binding.js'
-});
-
-config.push({
-	action: 'copy',
-	files: {
-		'lib/mask.binding.embeded.js': '../mask/src/handlers/mask.binding.js'
-	}
-})
-
-global.config = config;
+	};
+}

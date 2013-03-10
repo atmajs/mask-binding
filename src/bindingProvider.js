@@ -8,7 +8,7 @@ mask.registerBinding = function(type, binding) {
 mask.BindingProvider = BindingProvider;
 
 function BindingProvider(model, element, node, bindingType){
-	if (this.constructor == BindingProvider) {
+	if (this.constructor === BindingProvider) {
 
 		/** Initialize custom provider.
 		 * That could be defined by customName or by tagName
