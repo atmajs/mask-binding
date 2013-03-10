@@ -16,9 +16,9 @@ All possible bindings for MaskJS
 			<li> <code>attr</code> - {optional} - attribute name of an element</li>
 			<li> <code>prop</code> - {optional} - property name of an element</li>
 			<li> <code>-</code> - {default} - binds to parents .innerHTML</li>
-		</ul>		
+		</ul>
 	</li>
-	
+
 	<li>
 		Inline Binding Utility: <code> "Users name is #{bind:name}"</code>
 		<div>
@@ -43,7 +43,7 @@ input type=text > :dualbind value='currentUser.name';
 		<li> <code>getter</code> - {optional} - if parent is custom tag(controller) with getter you define some function to resolve value</li>
 		<li> <code>setter</code> - {optional} - if parent is custom tag(controller) with setter you define some function to apply value</li>
 		<li> <code>bindingProvider</code> - {optional} - you can register custom binding provider with: mask.registerBinding(name, handler)</li>
-	</ul>	
+	</ul>
 </ul>
 
 <h4>Validations</h4>
@@ -68,16 +68,26 @@ input type=text > :dualbind value='currentUser.name';
 				<li>maxLength='maxLength'</li>
 			</ul>
 		</li>
-		<li> <code>getter</code> - normally, BindingProvider resolves value for validation, but it is possible to use this control without :dualbind; control, so you may want to specify getter path.</li>		
-	</ul>	
+		<li> <code>getter</code> - normally, BindingProvider resolves value for validation, but it is possible to use this control without :dualbind; control, so you may want to specify getter path.</li>
+	</ul>
 </ul>
 
-<h4>Events Bindings</h4>
-<code>x-on</code> - Custom Attribute that binds dom/custom events to custom tags functions. 
+<h4>Signals / Slots</h4>
+<code>x-signal</code> - Custom Attribute that binds dom/custom events to closest custom handlers slots
 
 ````css
-div x-on='click: myClickHandler; mousemove: onmouseMove'
+div x-on='click: divClicked; mousemove: mouseMoved'
 ````
+````javascript
+mask.registerHandler(':any', Class({
+	name: 'Any',
+	slots: {
+		divClicked: function(event){
+			// this - reference to current ':any' handler instance
+			console.log('panel is clicked, my name is', this.name);
+		}
+	}
+})
 
 
 
