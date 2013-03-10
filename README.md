@@ -88,7 +88,7 @@ mask.registerHandler(':any', Class({
 		}
 	}
 })
-
+````
 
 
 More complex example:
