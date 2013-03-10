@@ -7,17 +7,13 @@
  */
 
 
+function Bind() {}
 
 mask.registerHandler(':bind', Bind);
 
-function Bind() {}
 
-Bind.prototype.render = function(model, container, cntx) {
 
-	if (this.firstChild != null) {
-		/** continue render if binder has nodes */
-		mask.render(this.firstChild, model, container, cntx);
-	}
+Bind.prototype.renderStart = function(model, cntx, container) {
 
 	new BindingProvider(model, container, this, 'single');
 

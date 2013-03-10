@@ -14,19 +14,15 @@
  *
  *
  */
-mask.registerHandler(':dualbind', DualbindHandler);
-
-
 function DualbindHandler() {}
 
-DualbindHandler.prototype.render = function(model, container, cntx) {
-	if (this.firstChild) {
-		mask.render(this.firstChild, model, container, cntx);
-	}
+mask.registerHandler(':dualbind', DualbindHandler);
 
-	if (cntx.components) {
-		for (var i = 0, x, length = cntx.components.length; i < length; i++) {
-			x = cntx.components[i];
+DualbindHandler.prototype.renderEnd = function(elements, model, cntx, container) {
+
+	if (this.components) {
+		for (var i = 0, x, length = this.components.length; i < length; i++) {
+			x = this.components[i];
 
 			if (x.compoName == ':validate') {
 				(this.validations || (this.validations = [])).push(x);
@@ -35,4 +31,5 @@ DualbindHandler.prototype.render = function(model, container, cntx) {
 
 	}
 	new BindingProvider(model, container, this);
+
 };

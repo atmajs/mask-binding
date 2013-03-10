@@ -1,14 +1,10 @@
+function ValidateGroup() {}
+
 mask.registerHandler(':validate:group', ValidateGroup);
 
-function ValidateGroup() {}
 
 ValidateGroup.prototype = {
 	constructor: ValidateGroup,
-	render: function(model, container, cntx) {
-		if (this.firstChild){
-			mask.render(this.firstChild, model, container, cntx);
-		}
-	},
 	validate: function() {
 		var validations = getValidations(this);
 

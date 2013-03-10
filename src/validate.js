@@ -4,14 +4,16 @@
 		Validators[type] = validator;
 	};
 
+	function Validate() {}
 
 	mask.registerHandler(':validate', Validate);
 
 
-	function Validate() {}
+
+
 	Validate.prototype = {
 		constructor: Validate,
-		render: function(model, container, cntx) {
+		renderStart: function(model, cntx, container) {
 			this.element = container;
 			this.model = model;
 		},
