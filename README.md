@@ -76,7 +76,7 @@ input type=text > :dualbind value='currentUser.name';
 <code>x-signal</code> - Custom Attribute that binds dom/custom events to closest custom handlers slots
 
 ````css
-div x-on='click: divClicked; mousemove: mouseMoved'
+div x-signal='click: divClicked; mousemove: mouseMoved'
 ````
 ````javascript
 mask.registerHandler(':any', Class({
