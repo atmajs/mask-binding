@@ -88,7 +88,7 @@ BindingProvider.prototype = {
 		get: function(obj, property) {
 
 			if (property[0] === ':'){
-				return mask.Util.ConditionUtil.condition(property.substring(1));
+				return mask.Utils.ConditionUtil.condition(property.substring(1));
 			}
 
 			return getProperty(obj, property);
