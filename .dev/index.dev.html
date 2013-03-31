@@ -37,10 +37,10 @@
             }
 
             tr {
-                td > datePicker {
+                td > :datePicker {
                         :dualbind value='date' getter='getDate' setter='setDate';
                     }
-                td > div > bind value='date';
+                td > div > :bind value='date';
             }
 
             tr {
@@ -56,7 +56,9 @@
             }
         }
 
-        div.#{bind:name}.mycllass x-on='click: onclick'> "privet #{bind:name}"
+        button.~[bind:name] x-signal='click: onclick'> "~[bind: name]"
+
+
     </script>
 
 </body>

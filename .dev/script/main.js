@@ -1,6 +1,6 @@
 include.js({
 	ruqq: ['dom/jquery', 'utils'],
-	lib: ['compo', 'mask-binding/mask.binding'],
+	lib: ['mask', 'compo', 'mask.binding/mask.binding'],
 	compo: ['datepicker']
 }).ready(function() {
 
@@ -45,10 +45,13 @@ include.js({
 		}
 	});
 
-	new Compo(document.querySelector('#layout').innerHTML).render(model, null, {
-		onclick: function() {
-			alert(';clicked');
+
+	var App = Compo({
+		attr: {
+			template: '#layout'
 		}
-	}).insert(document.body);
+	});
+
+	Compo.initialize(App, model, document.body);
 
 });

@@ -4,7 +4,7 @@
  */
 
 
-mask.registerUtility('bind', function(property, model, type, cntx, element, attrName){
+mask.registerUtility('bind', function(property, model, cntx, element, controller, type, attrName){
 	var current = getProperty(model, property);
 	switch(type){
 		case 'node':
@@ -17,7 +17,7 @@ mask.registerUtility('bind', function(property, model, type, cntx, element, attr
 
 			addObjectObserver(model, property, function(value){
 				var attrValue = element.getAttribute(attrName);
-				element.setAttribute(attrName, attrValue.replace(current, value));
+				element.setAttribute(attrName, attrValue ? attrValue.replace(current, value) : value);
 				current = value;
 			});
 
