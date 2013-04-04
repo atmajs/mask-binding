@@ -4,7 +4,7 @@
  */
 
 
-mask.registerUtility('bind', function(property, model, cntx, element, controller, type, attrName){
+mask.registerUtility('bind', function(property, model, cntx, element, controller, attrName, type){
 	var current = getProperty(model, property);
 	switch(type){
 		case 'node':
