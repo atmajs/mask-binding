@@ -11,11 +11,10 @@
 			switch (type) {
 				case 'node':
 					element.textContent = value;
-					console.log('Value', value);
 					break;
 				case 'attr':
 					var currentAttr = element.getAttribute(attrName),
-						attr = attrValue ? currentAttr.replace(currentValue, value) : value;
+						attr = currentAttr ? currentAttr.replace(currentValue, value) : value;
 					element.setAttribute(attrName, attr);
 					currentValue = value;
 					break;
@@ -26,12 +25,11 @@
 
 
 	mask.registerUtility('bind', function(expr, model, cntx, element, controller, attrName, type){
-		var refresher =  create_refresher(type, expr, element, current, attrName),
-			binder = expression_createBinder(expr, model, cntx, controller, refresher),
-			current = expression_bind(expr, model, cntx, controller, binder);
+		var current = expression_eval(expr, model, cntx, controller),
+			refresher =  create_refresher(type, expr, element, current, attrName),
+			binder = expression_createBinder(expr, model, cntx, controller, refresher);
 
-
-
+		expression_bind(expr, model, cntx, controller, binder);
 
 		if ('node' === type) {
 			element = document.createTextNode(current);
@@ -46,6 +44,7 @@
 		}
 
 		if ('attr' === type) {
+
 			return current;
 		}
 

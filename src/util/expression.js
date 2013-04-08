@@ -1,9 +1,13 @@
-var Expression = mask.Utils.Expression;
+var Expression = mask.Utils.Expression,
+	expression_eval = Expression.eval,
+	expression_parse = Expression.parse,
+	expression_varRefs = Expression.varRefs;
+
 
 function expression_bind(expr, model, cntx, controller, callback) {
-	var ast = Expression.parse(expr),
-		vars = Expression.varRefs(ast),
-		current = Expression.eval(ast, model);
+	var ast = expression_parse(expr),
+		vars = expression_varRefs(ast),
+		current = expression_eval(ast, model);
 
 	if (vars == null) {
 		return current;
@@ -25,8 +29,8 @@ function expression_bind(expr, model, cntx, controller, callback) {
 }
 
 function expression_unbind(expr, model, callback) {
-	var ast = Expression.parse(expr),
-		vars = Expression.varRefs(ast);
+	var ast = expression_parse(expr),
+		vars = expression_varRefs(ast);
 
 	if (vars == null) {
 		return;
@@ -50,6 +54,6 @@ function expression_unbind(expr, model, callback) {
  **/
 function expression_createBinder(expr, model, cntx, controller, callback) {
 	return function binder() {
-		callback(Expression.eval(expr, model, cntx, controller));
+		callback(expression_eval(expr, model, cntx, controller));
 	};
 }
