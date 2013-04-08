@@ -5,17 +5,17 @@
 
 
 mask.registerUtility('bind', function(property, model, cntx, element, controller, attrName, type){
-	var current = getProperty(model, property);
+	var current = obj_getProperty(model, property);
 	switch(type){
 		case 'node':
 			var node = document.createTextNode(current);
-			addObjectObserver(model, property, function(value){
+			obj_addObserver(model, property, function(value){
 				node.textContent = value;
 			});
 			return node;
 		case 'attr':
 
-			addObjectObserver(model, property, function(value){
+			obj_addObserver(model, property, function(value){
 				var attrValue = element.getAttribute(attrName);
 				element.setAttribute(attrName, attrValue ? attrValue.replace(current, value) : value);
 				current = value;

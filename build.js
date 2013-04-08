@@ -25,9 +25,16 @@ global.config = {
 		files: 'lib/mask.binding.js'
 	},
 
-	'copy': {
+	'export.embed': {
+		action: 'copy',
 		files: {
 			'lib/mask.binding.embed.js': '../mask/src/handlers/mask.binding.js'
+		}
+	},
+	'import.mask': {
+		action: 'copy',
+		files: {
+			'../mask/lib/mask.js': '.import/mask.js'
 		}
 	},
 
@@ -36,7 +43,7 @@ global.config = {
 		config: '#[import]'
 	},
 
-	'defaults': ['import', 'jshint', 'uglify', 'copy']
+	'defaults': ['import', 'jshint', 'uglify', 'export.embed']
 };
 
 
@@ -48,7 +55,7 @@ function JSHint() {
 		options: {
 			curly: true,
 			eqeqeq: true,
-			forin: true,
+			forin: false,
 			immed: true,
 			latedef: true,
 			newcap: true,
@@ -70,10 +77,13 @@ function JSHint() {
 			onevar: false,
 			evil: true,
 			sub: true,
+			debug: true
 		},
 		globals: {
 			define: true,
 			require: true,
+			Compo: true,
+			mask: true
 		}
 	};
 }

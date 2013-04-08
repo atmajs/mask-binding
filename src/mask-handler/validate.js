@@ -20,9 +20,9 @@
 		/**
 		 * @param input - {control specific} - value to validate
 		 * @param element - {HTMLElement} - (optional, @default this.element) -
-		 * 				Invalid message is schown(inserted into DOM) after this element
+		 *				Invalid message is schown(inserted into DOM) after this element
 		 * @param oncancel - {Function} - Callback function for canceling
-		 * 				invalid notification
+		 *				invalid notification
 		 */
 		validate: function(input, element, oncancel) {
 			if (element == null){
@@ -30,7 +30,7 @@
 			}
 
 			if (this.attr.getter) {
-				input = getProperty({
+				input = obj_getProperty({
 					node: this,
 					element: element
 				}, this.attr.getter);
@@ -83,7 +83,10 @@
 		next //
 		.children('button').off().on('click', function() {
 			next.hide();
-			oncancel && oncancel();
+			if (oncancel) {
+				oncancel();
+			}
+
 		}) //
 		.end() //
 		.children('span').text(message) //

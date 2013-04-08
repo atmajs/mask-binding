@@ -21,7 +21,7 @@ VisibleHandler.prototype = {
 		this.refresh(model, container);
 
 		if (this.attr.bind) {
-			addObjectObserver(model, this.attr.bind, this.refresh.bind(this, model, container));
+			obj_addObserver(model, this.attr.bind, this.refresh.bind(this, model, container));
 		}
 	}
 };
