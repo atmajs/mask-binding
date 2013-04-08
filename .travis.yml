@@ -5,6 +5,7 @@ before_script:
   - node_modules/.bin/includejs build.js import &
   - node_modules/.bin/buster-server &
   - sleep 5
+  - firefox -v more &
   - firefox http://localhost:1111/capture &
   - sleep 5
  
