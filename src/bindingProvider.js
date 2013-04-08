@@ -17,6 +17,7 @@ var BindingProvider = (function() {
 		this.node = node;
 		this.model = model;
 		this.element = element;
+		this.value = node.attr.value;
 		this.property = node.attr.property || (bindingType === 'single' ? 'element.innerHTML' : 'element.value');
 		this.setter = node.attr.setter;
 		this.getter = node.attr.getter;
@@ -51,6 +52,9 @@ var BindingProvider = (function() {
 
 	BindingProvider.prototype = {
 		constructor: BindingProvider,
+		dispose: function(){
+			obj_removeObserver(this.model, this.value, this.objectChanged);
+		},
 		objectChanged: function(x) {
 			if (this.dismiss-- > 0) {
 				return;

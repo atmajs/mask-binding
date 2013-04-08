@@ -91,3 +91,18 @@ function compo_inserted(compo) {
 		Compo.signal.emitIn(compo, 'domInsert');
 	}
 }
+
+function compo_attachDisposer(controller, disposer) {
+
+	if (typeof controller.dispose === 'function') {
+		var previous = controller.dispose;
+		controller.dispose = function(){
+			disposer();
+			previous();
+		};
+
+		return;
+	}
+
+	controller.dispose = disposer;
+}

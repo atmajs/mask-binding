@@ -9,6 +9,7 @@
 	// import ../src/util/array.js
 	// import ../src/util/dom.js
 	// import ../src/util/compo.js
+	// import ../src/util/expression.js
 
 	// import ../src/bindingProvider.js
 

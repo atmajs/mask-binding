@@ -5,6 +5,18 @@ All possible bindings for MaskJS
 
 <ul>
 
+	<li>
+		Inline Binding Utility:
+		<div><code> "~[bind:EXPRESSION]"</code></div>
+		<div><code> "Users name is ~[bind: name +'!']"</code></div>
+
+		<div>
+			Can be used in literals and attribute values. Usually you would use this util for binding view with a model,
+			but sometimes you may also need some special bindings. For that cases you can use ":bind" tag and define some custom binding provider
+			for [setting/getting] [to/from] [DOM/Model]
+		</div>
+	</li>
+
 	<li> Custom Tag Handler: <code>:bind ...;</code><br\>
 		Binds Model Properties to parents node
 		<code>
@@ -17,13 +29,6 @@ All possible bindings for MaskJS
 			<li> <code>prop</code> - {optional} - property name of an element</li>
 			<li> <code>-</code> - {default} - binds to parents .innerHTML</li>
 		</ul>
-	</li>
-
-	<li>
-		Inline Binding Utility: <code> "Users name is #{bind:name}"</code>
-		<div>
-			Can be used in literals and attribute values
-		</div>
 	</li>
 </ul>
 
@@ -72,24 +77,7 @@ input type=text > :dualbind value='currentUser.name';
 	</ul>
 </ul>
 
-<h4>Signals / Slots</h4>
-<h5 style='color:red'>moved to CompoJS</h5>
-<code>x-signal</code> - Custom Attribute that binds dom/custom events to closest custom handlers slots
 
-````css
-div x-signal='click: divClicked; mousemove: mouseMoved'
-````
-````javascript
-mask.registerHandler(':any', Class({
-	name: 'Any',
-	slots: {
-		divClicked: function(event){
-			// this - reference to current ':any' handler instance
-			console.log('panel is clicked, my name is', this.name);
-		}
-	}
-})
-````
 
 
 More complex example:
