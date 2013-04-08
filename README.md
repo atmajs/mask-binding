@@ -25,10 +25,40 @@ All possible bindings for MaskJS
 		<div>Attributes</div>
 		<ul>
 			<li> <code>value</code> - path to the value in a model</li>
+			<li> <code>bindingProvider</code> - {optional} - property name of a custom Binding Provider</li>
+
 			<li> <code>attr</code> - {optional} - attribute name of an element</li>
 			<li> <code>prop</code> - {optional} - property name of an element</li>
 			<li> <code>-</code> - {default} - binds to parents .innerHTML</li>
 		</ul>
+	</li>
+
+	<li>
+		Binded Percent Handler: <code> %%</code>
+		<div>
+			<code>%% each="users" { // template </code>
+			Add object and array observer and modify list on any mutable functions call:
+			<code>push, pop, shift, unshift, splice, sort, reverse</code>
+		</div>
+		<div>
+			<code>%% if="x < 10" { // template </code>
+			Toggle/Render template on condition change
+		</div>
+		<div>
+			<code>%% else { // template </code>
+			Use after "IF"
+		</div>
+
+		<div>
+			<code>%% use="some.property" { // template </code>
+			Template will be re-rendered after "some.property = newObject"
+		</div>
+
+		<div>
+			<code>%% log="name" { // template </code>
+			Log "name" property any time it is changed
+		</div>
+
 	</li>
 </ul>
 
@@ -77,6 +107,51 @@ input type=text > :dualbind value='currentUser.name';
 	</ul>
 </ul>
 
+<h4>Binding Provider API</h4>
+````javascript
+// Default Binding Provider Properties
+
+	this.node // mask DOM Node
+	this.model // model object
+	this.element // HTMLElement
+	this.value // object property PATH
+	this.property // HTMLElement property PATH @default 'element.value' for dualbinder, OR 'element.innerHTML' for singlebinder
+	this.setter = node.attr.setter; // @default null, use controller function as setter
+	this.getter = node.attr.getter; // @default null, use controller function as getter
+````
+
+````javascript
+mask.registerBinding('bindingName', {
+	/**
+	 * (Optional) override default Setter/Getter to/from a DOM
+	 */
+	domWay: {
+		get: function(provider){
+			// retrieve value from dom
+			return value;
+		},
+		/**
+		 * - provider(BindingProvider)
+		 * - value (Object): new value, that should be set to the DOM
+		set: function(provider, value){
+			// set value to dom
+		}
+	},
+	/**
+	 * (Optional) override default Setter/Getter to/from an Object.
+	objectWay: {
+		/**
+		 * - property (String): Dot chained, example: "user.name"
+		 **/
+		get: function(obj, property){
+			// get and return value
+		},
+		set: function(obj, property, value){
+			// set value to obj
+		}
+	}
+})
+````
 
 
 
