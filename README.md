@@ -6,7 +6,7 @@ All possible bindings for MaskJS
 <ul>
 
 	<li>
-		Inline Binding Utility:
+		<h6>Inline Binding Utility</h6>
 		<div><code> "~[bind:EXPRESSION]"</code></div>
 		<div><code> "Users name is ~[bind: name +'!']"</code></div>
 
@@ -17,7 +17,9 @@ All possible bindings for MaskJS
 		</div>
 	</li>
 
-	<li> Custom Tag Handler: <code>:bind ...;</code><br\>
+	<li>
+		<h6>Custom Tag Handler</h6>
+		<code>:bind ...;</code><br\>
 		Binds Model Properties to parents node
 		<code>
 			div > :bind attr='data-name' value='name';
@@ -34,7 +36,8 @@ All possible bindings for MaskJS
 	</li>
 
 	<li>
-		Binded Percent Handler: <code> %%</code>
+		<h6>Binded Percent Handler</h6>
+		<code>%%</code>
 		<div>
 			<code>%% each="users" { // template </code>
 			Add object and array observer and modify list on any mutable functions call:
