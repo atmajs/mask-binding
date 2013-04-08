@@ -73,6 +73,7 @@ input type=text > :dualbind value='currentUser.name';
 </ul>
 
 <h4>Signals / Slots</h4>
+<h5 style='color:red'>moved to CompoJS</h5>
 <code>x-signal</code> - Custom Attribute that binds dom/custom events to closest custom handlers slots
 
 ````css
