@@ -42,15 +42,14 @@ var attr_each = (function() {
 			var i = 0,
 				x, imax;
 
-			//-array = mask.Utils.Expression.eval(this.expr, this.model, null, this);
 			if (method == null) {
 				// this was new array setter and not an immutable function call
 
-				for(var i = 0, x, length = this.components.length; i < length; i++){
+				for(i = 0, imax = this.components.length; i < imax; i++){
 					x = this.components[i];
 					if (compo_dispose(x, this)) {
 						i--;
-						length--;
+						imax--;
 					}
 				}
 

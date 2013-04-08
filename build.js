@@ -28,7 +28,7 @@ global.config = {
 	'export.embed': {
 		action: 'copy',
 		files: {
-			'lib/mask.binding.embed.js': '../mask/src/handlers/mask.binding.js'
+			'lib/mask.binding.embed.js': '../mask/src/libs/mask.binding.js'
 		}
 	},
 	'import.mask': {
