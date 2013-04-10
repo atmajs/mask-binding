@@ -75,8 +75,8 @@ input type=text > :dualbind value='currentUser.name';
 	<div>Attributes</div>
 
 	<ul>
-		<li> <code>value</code> - path to the value in a model</li>
-		<li> <code>property</code> - {default: 'element.value'} - path to get/set in a HTMLElement</li>
+		<li> <code>value</code> - property PATH in a MODEL to BIND</li>
+		<li> <code>property</code> - {default: "element.value"} - property PATH in a PROVIDER to BIND</li>
 		<li> <code>changeEvent</code> - {default: change} - event to listen for DOM Changes</li>
 		<li> <code>getter</code> - {optional} - if parent is custom tag(controller) with getter you define some function to resolve value</li>
 		<li> <code>setter</code> - {optional} - if parent is custom tag(controller) with setter you define some function to apply value</li>
@@ -117,8 +117,8 @@ input type=text > :dualbind value='currentUser.name';
 	this.node // mask DOM Node
 	this.model // model object
 	this.element // HTMLElement
-	this.value // object property PATH
-	this.property // HTMLElement property PATH @default 'element.value' for dualbinder, OR 'element.innerHTML' for singlebinder
+	this.value // property PATH in a MODEL to BIND
+	this.property //  property PATH in a PROVIDER to BIND @default 'element.value' for dualbinder, OR 'element.innerHTML' for singlebinder
 	this.setter = node.attr.setter; // @default null, use controller function as setter
 	this.getter = node.attr.getter; // @default null, use controller function as getter
 ````
@@ -136,12 +136,14 @@ mask.registerBinding('bindingName', {
 		/**
 		 * - provider(BindingProvider)
 		 * - value (Object): new value, that should be set to the DOM
+		 */
 		set: function(provider, value){
 			// set value to dom
 		}
 	},
 	/**
 	 * (Optional) override default Setter/Getter to/from an Object.
+	 */
 	objectWay: {
 		/**
 		 * - property (String): Dot chained, example: "user.name"
