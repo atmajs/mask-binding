@@ -4,8 +4,9 @@ var BindingProvider = (function() {
 		Providers[type] = binding;
 	};
 
-	var Providers = {},
-		Expression = mask.Utils.Expression;
+	mask.BindingProvider = BindingProvider;
+
+	var Providers = {};
 
 
 	function BindingProvider(model, element, node, bindingType) {
@@ -23,6 +24,20 @@ var BindingProvider = (function() {
 		this.getter = node.attr.getter;
 		this.dismiss = 0;
 		this.bindingType = bindingType;
+
+		if (node.attr.expression) {
+			this.expression = node.attr.expression;
+			if (this.value == null && bindingType !== 'single') {
+				var refs = expression_varRefs(this.expression);
+				if (typeof refs === 'string') {
+					this.value = refs;
+				}else{
+					console.warn('Please set value attribute in DualBind Control.');
+				}
+			}
+		}else {
+			this.expression = this.value;
+		}
 
 	}
 
@@ -53,7 +68,7 @@ var BindingProvider = (function() {
 	BindingProvider.prototype = {
 		constructor: BindingProvider,
 		dispose: function(){
-			obj_removeObserver(this.model, this.value, this.objectChanged);
+			expression_unbind(this.expression, this.model, this.binder);
 		},
 		objectChanged: function(x) {
 			if (this.dismiss-- > 0) {
@@ -61,7 +76,7 @@ var BindingProvider = (function() {
 			}
 
 			if (x == null) {
-				x = this.objectWay.get(this.model, this.node.attr.value);
+				x = this.objectWay.get(this, this.expression);
 			}
 
 			this.domWay.set(this, x);
@@ -80,17 +95,12 @@ var BindingProvider = (function() {
 			}
 
 			this.dismiss = 1;
-			this.objectWay.set(this.model, this.node.attr.value, x);
+			this.objectWay.set(this.model, this.value, x);
 			this.dismiss = 0;
 		},
 		objectWay: {
-			get: function(obj, property) {
-
-				if (property[0] === ':') {
-					return Expression.eval(property.substring(1), obj);
-				}
-
-				return obj_getProperty(obj, property);
+			get: function(provider, expression) {
+				return expression_eval(expression, provider.model, provider.cntx, provider);
 			},
 			set: function(obj, property, value) {
 				obj_setProperty(obj, property, value);
@@ -142,12 +152,13 @@ var BindingProvider = (function() {
 
 	function apply_bind(provider) {
 
-		var value = provider.node.attr.value,
+		var expr = provider.expression,
 			model = provider.model,
-			onObjChange = provider.objectChanged = provider.objectChanged.bind(provider);
+			onObjChanged = provider.objectChanged = provider.objectChanged.bind(provider);
 
-		obj_addObserver(model, value, onObjChange);
+		provider.binder = expression_createBinder(expr, model, provider.cntx, provider.node, onObjChanged);
 
+		expression_bind(expr, model, provider.cntx, provider.node, provider.binder);
 
 		if (provider.bindingType === 'dual') {
 			var element = provider.element,
@@ -162,6 +173,11 @@ var BindingProvider = (function() {
 		return provider;
 	}
 
+
+	obj_extend(BindingProvider, {
+		addObserver: obj_addObserver,
+		removeObserver: obj_removeObserver
+	});
 
 	return BindingProvider;
 

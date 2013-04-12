@@ -10,6 +10,7 @@
 	// import attr.if.js
 	// import attr.if.else.js
 	// import attr.each.js
+	// import attr.visible.js
 
 
 
@@ -56,6 +57,11 @@
 		render: null,
 		renderEnd: function(elements) {
 			this.elements = elements;
+
+
+			if (this.attr['visible'] != null) {
+				attr_visible(this, this.model, this.cntx);
+			}
 		}
 	};
 

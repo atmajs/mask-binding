@@ -25,15 +25,19 @@
 
 
 	mask.registerUtility('bind', function(expr, model, cntx, element, controller, attrName, type){
-		var current = expression_eval(expr, model, cntx, controller),
-			refresher =  create_refresher(type, expr, element, current, attrName),
-			binder = expression_createBinder(expr, model, cntx, controller, refresher);
 
-		expression_bind(expr, model, cntx, controller, binder);
+		var current = expression_eval(expr, model, cntx, controller);
 
 		if ('node' === type) {
 			element = document.createTextNode(current);
 		}
+
+
+		var refresher =  create_refresher(type, expr, element, current, attrName),
+			binder = expression_createBinder(expr, model, cntx, controller, refresher);
+
+		expression_bind(expr, model, cntx, controller, binder);
+
 
 		compo_attachDisposer(controller, function(){
 			expression_unbind(expr, model, binder);
