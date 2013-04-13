@@ -79,6 +79,9 @@ function obj_addObserver(obj, property, callback) {
 			return currentValue;
 		},
 		set: function(x) {
+			if (x === currentValue) {
+				return;
+			}
 			currentValue = x;
 
 			for (var i = 0, length = observers.length; i < length; i++) {

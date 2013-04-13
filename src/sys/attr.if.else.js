@@ -1,31 +1,30 @@
 var attr_else = (function() {
 
 	var ElseProto = {
-		refresh: function(value){
+		refresh: function(value) {
 			if (this.elements == null && value) {
-			// was not render and still truthy
-			return;
-		}
+				// was not render and still truthy
+				return;
+			}
 
-		if (this.elements == null) {
-			// was not render - do it
+			if (this.elements == null) {
+				// was not render - do it
 
-			dom_insertBefore(compo_render(this, this.template, this.model, this.cntx));
-			this.$ = $(this.elements);
-			
-			return;
-		}
+				dom_insertBefore(compo_render(this, this.template, this.model, this.cntx));
+				this.$ = $(this.elements);
 
-		if (this.$ == null) {
-			this.$ = $(this.elements);
-		}
+				return;
+			}
 
-		this.$[value ? 'hide' : 'show']();
+			if (this.$ == null) {
+				this.$ = $(this.elements);
+			}
 
+			this.$[value ? 'hide' : 'show']();
 		}
 	};
 
-	return function (self, model, cntx, container) {
+	return function(self, model, cntx, container) {
 
 
 		var compos = self.parent.components,

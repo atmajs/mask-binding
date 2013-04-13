@@ -7,15 +7,17 @@ var attr_log = (function() {
 		}
 
 		var expr = self.attr['log'],
-			value = expression_bind(expr, model, cntx, self, log);
+			binder = expression_createBinder(expr, model, cntx, self, log),
+			value = expression_eval(expr, model, cntx, self);
+
+		expression_bind(expr, model, cntx, self, binder);
 
 
+		compo_attachDisposer(self, function(){
+			expression_unbind(expr, model, binder);
+		});
 
 		log(value);
-
-		self = null;
-		model = null;
-		cntx = null;
 	};
 
 }());

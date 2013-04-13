@@ -45,11 +45,13 @@ var attr_each = (function() {
 			if (method == null) {
 				// this was new array setter and not an immutable function call
 
-				for(i = 0, imax = this.components.length; i < imax; i++){
-					x = this.components[i];
-					if (compo_dispose(x, this)) {
-						i--;
-						imax--;
+				if (this.components != null) {
+					for (i = 0, imax = this.components.length; i < imax; i++) {
+						x = this.components[i];
+						if (compo_dispose(x, this)) {
+							i--;
+							imax--;
+						}
 					}
 				}
 
@@ -66,12 +68,12 @@ var attr_each = (function() {
 			for (imax = array.length; i < imax; i++) {
 				//create references from values to distinguish the models
 				x = array[i];
-				switch (typeof x){
-					case 'string':
-					case 'number':
-					case 'boolean':
-						array[i] = Object(x);
-						break;
+				switch (typeof x) {
+				case 'string':
+				case 'number':
+				case 'boolean':
+					array[i] = Object(x);
+					break;
 				}
 			}
 
@@ -102,7 +104,7 @@ var attr_each = (function() {
 			}
 
 		},
-		dispose: function(){
+		dispose: function() {
 			expression_unbind(this.expr, this.model, this.refresh);
 		}
 	};
@@ -114,26 +116,29 @@ var attr_each = (function() {
 			Compo.ensureTemplate(self);
 		}
 
-		self.refresh = EachProto.refresh.bind(self);
-		self.dispose = EachProto.dispose.bind(self);
-		self.expr = self.attr.each || self.attr.foreach;
+		var expr = self.attr.each || self.attr.foreach,
+			current = expression_eval(expr, model, cntx, self);
 
-		var array = expression_bind(self.expr, model, cntx, self, self.refresh);
+		obj_extend(self, {
+			expr: expr,
+			binder: expression_createBinder(expr, model, cntx, self, EachProto.refresh.bind(self)),
+			template: self.nodes,
+			container: container,
+			placeholder: document.createComment(''),
 
-
-		self.template = self.nodes;
-		self.container = container;
-		self.placeholder = document.createComment('');
+			dispose: EachProto.dispose
+		});
 
 		container.appendChild(self.placeholder);
+
+		expression_bind(self.expr, model, cntx, self, self.binder);
 
 		for (var method in ListProto) {
 			self[method] = ListProto[method];
 		}
 
 
-
-		self.nodes = list_prepairNodes(self, array);
+		self.nodes = list_prepairNodes(self, current);
 	};
 
 }());

@@ -13,9 +13,29 @@
 					element.textContent = value;
 					break;
 				case 'attr':
-					var currentAttr = element.getAttribute(attrName),
+					var currentAttr, attr;
+
+
+					if (element[attrName]  != null) {
+						currentAttr = element[attrName];
+						attr = typeof currentAttr === 'string' ? currentAttr.replace(currentValue, value) : value;
+
+						switch (typeof currentAttr) {
+							case 'boolean':
+								element[attrName] = !!attr;
+								break;
+							case 'string':
+								element[attrName] = attr;
+								break;
+						}
+
+					}else{
+						currentAttr = element.getAttribute(attrName);
 						attr = currentAttr ? currentAttr.replace(currentValue, value) : value;
-					element.setAttribute(attrName, attr);
+
+						element.setAttribute(attrName, attr);
+					}
+
 					currentValue = value;
 					break;
 			}
@@ -31,7 +51,6 @@
 		if ('node' === type) {
 			element = document.createTextNode(current);
 		}
-
 
 		var refresher =  create_refresher(type, expr, element, current, attrName),
 			binder = expression_createBinder(expr, model, cntx, controller, refresher);

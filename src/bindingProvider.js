@@ -24,6 +24,42 @@ var BindingProvider = (function() {
 		this.getter = node.attr.getter;
 		this.dismiss = 0;
 		this.bindingType = bindingType;
+		this.log = false;
+		this.signal_domChanged = null;
+		this.signal_objectChanged = null;
+		this.locked = false;
+
+		if (typeof node.attr.log === 'string') {
+			this.log = true;
+			if (node.attr.log !== 'log') {
+				this.logExpression = node.attr.log;
+			}
+		}
+
+		if (node.attr['x-signal']) {
+			var signals = node.attr['x-signal'].split(';'),
+				type, signal;
+
+			for (var i = 0, x, length = signals.length; i < length; i++) {
+				x = signals[i].split(':');
+				switch (x.length) {
+				case 1:
+					this.signal_domChanged = x[0];
+					break;
+				case 2:
+					type = x[0].trim();
+					signal = x[1].trim();
+					if ('dom' === type) {
+						this.signal_domChanged = signal;
+					}
+					if ('object' === type) {
+						this.signal_domChanged = signal;
+					}
+					break;
+				}
+			}
+		}
+
 
 		if (node.attr.expression) {
 			this.expression = node.attr.expression;
@@ -31,11 +67,11 @@ var BindingProvider = (function() {
 				var refs = expression_varRefs(this.expression);
 				if (typeof refs === 'string') {
 					this.value = refs;
-				}else{
+				} else {
 					console.warn('Please set value attribute in DualBind Control.');
 				}
 			}
-		}else {
+		} else {
 			this.expression = this.value;
 		}
 
@@ -67,36 +103,71 @@ var BindingProvider = (function() {
 
 	BindingProvider.prototype = {
 		constructor: BindingProvider,
-		dispose: function(){
+		dispose: function() {
 			expression_unbind(this.expression, this.model, this.binder);
 		},
 		objectChanged: function(x) {
 			if (this.dismiss-- > 0) {
 				return;
 			}
+			if (this.locked === true) {
+				console.warn('Concurance change detected', this);
+				return;
+			}
+			this.locked = true;
 
 			if (x == null) {
 				x = this.objectWay.get(this, this.expression);
 			}
 
 			this.domWay.set(this, x);
+
+			if (this.log) {
+				console.log('[BindingProvider] objectChanged -', x);
+			}
+			if (this.signal_objectChanged) {
+				signal_emitOut(this.node, this.signal_objectChanged, [x]);
+			}
+
+			this.locked = false;
 		},
 		domChanged: function() {
-			var x = this.domWay.get(this);
+
+			if (this.locked === true) {
+				console.warn('Concurance change detected', this);
+				return;
+			}
+			this.locked = true;
+
+			var x = this.domWay.get(this),
+				valid = true;
 
 			if (this.node.validations) {
 
 				for (var i = 0, validation, length = this.node.validations.length; i < length; i++) {
 					validation = this.node.validations[i];
 					if (validation.validate(x, this.element, this.objectChanged.bind(this)) === false) {
-						return;
+						valid = false;
+						break;
 					}
 				}
 			}
 
-			this.dismiss = 1;
-			this.objectWay.set(this.model, this.value, x);
-			this.dismiss = 0;
+			if (valid) {
+				this.dismiss = 1;
+				this.objectWay.set(this.model, this.value, x);
+				this.dismiss = 0;
+
+				if (this.log) {
+					console.log('[BindingProvider] domChanged -', x);
+				}
+
+				if (this.signal_domChanged) {
+					signal_emitOut(this.node, this.signal_domChanged, [x]);
+				}
+			}
+
+			this.locked = false;
 		},
 		objectWay: {
 			get: function(provider, expression) {
@@ -171,6 +242,19 @@ var BindingProvider = (function() {
 		// trigger update
 		provider.objectChanged();
 		return provider;
+	}
+
+	function signal_emitOut(controller, signal, args) {
+		var slots = controller.slots;
+		if (slots != null && typeof slots[signal] === 'function') {
+			if (slots[signal].apply(controller, args) === false) {
+				return;
+			}
+		}
+
+		if (controller.parent != null) {
+			signal_emitOut(controller.parent, signal, args);
+		}
 	}
 
 

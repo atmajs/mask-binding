@@ -6,20 +6,21 @@ var attr_use = (function() {
 			this.model = value;
 
 			if (this.elements) {
-				for (var i = 0, x, length = this.elements.length; i < length; i++) {
-					x = this.elements[i];
-					x.parentNode.removeChild(x);
-				}
+				dom_removeAll(this.elements);
+
+				this.elements = [];
 			}
 
 			if (typeof Compo !== 'undefined') {
 				Compo.dispose(this);
 			}
 
-			mask //
-			.render(this.nodes, this.model, this.cntx) //
-			.insertBefore(this.placeholder);
+			dom_insertBefore( //
+			compo_render(this, this.nodes, this.model, this.cntx), this.placeholder);
 
+		},
+		dispose: function(){
+			expression_unbind(this.expr, this.originalModel, this.binder);
 		}
 	};
 
@@ -27,8 +28,19 @@ var attr_use = (function() {
 
 		var expr = self.attr['use'];
 
-		self.placeholder = document.createComment('');
-		self.model = expression_bind(expr, model, cntx, self, UseProto.refresh.bind(self));
+		obj_extend(self, {
+			expr: expr,
+			placeholder: document.createComment(''),
+			binder: expression_createBinder(expr, model, cntx, self, UseProto.refresh.bind(self)),
+			
+			originalModel: model,
+			model: expression_eval(expr, model, cntx, self),
+
+			dispose: UseProto.dispose
+		});
+
+
+		expression_bind(expr, model, cntx, self, self.binder);
 
 		container.appendChild(self.placeholder);
 	};

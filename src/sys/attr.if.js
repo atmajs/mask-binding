@@ -11,9 +11,8 @@ var attr_if = (function() {
 			if (this.elements == null) {
 				// was not render - do it
 
-				mask //
-				.render(this.template, this.model, this.cntx, null, this) //
-				.insertBefore(this.placeholder);
+				dom_insertBefore( //
+				compo_render(this, this.template, this.model, this.cntx), this.placeholder);
 
 				this.$ = $(this.elements);
 			} else {
@@ -27,7 +26,12 @@ var attr_if = (function() {
 			if (this.onchange) {
 				this.onchange(value);
 			}
-			
+
+		},
+		dispose: function(){
+			expression_unbind(this.expr, this.model, this.binder);
+			this.onchange = null;
+			this.elements = null;
 		}
 	};
 
@@ -35,14 +39,21 @@ var attr_if = (function() {
 
 		var expr = self.attr['if'];
 
-		self.placeholder = document.createComment('');
-		self.template = self.nodes;
 
-		self.state = !! expression_bind(expr, model, cntx, self, IfProto.refresh.bind(self));
+		obj_extend(self, {
+			expr: expr,
+			template: self.nodes,
+			placeholder: document.createComment(''),
+			binder: expression_createBinder(expr, model, cntx, self, IfProto.refresh.bind(self)),
+
+			state: !! expression_eval(expr, model, cntx, self)
+		});
 
 		if (!self.state) {
 			self.nodes = null;
 		}
+
+		expression_bind(expr, model, cntx, self, self.binder);
 
 		container.appendChild(self.placeholder);
 	};
