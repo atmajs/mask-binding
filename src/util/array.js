@@ -28,8 +28,8 @@ function arr_remove(array /*, .. */){
 }
 
 
-function arr_toArray(args) {
-	return Array.prototype.slice.call(args);
+function arr_toArray(args, start) {
+	return __array_slice.call(args, start == null ? 0 : start);
 }
 
 
@@ -43,40 +43,63 @@ function arr_addObserver(arr, callback) {
 		});
 	}
 
-	function wrap(method) {
-		arr[method] = function() {
-			var callbacks = this.__observers,
-				args = arr_toArray(arguments),
-				result = Array.prototype[method].apply(this, args);
-
-
-			if (callbacks == null || callbacks.length === 0) {
-				return result;
-			}
-
-
-			for(var i = 0, x, length = callbacks.length; i < length; i++){
-				x = callbacks[i];
-				if (typeof x === 'function') {
-
-					x(this, method, args);
-				}
-			}
-
-			return result;
-		};
-	}
+	////////function wrap(method) {
+	////////	arr[method] = function() {
+	////////		var callbacks = this.__observers,
+	////////			args = arr_toArray(arguments),
+	////////			result = Array.prototype[method].apply(this, args);
+	////////
+	////////
+	////////		if (callbacks == null || callbacks.length === 0) {
+	////////			return result;
+	////////		}
+	////////
+	////////
+	////////		for(var i = 0, x, length = callbacks.length; i < length; i++){
+	////////			x = callbacks[i];
+	////////			if (typeof x === 'function') {
+	////////
+	////////				x(this, method, args);
+	////////			}
+	////////		}
+	////////
+	////////		return result;
+	////////	};
+	////////}
 
 	var i = 0,
 		fns = ['push', 'unshift', 'splice', 'pop', 'shift', 'reverse', 'sort'],
-		length = fns.length;
+		length = fns.length,
+		method;
 	for (; i < length; i++) {
-		wrap(fns[i]);
+		//////wrap(fns[i]);
+		method = fns[i];
+		arr[method] = _array_methodWrapper.bind(arr, arr[method], method);
 	}
 
 	arr.__observers.push(callback);
+}
 
-	arr = null;
+function _array_methodWrapper(original, method) {
+	var callbacks = this.__observers,
+		args = arr_toArray(arguments, 2),
+		result = original.apply(this, args);
+
+
+	if (callbacks == null || callbacks.length === 0) {
+		return result;
+	}
+
+
+	for(var i = 0, x, length = callbacks.length; i < length; i++){
+		x = callbacks[i];
+		if (typeof x === 'function') {
+
+			x(this, method, args);
+		}
+	}
+
+	return result;
 }
 
 
