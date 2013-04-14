@@ -27,6 +27,7 @@ All possible bindings for MaskJS
 		<div>Attributes</div>
 		<ul>
 			<li> <code>value</code> - path to the value in a model</li>
+			<li> <code>expression</code> - instead of value (simple property path) could be expression used </li>
 			<li> <code>bindingProvider</code> - {optional} - property name of a custom Binding Provider</li>
 
 			<li> <code>attr</code> - {optional} - attribute name of an element</li>
@@ -61,6 +62,11 @@ All possible bindings for MaskJS
 			<code>%% log="name" { // template </code>
 			Log "name" property any time it is changed
 		</div>
+		<div>
+			<code>%% visible="EXPRESSION" { // template </code>
+			Render underlined template, but set display:none, if expression fails, and change display
+			each time variable references in expression changes.
+		</div>
 
 	</li>
 </ul>
@@ -76,6 +82,10 @@ input type=text > :dualbind value='currentUser.name';
 
 	<ul>
 		<li> <code>value</code> - property PATH in a MODEL to BIND</li>
+		<li> <code>expression</code> - parse and evaluate expression, listen to all variable changes in expression,
+			(though it could be used instead "value" argument in single binder, but in dual binder "value" should be specified, if expression
+			contains more then one variable reference)
+		</li>
 		<li> <code>property</code> - {default: "element.value"} - property PATH in a PROVIDER to BIND</li>
 		<li> <code>changeEvent</code> - {default: change} - event to listen for DOM Changes</li>
 		<li> <code>getter</code> - {optional} - if parent is custom tag(controller) with getter you define some function to resolve value</li>
@@ -118,6 +128,7 @@ input type=text > :dualbind value='currentUser.name';
 	this.model // model object
 	this.element // HTMLElement
 	this.value // property PATH in a MODEL to BIND
+	this.expression // @default = this.value | expression to parse and evaluate
 	this.property //  property PATH in a PROVIDER to BIND @default 'element.value' for dualbinder, OR 'element.innerHTML' for singlebinder
 	this.setter = node.attr.setter; // @default null, use controller function as setter
 	this.getter = node.attr.getter; // @default null, use controller function as getter
