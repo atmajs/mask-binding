@@ -9,19 +9,23 @@ var BindingProvider = (function() {
 	var Providers = {};
 
 
-	function BindingProvider(model, element, node, bindingType) {
+	function BindingProvider(model, element, controller, bindingType) {
 
 		if (bindingType == null) {
-			bindingType = node.compoName === ':bind' ? 'single' : 'dual';
+			bindingType = controller.compoName === ':bind' ? 'single' : 'dual';
 		}
 
-		this.node = node;
+		var attr = controller.attr;
+
+		this.node = controller; // backwards compat.
+		this.controller = controller;
+
 		this.model = model;
 		this.element = element;
-		this.value = node.attr.value;
-		this.property = node.attr.property || (bindingType === 'single' ? 'element.innerHTML' : 'element.value');
-		this.setter = node.attr.setter;
-		this.getter = node.attr.getter;
+		this.value = attr.value;
+		this.property = attr.property;
+		this.setter = controller.attr.setter;
+		this.getter = controller.attr.getter;
 		this.dismiss = 0;
 		this.bindingType = bindingType;
 		this.log = false;
@@ -29,15 +33,35 @@ var BindingProvider = (function() {
 		this.signal_objectChanged = null;
 		this.locked = false;
 
-		if (typeof node.attr.log === 'string') {
-			this.log = true;
-			if (node.attr.log !== 'log') {
-				this.logExpression = node.attr.log;
+		if (this.property == null) {
+
+			switch (element.tagName) {
+				case 'INPUT':
+					var type = element.getAttribute('type');
+					if ('checkbox' === type) {
+						this.prototype = 'element.checked';
+						break;
+					}
+					this.prototype = 'element.value';
+					break;
+				case 'TEXTAREA':
+					this.prototype = 'element.value';
+					break;
+				default:
+					this.property = 'element.innerHTML';
+					break;
 			}
 		}
 
-		if (node.attr['x-signal']) {
-			var signals = node.attr['x-signal'].split(';'),
+		if (attr['log']) {
+			this.log = true;
+			if (attr.log !== 'log') {
+				this.logExpression = attr.log;
+			}
+		}
+
+		if (attr['x-signal']) {
+			var signals = attr['x-signal'].split(';'),
 				type, signal;
 
 			for (var i = 0, x, length = signals.length; i < length; i++) {
@@ -61,8 +85,8 @@ var BindingProvider = (function() {
 		}
 
 
-		if (node.attr.expression) {
-			this.expression = node.attr.expression;
+		if (attr.expression) {
+			this.expression = attr.expression;
 			if (this.value == null && bindingType !== 'single') {
 				var refs = expression_varRefs(this.expression);
 				if (typeof refs === 'string') {
@@ -77,20 +101,18 @@ var BindingProvider = (function() {
 
 	}
 
-	BindingProvider.create = function(model, element, node, bindingType) {
+	BindingProvider.create = function(model, element, controller, bindingType) {
 
-		/** Initialize custom provider.
-		 * That could be defined by customName or by tagName
-		 */
-		var type = node.attr.bindingProvider || element.tagName.toLowerCase(),
-			CustomProvider = Providers[type],
+		/* Initialize custom provider */
+		var type = controller.attr.bindingProvider,
+			CustomProvider = type == null ? null : Providers[type],
 			provider;
 
-		if (CustomProvider instanceof Function) {
-			return new CustomProvider(model, element, node, bindingType);
+		if (typeof CustomProvider === 'function') {
+			return new CustomProvider(model, element, controller, bindingType);
 		}
 
-		provider = new BindingProvider(model, element, node, bindingType);
+		provider = new BindingProvider(model, element, controller, bindingType);
 
 		if (CustomProvider != null) {
 			obj_extend(provider, CustomProvider);
