@@ -54,17 +54,24 @@ buster.testCase('Render', {
 	'bind util': function(){
 		var model = {
 			name: 'A',
-			age: 1
+			age: 1,
+			height: 10
 		},
-		span = mask.render('span data-age="~[bind:name]" > "~[bind:age]"', model);
+		div = mask.render('div data-age="~[bind:name]" style="color:red; height:~[bind:height]px"> "~[bind:age]"', model);
 
-		assert.equals(span.getAttribute('data-age'), 'A');
-		assert.equals(span.textContent, '1');
+		assert.equals(div.getAttribute('data-age'), 'A');
+		assert.equals(div.textContent, '1');
+		assert.equals(div.getAttribute('style'), 'color:red; height:10px');
+		assert.equals(div.style.height, '10px');
 
 		model.name = 'B';
 		model.age = 2;
-		assert.equals(span.getAttribute('data-age'), 'B');
-		assert.equals(span.textContent, '2');
+		model.height = 2;
+
+		assert.equals(div.getAttribute('data-age'), 'B');
+		assert.equals(div.textContent, '2');
+		assert.equals(div.getAttribute('style'), 'color:red; height:2px');
+		assert.equals(div.style.height, '2px');
 	},
 	'bind handler': function(){
 		var model = {
