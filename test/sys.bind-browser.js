@@ -80,12 +80,12 @@ buster.testCase('Render', {
 			}
 		};
 
-		var dom = mask.render('input type="text" > :bind value="user.name" property="element.value";', model);
+		var dom = mask.render('input type="text" > :bind expression="user.name + 12";', model);
 
-		assert.equals(dom.value, 'A');
+		assert.equals(dom.value, 'A12');
 
 		model.user.name = 'C';
-		assert.equals(dom.value, 'C');
+		assert.equals(dom.value, 'C12');
 
 	}
 });
