@@ -56,9 +56,23 @@
             }
         }
 
-        button.~[bind:name] x-signal='click: onclick'> "~[bind: name]"
+        :slotHandler > button.~[bind:name] x-signal='click: onclick'> "~[bind: name]"
+
+		p > :switcher2 {
+			:radio {
+				button > '1'
+				button > '2'
+				button > '3'
+			}
+			.status > 'Caption ~[bind: text]'
+		}
 
 
+		p > :slotHandler {
+			'Array length: ~[bind: array.length]'
+			button x-signal='click: arrayPush' > 'push'
+			button x-signal='click: arrayPop' > 'pop'
+		}
     </script>
 
 </body>

@@ -1,6 +1,6 @@
 include.js({
 	ruqq: ['dom/jquery', 'utils'],
-	lib: ['mask', 'compo', 'mask.binding/mask.binding'],
+	lib: ['mask', 'mask.binding/mask.binding'],
 	compo: ['datepicker']
 }).ready(function() {
 
@@ -8,8 +8,9 @@ include.js({
 		name: 'Alex',
 		paths: ['path1.html', 'path2.html'],
 		date: new Date,
-		height: 10
-	}
+		height: 10,
+		array: [1,2]
+	};
 
 	mask.registerBinding('pathsProvider', {
 		domWay: {
@@ -44,6 +45,50 @@ include.js({
 			}
 		}
 	});
+
+
+	/* switcher */
+	mask.registerHandler(':radio', Compo({
+		events: {
+			'click: button': function(event) {
+
+				this.$.children('.active').removeClass('active');
+				this.$.trigger('changed', event.target);
+
+				$(event.currentTarget).addClass('active');
+			}
+		},
+		onRenderStart: function() {
+			jmask(this).tag('div').addClass('radio');
+		}
+	}));
+
+	mask.registerHandler(':switcher2', Compo({
+		events: {
+			'changed: .radio': function(event, sender) {
+				this.text = sender.textContent;
+			}
+		},
+		onRenderStart: function() {
+			this.text = 'click to start tracking';
+		}
+	}));
+
+	/** switcher */
+
+	mask.registerHandler(':slotHandler', {
+		slots: {
+			onclick: function(){
+				alert('slot plucked');
+			},
+			arrayPush: function(){
+				model.array.push(1);
+			},
+			arrayPop: function(){
+				model.array.pop();
+			}
+		}
+	})
 
 
 	var App = Compo({
