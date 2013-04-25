@@ -17,16 +17,13 @@ function expression_bind(expr, model, cntx, controller, callback) {
 		return;
 	}
 
-
 	if (typeof vars === 'string') {
 		obj_addObserver(model, vars, callback);
 		return;
 	}
 
-
-	for (var i = 0, x, length = vars.length; i < length; i++) {
-		x = vars[i];
-		obj_addObserver(model, x, callback);
+	for (var i = 0, length = vars.length; i < length; i++) {
+		obj_addObserver(model, vars[i], callback);
 	}
 
 	return;

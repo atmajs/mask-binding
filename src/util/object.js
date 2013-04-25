@@ -1,9 +1,9 @@
 /**
- *	Resolve object, of if property do not exists - create
+ *	Resolve object, or if property do not exists - create
  */
 function obj_ensure(obj, chain) {
 	for (var i = 0, length = chain.length - 1; i < length; i++) {
-		var key = chain.shift();
+		var key = chain[i];
 
 		if (obj[key] == null) {
 			obj[key] = {};
@@ -68,10 +68,16 @@ function obj_addObserver(obj, property, callback) {
 
 	var observers = obj.__observers[property] = [callback],
 		chain = property.split('.'),
-		parent = chain.length > 1 ? obj_ensure(obj, chain) : obj,
-		key = chain[0],
+		length = chain.length,
+		parent = length > 1 ? obj_ensure(obj, chain) : obj,
+		key = chain[length - 1],
 		currentValue = parent[key];
 
+	if (parent instanceof Array) {
+		// we cannot redefine array properties like 'length'
+		arr_addObserver(parent, callback);
+		return;
+	}
 
 
 	Object.defineProperty(parent, key, {
