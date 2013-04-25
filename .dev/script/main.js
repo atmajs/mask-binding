@@ -33,20 +33,6 @@ include.js({
 		}
 	});
 
-	mask.registerBinding("datePickerProvider", {
-		domWay: {
-			get: function(provider) {
-				console.log('getDate', provider.node.parent);
-				return provider.node.parent.getDate();
-			},
-			set: function(provider, value) {
-				console.log('setDate', value, typeof value);
-				provider.node.parent.setDate(new Date(value));
-			}
-		}
-	});
-
-
 	/* switcher */
 	mask.registerHandler(':radio', Compo({
 		events: {

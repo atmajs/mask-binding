@@ -38,8 +38,8 @@
 
             tr {
                 td > :datePicker {
-                        :dualbind value='date' getter='getDate' setter='setDate';
-                    }
+					:dualbind value='date' getter='getDate' setter='setDate';
+				}
                 td > div > :bind value='date';
             }
 
@@ -47,8 +47,8 @@
                 td > input type='text' {
                         :dualbind value='height' {
                             :validate match='^([\d]+)$' message='Only digits';
-                            :validate check='<10' message='Min Height is 10px';
-                            :validate check='>500' message='Max Height is 500px';
+                            :validate check='x>10' message='Min Height is 10px';
+                            :validate check='x<500' message='Max Height is 500px';
 
                         }
                     }

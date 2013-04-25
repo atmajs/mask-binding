@@ -114,11 +114,27 @@ input type=text > :dualbind value='currentUser.name';
 				<li>unmatch='some regexp'</li>
 				<li>minLength='min str length'</li>
 				<li>maxLength='maxLength'</li>
+				<li>check='EXPRESSION' - argument name is "x" - example: :validate check="x>10" message="..";</li>
 			</ul>
 		</li>
 		<li> <code>getter</code> - normally, BindingProvider resolves value for validation, but it is possible to use this control without :dualbind; control, so you may want to specify getter path.</li>
 	</ul>
 </ul>
+
+```javascript
+mask.registerValidator('mycustom', {
+	validate: function(node, string){
+		return doSomeChecks(string);
+		// or if some check settings specified ->
+		return doSomeChecks(node.attr.mycustom, string);
+	}
+})
+```
+
+```css
+:validate mycustom message="failed";
+:validate mycustom="some setting" message="failed";
+```
 
 <h4>Binding Provider API</h4>
 ````javascript

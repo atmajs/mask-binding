@@ -118,6 +118,11 @@
 			validate: function(node, str) {
 				return str.length <= parseInt(node.attr.maxLength, 10);
 			}
+		},
+		check: {
+			validate: function(node, str){
+				return expression_eval(node.attr.check, node.model, {x: str}, node);
+			}
 		}
 
 	};
