@@ -50,13 +50,17 @@ function obj_setProperty(obj, property, value) {
 function obj_addObserver(obj, property, callback) {
 	if (obj.__observers == null) {
 		Object.defineProperty(obj, '__observers', {
-			value: {},
+			value: {
+				__dirty: null
+			},
 			enumerable: false
 		});
 	}
 
-	if (obj.__observers[property]) {
-		obj.__observers[property].push(callback);
+	var observers = obj.__observers;
+
+	if (observers[property] != null) {
+		observers[property].push(callback);
 
 		var value = obj_getProperty(obj, property);
 		if (value instanceof Array) {
@@ -66,7 +70,7 @@ function obj_addObserver(obj, property, callback) {
 		return;
 	}
 
-	var observers = obj.__observers[property] = [callback],
+	var callbacks = observers[property] = [callback],
 		chain = property.split('.'),
 		length = chain.length,
 		parent = length > 1 ? obj_ensure(obj, chain) : obj,
@@ -90,12 +94,17 @@ function obj_addObserver(obj, property, callback) {
 			}
 			currentValue = x;
 
-			for (var i = 0, length = observers.length; i < length; i++) {
-				observers[i](x);
+			if (x instanceof Array) {
+				arr_addObserver(x, callback);
 			}
 
-			if (currentValue instanceof Array) {
-				arr_addObserver(currentValue, callback);
+			if (observers.__dirties != null) {
+				observers.__dirties[property] = 1;
+				return;
+			}
+
+			for (var i = 0, length = callbacks.length; i < length; i++) {
+				callbacks[i](x);
 			}
 		}
 	});
@@ -105,6 +114,42 @@ function obj_addObserver(obj, property, callback) {
 	}
 }
 
+
+function obj_lockObservers(obj) {
+	if (obj instanceof Array) {
+		arr_lockObservers(obj);
+		return;
+	}
+
+	var obs = obj.__observers;
+	if (obs != null) {
+		obs.__dirties = {};
+	}
+}
+
+function obj_unlockObservers(obj) {
+	if (obj instanceof Array) {
+		arr_unlockObservers(obj);
+		return;
+	}
+
+	var obs = obj.__observers,
+		dirties = obs == null ? null : obs.__dirties;
+
+	if (dirties != null) {
+		for (var prop in dirties) {
+			var callbacks = obj.__observers[prop],
+				value = obj_getProperty(obj, prop);
+
+			if (callbacks != null) {
+				for(var i = 0, imax = callbacks.length; i < imax; i++){
+					callbacks[i](value);
+				}
+			}
+		}
+		obs.__dirties = null;
+	}
+}
 
 
 function obj_removeObserver(obj, property, callback) {
@@ -123,7 +168,7 @@ function obj_removeObserver(obj, property, callback) {
 	arr_remove(obj.__observers[property], callback);
 
 	if (currentValue instanceof Array) {
-		arr_remove(currentValue.__observers, callback);
+		arr_removeObserver(currentValue, callback);
 	}
 
 }
