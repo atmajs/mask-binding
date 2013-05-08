@@ -15,7 +15,7 @@ VisibleHandler.prototype = {
 	constructor: VisibleHandler,
 
 	refresh: function(model, container) {
-		container.style.display = mask.Utils.Condition.isCondition(this.attr.check, model) ? '' : 'none';
+		container.style.display = expression_eval(this.attr.check, model) ? '' : 'none';
 	},
 	renderStart: function(model, cntx, container) {
 		this.refresh(model, container);

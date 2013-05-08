@@ -35,6 +35,13 @@ var attr_if = (function() {
 		}
 	};
 
+
+	function bind(fn, compo) {
+		return function(){
+			return fn.apply(compo, arguments);
+		}
+	}
+
 	return function(self, model, cntx, container) {
 
 		var expr = self.attr['if'];
@@ -44,7 +51,7 @@ var attr_if = (function() {
 			expr: expr,
 			template: self.nodes,
 			placeholder: document.createComment(''),
-			binder: expression_createBinder(expr, model, cntx, self, IfProto.refresh.bind(self)),
+			binder: expression_createBinder(expr, model, cntx, self, bind(IfProto.refresh, self)),
 
 			state: !! expression_eval(expr, model, cntx, self)
 		});

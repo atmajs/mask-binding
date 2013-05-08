@@ -59,17 +59,7 @@
 			expression_unbind(expr, model, binder);
 		});
 
-		if ('node' === type) {
-			return element;
-		}
-
-		if ('attr' === type) {
-
-			return current;
-		}
-
-		console.error('Unknown binding type', arguments);
-		return 'Unknown';
+		return type === 'node' ? element : current;
 	});
 
 
