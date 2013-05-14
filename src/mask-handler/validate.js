@@ -1,4 +1,6 @@
 (function() {
+	
+	var class_INVALID = '-validate-invalid';
 
 	mask.registerValidator = function(type, validator) {
 		Validators[type] = validator;
@@ -48,7 +50,7 @@
 				}
 			}
 
-			isValid(element);
+			makeValid(element);
 			return true;
 		},
 		initValidators: function() {
@@ -74,28 +76,30 @@
 	function notifyInvalid(element, message, oncancel) {
 		console.warn('Validate Notification:', element, message);
 
-
-		var next = $(element).next('.-validate-invalid');
+		var next = domLib(element).next('.' + class_INVALID);
 		if (next.length === 0) {
-			next = $('<div>').addClass('-validate-invalid').html('<span></span><button>cancel</button>').insertAfter(element);
+			next = domLib('<div>')
+				.addClass(class_INVALID)
+				.html('<span></span><button>cancel</button>')
+				.insertAfter(element);
 		}
 
-		next //
-		.children('button').off().on('click', function() {
-			next.hide();
-			if (oncancel) {
-				oncancel();
-			}
-
-		}) //
-		.end() //
-		.children('span').text(message) //
-		.end() //
-		.show(); //
+		next
+			.children('button')
+			.off()
+			.on('click', function() {
+				next.hide();
+				oncancel && oncancel();
+	
+			})
+			.end()
+			.children('span').text(message)
+			.end()
+			.show();
 	}
 
-	function isValid(element) {
-		$(element).next('.-validate-invalid').hide();
+	function makeValid(element) {
+		domLib(element).next('.' + class_INVALID).hide();
 	}
 
 	var Validators = {

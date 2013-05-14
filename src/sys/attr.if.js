@@ -14,11 +14,11 @@ var attr_if = (function() {
 				dom_insertBefore( //
 				compo_render(this, this.template, this.model, this.cntx), this.placeholder);
 
-				this.$ = $(this.elements);
+				this.$ = domLib(this.elements);
 			} else {
 
 				if (this.$ == null) {
-					this.$ = $(this.elements);
+					this.$ = domLib(this.elements);
 				}
 				this.$[value ? 'show' : 'hide']();
 			}
@@ -39,7 +39,7 @@ var attr_if = (function() {
 	function bind(fn, compo) {
 		return function(){
 			return fn.apply(compo, arguments);
-		}
+		};
 	}
 
 	return function(self, model, cntx, container) {

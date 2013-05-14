@@ -1,21 +1,20 @@
 var BindingProvider = (function() {
-
+	var Providers = {};
+	
 	mask.registerBinding = function(type, binding) {
 		Providers[type] = binding;
 	};
 
 	mask.BindingProvider = BindingProvider;
-
-	var Providers = {};
-
-
+	
 	function BindingProvider(model, element, controller, bindingType) {
 
 		if (bindingType == null) {
 			bindingType = controller.compoName === ':bind' ? 'single' : 'dual';
 		}
 
-		var attr = controller.attr;
+		var attr = controller.attr,
+			type;
 
 		this.node = controller; // backwards compat.
 		this.controller = controller;
@@ -37,7 +36,7 @@ var BindingProvider = (function() {
 
 			switch (element.tagName) {
 				case 'INPUT':
-					var type = element.getAttribute('type');
+					type = element.getAttribute('type');
 					if ('checkbox' === type) {
 						this.property = 'element.checked';
 						break;
@@ -62,7 +61,7 @@ var BindingProvider = (function() {
 
 		if (attr['x-signal']) {
 			var signals = attr['x-signal'].split(';'),
-				type, signal;
+				signal;
 
 			for (var i = 0, x, length = signals.length; i < length; i++) {
 				x = signals[i].split(':');
@@ -95,12 +94,12 @@ var BindingProvider = (function() {
 					console.warn('Please set value attribute in DualBind Control.');
 				}
 			}
-		} else {
-			this.expression = this.value;
+			return;
 		}
-
+		
+		this.expression = this.value;
 	}
-
+	
 	BindingProvider.create = function(model, element, controller, bindingType) {
 
 		/* Initialize custom provider */

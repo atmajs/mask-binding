@@ -77,7 +77,9 @@ function JSHint() {
 			onevar: false,
 			evil: true,
 			sub: true,
-			debug: true
+			debug: true,
+			
+			expr: true,
 		},
 		globals: {
 			define: true,

@@ -11,13 +11,13 @@ var attr_else = (function() {
 				// was not render - do it
 
 				dom_insertBefore(compo_render(this, this.template, this.model, this.cntx));
-				this.$ = $(this.elements);
+				this.$ = domLib(this.elements);
 
 				return;
 			}
 
 			if (this.$ == null) {
-				this.$ = $(this.elements);
+				this.$ = domLib(this.elements);
 			}
 
 			this.$[value ? 'hide' : 'show']();

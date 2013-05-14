@@ -24,10 +24,11 @@ function dom_insertBefore(element, anchor) {
 
 function dom_addEventListener(element, event, listener) {
 
-	////if (typeof $ === 'function'){
-	////	$(element).on(event, listener);
-	////	return;
-	////}
+	// add event listener with jQuery for custom events
+	if (typeof domLib === 'function'){
+		domLib(element).on(event, listener);
+		return;
+	}
 
 	if (element.addEventListener != null) {
 		element.addEventListener(event, listener, false);
