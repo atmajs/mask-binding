@@ -11,6 +11,7 @@
 	// import ../src/util/dom.js
 	// import ../src/util/compo.js
 	// import ../src/util/expression.js
+	// import ../src/util/signal.js
 
 	// import ../src/bindingProvider.js
 

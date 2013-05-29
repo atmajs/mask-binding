@@ -1,0 +1,53 @@
+function signal_parse(str, isPiped, defaultType) {
+	var signals = str.split(';'),
+		set = [],
+		i = 0,
+		imax = signals.length,
+		x,
+		signalName, type,
+		signal;
+		
+
+	for (; i < imax; i++) {
+		x = signals[i].split(':');
+		
+		if (x.length !== 1 && x.length !== 2) {
+			console.error('Too much ":" in a signal def.', signals[i]);
+			continue;
+		}
+		
+		
+		type = x.length == 2 ? x[0] : defaultType;
+		signalName = x[x.length == 2 ? 1 : 0];
+		
+		signal = signal_create(signalName, type, isPiped);
+		
+		if (signal != null) {
+			set.push(signal);
+		}
+	}
+	
+	return set;
+}
+
+
+function signal_create(signal, type, isPiped) {
+	if (isPiped !== true) {
+		return {
+			signal: signal,
+			type: type
+		};
+	}
+	
+	var index = signal.indexOf('.');
+	if (index === -1) {
+		console.error('No pipe name in a signal', signal);
+		return null;
+	}
+	
+	return {
+		signal: signal.substring(index + 1),
+		pipe: signal.substring(0, index),
+		type: type
+	};
+}

@@ -60,27 +60,55 @@ var BindingProvider = (function() {
 		}
 
 		if (attr['x-signal']) {
-			var signals = attr['x-signal'].split(';'),
-				signal;
-
-			for (var i = 0, x, length = signals.length; i < length; i++) {
-				x = signals[i].split(':');
-				switch (x.length) {
-				case 1:
-					this.signal_domChanged = x[0];
-					break;
-				case 2:
-					type = x[0].trim();
-					signal = x[1].trim();
-					if ('dom' === type) {
-						this.signal_domChanged = signal;
-					}
-					if ('object' === type) {
-						this.signal_domChanged = signal;
-					}
-					break;
+			var signal = signal_parse(attr['x-signal'], null, 'dom')[0];
+			
+			if (signal) {
+					
+				if (signal.type === 'dom') {
+					this.signal_domChanged = signal.signal;
+				}
+				
+				else if (signal.type === 'object') {
+					this.signal_objectChanged = signal.signal;
+				}
+				
+				else {
+					console.error('Type is not supported', signal);
 				}
 			}
+			
+		}
+		
+		if (attr['x-pipe-signal']) {
+			var signal = signal_parse(attr['x-pipe-signal'], true, 'dom')[0];
+			if (signal) {
+				if (signal.type === 'dom') {
+					this.pipe_domChanged = signal;
+				}
+				
+				else if (signal.type === 'object') {
+					this.pipe_objectChanged = signal;
+				}
+				
+				else {
+					console.error('Type is not supported', signal)
+				}
+			}
+		}
+		
+		if (attr['x-pipe-slot']) {
+			var str = attr['x-pipe-slot'],
+				index = str.indexOf('.'),
+				pipeName = str.substring(0, index),
+				signal = str.substring(index + 1);
+			
+			this.pipes = {};
+			this.pipes[pipeName] = {};
+			this.pipes[pipeName][signal] = function(){
+				this.objectChanged();
+			};
+			
+			__Compo.pipe.addController(this);
 		}
 
 
@@ -149,6 +177,11 @@ var BindingProvider = (function() {
 			if (this.signal_objectChanged) {
 				signal_emitOut(this.node, this.signal_objectChanged, [x]);
 			}
+			
+			if (this.pipe_objectChanged) {
+				var pipe = this.pipe_objectChanged;
+				__Compo.pipe(pipe.pipe).emit(pipe.signal);
+			}
 
 			this.locked = false;
 		},
@@ -186,13 +219,18 @@ var BindingProvider = (function() {
 				if (this.signal_domChanged) {
 					signal_emitOut(this.node, this.signal_domChanged, [x]);
 				}
+				
+				if (this.pipe_domChanged) {
+					var pipe = this.pipe_domChanged;
+					__Compo.pipe(pipe.pipe).emit(pipe.signal);
+				}	
 			}
 
 			this.locked = false;
 		},
 		objectWay: {
 			get: function(provider, expression) {
-				return expression_eval(expression, provider.model, provider.cntx, provider);
+				return expression_eval(expression, provider.model, provider.cntx, provider.controller);
 			},
 			set: function(obj, property, value) {
 				obj_setProperty(obj, property, value);
@@ -226,7 +264,7 @@ var BindingProvider = (function() {
 
 					// if DEBUG
 					if (controller == null || typeof controller[provider.setter] !== 'function') {
-						console.error('Mask.bindings: Getter should be a function', provider.getter, provider);
+						console.error('Mask.bindings: Setter should be a function', provider.setter, provider);
 						return;
 					}
 					// endif

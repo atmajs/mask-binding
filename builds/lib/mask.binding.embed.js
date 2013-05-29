@@ -1,11 +1,11 @@
 
-(function(mask, Compo){
+(function(mask){
 	'use strict'
 
 
 	// source ../src/vars.js
 	var domLib = window.jQuery || window.Zepto || window.$,
-		__Compo = typeof Compo !== 'undefined' ? Compo : (mask.Compo || window.Compo),
+		Compo = mask.Compo || window.Compo,
 		__array_slice = Array.prototype.slice;
 		
 	
@@ -475,8 +475,8 @@
 	
 		compo.elements = null;
 	
-		if (__Compo != null) {
-			__Compo.dispose(compo);
+		if (typeof Compo !== 'undefined') {
+			Compo.dispose(compo);
 		}
 	
 		var components = (parent && parent.components) || (compo.parent && compo.parent.components);
@@ -490,8 +490,8 @@
 	}
 	
 	function compo_inserted(compo) {
-		if (__Compo != null) {
-			__Compo.signal.emitIn(compo, 'domInsert');
+		if (typeof Compo !== 'undefined') {
+			Compo.signal.emitIn(compo, 'domInsert');
 		}
 	}
 	
@@ -578,60 +578,6 @@
 		};
 	}
 	
-	// source ../src/util/signal.js
-	function signal_parse(str, isPiped, defaultType) {
-		var signals = str.split(';'),
-			set = [],
-			i = 0,
-			imax = signals.length,
-			x,
-			signalName, type,
-			signal;
-			
-	
-		for (; i < imax; i++) {
-			x = signals[i].split(':');
-			
-			if (x.length !== 1 && x.length !== 2) {
-				console.error('Too much ":" in a signal def.', signals[i]);
-				continue;
-			}
-			
-			
-			type = x.length == 2 ? x[0] : defaultType;
-			signalName = x[x.length == 2 ? 1 : 0];
-			
-			signal = signal_create(signalName, type, isPiped);
-			
-			if (signal != null) {
-				set.push(signal);
-			}
-		}
-		
-		return set;
-	}
-	
-	
-	function signal_create(signal, type, isPiped) {
-		if (isPiped !== true) {
-			return {
-				signal: signal,
-				type: type
-			};
-		}
-		
-		var index = signal.indexOf('.');
-		if (index === -1) {
-			console.error('No pipe name in a signal', signal);
-			return null;
-		}
-		
-		return {
-			signal: signal.substring(index + 1),
-			pipe: signal.substring(0, index),
-			type: type
-		};
-	}
 
 	// source ../src/bindingProvider.js
 	var BindingProvider = (function() {
@@ -696,39 +642,32 @@
 			}
 	
 			if (attr['x-signal']) {
-				var signal = signal_parse(attr['x-signal'], null, 'dom')[0];
+				var signal = signal_parse(attr['x-signal'])[0];
 				
-				if (signal) {
-						
-					if (signal.type === 'dom') {
+				switch (signal.type) {
+					case 'dom':
+					case null:
 						this.signal_domChanged = signal.signal;
-					}
-					
-					else if (signal.type === 'object') {
+						break;
+					case 'object':
 						this.signal_objectChanged = signal.signal;
-					}
-					
-					else {
-						console.error('Type is not supported', signal);
-					}
+						break;
+					default:
+						console.warn('Signal type is not supported', signal.type);
+						break;
 				}
-				
 			}
 			
 			if (attr['x-pipe-signal']) {
-				var signal = signal_parse(attr['x-pipe-signal'], true, 'dom')[0];
-				if (signal) {
-					if (signal.type === 'dom') {
+				var signal = signal_parse(attr['x-pipe-signal'], null, true)[0];
+				switch (signal.type) {
+					case 'dom':
+					case null:
 						this.pipe_domChanged = signal;
-					}
-					
-					else if (signal.type === 'object') {
+						break;
+					case 'object':
 						this.pipe_objectChanged = signal;
-					}
-					
-					else {
-						console.error('Type is not supported', signal)
-					}
+						break;
 				}
 			}
 			
@@ -738,13 +677,15 @@
 					pipeName = str.substring(0, index),
 					signal = str.substring(index + 1);
 				
+				var that = this;
+				
 				this.pipes = {};
 				this.pipes[pipeName] = {};
 				this.pipes[pipeName][signal] = function(){
-					this.objectChanged();
+					that.objectChanged();
 				};
 				
-				__Compo.pipe.addController(this);
+				Compo.pipe.addController(this);
 			}
 	
 	
@@ -816,7 +757,7 @@
 				
 				if (this.pipe_objectChanged) {
 					var pipe = this.pipe_objectChanged;
-					__Compo.pipe(pipe.pipe).emit(pipe.signal);
+					Compo.pipe(pipe.pipe).emit(pipe.signal);
 				}
 	
 				this.locked = false;
@@ -858,7 +799,7 @@
 					
 					if (this.pipe_domChanged) {
 						var pipe = this.pipe_domChanged;
-						__Compo.pipe(pipe.pipe).emit(pipe.signal);
+						Compo.pipe(pipe.pipe).emit(pipe.signal);
 					}	
 				}
 	
@@ -1355,8 +1296,8 @@
 						this.elements = [];
 					}
 		
-					if (__Compo != null) {
-						__Compo.dispose(this);
+					if (typeof Compo !== 'undefined') {
+						Compo.dispose(this);
 					}
 		
 					dom_insertBefore( //
@@ -1915,4 +1856,4 @@
 	}(mask));
 	
 
-}(Mask, Compo));
+}(Mask));

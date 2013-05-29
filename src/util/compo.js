@@ -72,8 +72,8 @@ function compo_dispose(compo, parent) {
 
 	compo.elements = null;
 
-	if (typeof Compo !== 'undefined') {
-		Compo.dispose(compo);
+	if (__Compo != null) {
+		__Compo.dispose(compo);
 	}
 
 	var components = (parent && parent.components) || (compo.parent && compo.parent.components);
@@ -87,8 +87,8 @@ function compo_dispose(compo, parent) {
 }
 
 function compo_inserted(compo) {
-	if (typeof Compo !== 'undefined') {
-		Compo.signal.emitIn(compo, 'domInsert');
+	if (__Compo != null) {
+		__Compo.signal.emitIn(compo, 'domInsert');
 	}
 }
 

@@ -11,8 +11,8 @@ var attr_use = (function() {
 				this.elements = [];
 			}
 
-			if (typeof Compo !== 'undefined') {
-				Compo.dispose(this);
+			if (__Compo != null) {
+				__Compo.dispose(this);
 			}
 
 			dom_insertBefore( //
