@@ -1,0 +1,91 @@
+UTest({
+	'binded sys': function() {
+
+		var model = {
+			users: ['A', 'B', 'C']
+		},
+			dom = mask.render('div > %% each="users" > span > "~[.]"', model);
+
+		assert.equal(dom.textContent, 'ABC', 'Render Failed');
+
+		model.users.push('E');
+		assert.equal(dom.textContent, 'ABCE', 'Push Failed');
+
+		model.users.unshift('0');
+		assert.equal(dom.textContent, '0ABCE', 'Unshift Failed');
+
+		model.users.splice(1, 0, '1', '2');
+		assert.equal(dom.textContent, '012ABCE', 'Splice Failed');
+
+		model.users.reverse();
+		assert.equal(dom.textContent, 'ECBA210', 'Reverse Failed');
+
+		model.users.sort();
+		assert.equal(dom.textContent, '012ABCE', 'Sort Failed');
+
+		model.users.sort(function(a, b) {
+			return isNaN(+a) ? -1 : 1;
+		});
+		assert.equal(dom.textContent, 'ABCE210', 'FN Sort Failed');
+
+		model.users.splice(0);
+		assert.equal(dom.textContent, '', 'Empty Failed');
+
+		model.users.unshift('F');
+		assert.equal(dom.textContent, 'F', 'Unshift Failed');
+
+		model.users.push('1');
+		model.users.push('2');
+		model.users.push('3');
+		model.users.push('4');
+		model.users.splice(1, 4, '5', '6', '7');
+		model.users.splice(0, 1, 'A');
+		assert.equal(dom.textContent, 'A567', 'Complex splice Failed');
+
+
+		model.users = ['X', 'Z'];
+		assert.equal(dom.textContent, 'XZ', 'Model redefine failed');
+
+
+		model.users.unshift('Y');
+		assert.equal(dom.textContent, 'YXZ', 'Unshift failed after redefine');
+
+	},
+	'bind util': function(){
+		var model = {
+			name: 'A',
+			age: 1,
+			height: 10
+		},
+		div = mask.render('div data-age="~[bind:name]" style="color:red; height:~[bind:height]px"> "~[bind:age]"', model);
+
+		assert.equal(div.getAttribute('data-age'), 'A');
+		assert.equal(div.textContent, '1');
+		assert.equal(div.getAttribute('style'), 'color:red; height:10px');
+		assert.equal(div.style.height, '10px');
+
+		model.name = 'B';
+		model.age = 2;
+		model.height = 2;
+
+		assert.equal(div.getAttribute('data-age'), 'B');
+		assert.equal(div.textContent, '2');
+		assert.equal(div.getAttribute('style'), 'color:red; height:2px');
+		assert.equal(div.style.height, '2px');
+	},
+	'bind handler': function(){
+		var model = {
+			user: {
+				name: 'A'
+			}
+		};
+
+		var dom = mask.render('input type="text" > :bind expression="user.name + 12";', model);
+
+		assert.equal(dom.value, 'A12');
+
+		model.user.name = 'C';
+		assert.equal(dom.value, 'C12');
+
+	}
+});
