@@ -1,3 +1,8 @@
+
+function arr_isArray(x) {
+	return x != null && typeof x === 'object' && x.length != null && typeof x.splice === 'function';
+}
+
 function arr_remove(array /*, .. */ ) {
 	if (array == null) {
 		return false;

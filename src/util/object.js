@@ -63,7 +63,7 @@ function obj_addObserver(obj, property, callback) {
 		observers[property].push(callback);
 
 		var value = obj_getProperty(obj, property);
-		if (value instanceof Array) {
+		if (arr_isArray(value)) {
 			arr_addObserver(value, callback);
 		}
 
@@ -77,7 +77,7 @@ function obj_addObserver(obj, property, callback) {
 		key = chain[length - 1],
 		currentValue = parent[key];
 
-	if (parent instanceof Array) {
+	if (key === 'length' && arr_isArray(parent)) {
 		// we cannot redefine array properties like 'length'
 		arr_addObserver(parent, callback);
 		return;
@@ -94,7 +94,7 @@ function obj_addObserver(obj, property, callback) {
 			}
 			currentValue = x;
 
-			if (x instanceof Array) {
+			if (arr_isArray(x)) {
 				arr_addObserver(x, callback);
 			}
 
@@ -109,14 +109,14 @@ function obj_addObserver(obj, property, callback) {
 		}
 	});
 
-	if (currentValue instanceof Array) {
+	if (arr_isArray(currentValue)) {
 		arr_addObserver(currentValue, callback);
 	}
 }
 
 
 function obj_lockObservers(obj) {
-	if (obj instanceof Array) {
+	if (arr_isArray(obj)) {
 		arr_lockObservers(obj);
 		return;
 	}
@@ -128,7 +128,7 @@ function obj_lockObservers(obj) {
 }
 
 function obj_unlockObservers(obj) {
-	if (obj instanceof Array) {
+	if (arr_isArray(obj)) {
 		arr_unlockObservers(obj);
 		return;
 	}
@@ -167,7 +167,7 @@ function obj_removeObserver(obj, property, callback) {
 
 	arr_remove(obj.__observers[property], callback);
 
-	if (currentValue instanceof Array) {
+	if (arr_isArray(currentValue)) {
 		arr_removeObserver(currentValue, callback);
 	}
 
