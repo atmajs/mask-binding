@@ -1,7 +1,7 @@
 function list_prepairNodes(compo, arrayModel) {
 	var nodes = [];
 
-	if (arrayModel instanceof Array === false) {
+	if (arrayModel == null || typeof arrayModel !== 'object' || arrayModel.length == null) {
 		return nodes;
 	}
 
