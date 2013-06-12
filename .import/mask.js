@@ -1458,30 +1458,10 @@
 			/**
 			 * extract symbol references
 			 * ~[:user.name + 'px'] -> 'user.name'
-			 * ~[someFn(varName) + user.name] -> ['varName', 'user.name']
+			 * ~[:someFn(varName) + user.name] -> ['varName', 'user.name']
+			 *
+			 * ~[:someFn().user.name] -> {accessor: (Accessor AST function call) , ref: 'user.name'}
 			 */
-		
-			function _append(current, x) {
-				if (current == null) {
-					return x;
-				}
-		
-				if (x == null) {
-					return current;
-				}
-		
-				if (typeof current === 'string') {
-					current = [current];
-				}
-		
-				if (typeof x === 'string') {
-					current.push(x);
-					return current;
-				}
-		
-				return current.concat(x);
-		
-			}
 		
 		
 			return function _extractVars(expr) {
@@ -1568,12 +1548,86 @@
 					if (x != null) {
 						refs = _append(refs, x);
 					}
+					
+					if (expr.next) {
+						x = _extractVars(expr.next);
+						refs = _append(refs, {accessor: _getAccessor(expr), ref: x});
+					}
 				}
 		
 				return refs;
 			};
+			
+			function _append(current, x) {
+				if (current == null) {
+					return x;
+				}
 		
+				if (x == null) {
+					return current;
+				}
 		
+				if (!(typeof current === 'object' && current.length != null)) {
+					current = [current];
+				}
+		
+				if (!(typeof x === 'object' && x.length != null)) {
+					current.push(x);
+					return current;
+				}
+		
+				return current.concat(x);
+		
+			}
+			
+			function _getAccessor(current) {
+				
+				var parent = current;
+				
+				outer: while (parent.parent) {
+					switch (parent.parent.type) {
+						case type_Body:
+						case type_Statement:
+							break outer;
+					}
+					parent = parent.parent;
+				}
+				
+				return _copy(parent, current.next);
+			}
+			
+			function _copy(ast, stop) {
+				
+				if (ast === stop || ast == null) {
+					return null;
+				}
+				
+				if (typeof ast !== 'object') {
+					return ast;
+				}
+				
+				if (ast.length != null && typeof ast.splice === 'function') {
+					
+					var arr = [];
+					
+					for (var i = 0, imax = ast.length; i < imax; i++){
+						arr[i] = _copy(ast[i], stop);
+					}
+					
+					return arr;
+				}
+				
+				
+				var clone = {};
+				for (var key in ast) {
+					if (ast[key] == null || key === 'parent') {
+						continue;
+					}
+					clone[key] = _copy(ast[key], stop);
+				}
+				
+				return clone;
+			}
 		
 		}());
 		
@@ -3048,7 +3102,7 @@
 			compo.template = nodes;
 			compo.container = container;
 	
-			if (array instanceof Array === false){
+			if (array == null || typeof array !== 'object' || array.length == null){
 				return;
 			}
 	
@@ -3214,7 +3268,7 @@
 			Dom = mask.Dom,
 			__array_slice = Array.prototype.slice;
 		
-		if (!domLib){
+		if (document != null && domLib == null){
 			console.warn('jQuery / Zepto etc. was not loaded before compo.js, please use Compo.config.setDOMLibrary to define dom engine');
 		}
 		
@@ -3419,9 +3473,10 @@
 					var element = component.compos[name];
 		
 					if (events != null) {
-						if (element instanceof Compo) {
+						if (element.$ != null) {
 							element = element.$;
 						}
+						
 						Events_.on(component, events, element);
 					}
 				}
@@ -3828,13 +3883,19 @@
 				if (compo.nodes != null) {
 					return;
 				}
-			
-				if (compo.template) {
-					compo.nodes = mask.parse(compo.template);
+				
+				if (compo.attr.template != null) {
+					compo.template = compo.attr.template;
+					
+					delete compo.attr.template;
+				}
+				
+				var template = compo.template;
+				
+				if (typeof template == null) {
 					return;
 				}
-			
-				var template = compo.attr.template;
+				
 			
 				if (typeof template === 'string') {
 					if (template[0] === '#') {
@@ -3848,10 +3909,8 @@
 					template = mask.parse(template);
 				}
 			
-				if (typeof template !== 'undefined') {
+				if (typeof template === 'object') {
 					compo.nodes = template;
-			
-					delete compo.attr.template;
 				}
 			}
 			
@@ -5675,7 +5734,7 @@
 				observers[property].push(callback);
 		
 				var value = obj_getProperty(obj, property);
-				if (value instanceof Array) {
+				if (arr_isArray(value)) {
 					arr_addObserver(value, callback);
 				}
 		
@@ -5689,7 +5748,7 @@
 				key = chain[length - 1],
 				currentValue = parent[key];
 		
-			if (parent instanceof Array) {
+			if (key === 'length' && arr_isArray(parent)) {
 				// we cannot redefine array properties like 'length'
 				arr_addObserver(parent, callback);
 				return;
@@ -5706,7 +5765,7 @@
 					}
 					currentValue = x;
 		
-					if (x instanceof Array) {
+					if (arr_isArray(x)) {
 						arr_addObserver(x, callback);
 					}
 		
@@ -5721,14 +5780,14 @@
 				}
 			});
 		
-			if (currentValue instanceof Array) {
+			if (arr_isArray(currentValue)) {
 				arr_addObserver(currentValue, callback);
 			}
 		}
 		
 		
 		function obj_lockObservers(obj) {
-			if (obj instanceof Array) {
+			if (arr_isArray(obj)) {
 				arr_lockObservers(obj);
 				return;
 			}
@@ -5740,7 +5799,7 @@
 		}
 		
 		function obj_unlockObservers(obj) {
-			if (obj instanceof Array) {
+			if (arr_isArray(obj)) {
 				arr_unlockObservers(obj);
 				return;
 			}
@@ -5779,7 +5838,7 @@
 		
 			arr_remove(obj.__observers[property], callback);
 		
-			if (currentValue instanceof Array) {
+			if (arr_isArray(currentValue)) {
 				arr_removeObserver(currentValue, callback);
 			}
 		
@@ -5799,6 +5858,11 @@
 		}
 		
 		// source ../src/util/array.js
+		
+		function arr_isArray(x) {
+			return x != null && typeof x === 'object' && x.length != null && typeof x.splice === 'function';
+		}
+		
 		function arr_remove(array /*, .. */ ) {
 			if (array == null) {
 				return false;
@@ -7150,7 +7214,7 @@
 				function list_prepairNodes(compo, arrayModel) {
 					var nodes = [];
 				
-					if (arrayModel instanceof Array === false) {
+					if (arrayModel == null || typeof arrayModel !== 'object' || arrayModel.length == null) {
 						return nodes;
 					}
 				

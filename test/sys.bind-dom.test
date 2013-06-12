@@ -87,5 +87,35 @@ UTest({
 		model.user.name = 'C';
 		eq(dom.value, 'C12');
 
+	},
+	
+	'bind via accessor': function(){
+		
+		var model = {
+				name: 'A'
+			},
+			controller = {
+				someFn: function(){
+					return this.x;
+				},
+				x: {
+					age: 10
+				}
+			},
+			dom;
+		
+		dom = mask.render('div > "~[bind: name + someFn().age]"', model, null, null, controller);
+		eq(dom.textContent, 'A10');
+		
+		model.name = 'B'
+		eq(dom.textContent, 'B10');
+		
+		controller.x.age = 5;
+		eq(dom.textContent, 'B5');
+		
+		dom = mask.render('div > "~[bind: someFn().age]"', model, null, null, controller);
+		controller.x.age = 7;
+		eq(dom.textContent, '7');
+		
 	}
 });

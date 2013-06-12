@@ -1,8 +1,4 @@
-
-
-
-
-
+	
 module.exports = {
 	exec: 'dom',
     env: [
