@@ -19,7 +19,20 @@ function expression_bind(expr, model, cntx, controller, callback) {
 	}
 
 	if (typeof vars === 'string') {
-		obj_addObserver(model, vars, callback);
+		
+		if (obj_isDefined(model, vars)) {
+			obj = model;
+		}
+		
+		if (obj == null && obj_isDefined(controller, vars)) {
+			obj = controller;
+		}
+		
+		if (obj == null) {
+			obj = model;
+		}
+		
+		obj_addObserver(obj, vars, callback);
 		return;
 	}
 
@@ -34,7 +47,6 @@ function expression_bind(expr, model, cntx, controller, callback) {
 			continue;
 		}
 		
-		obj = model;
 		
 		if (typeof x === 'object') {
 			
@@ -46,6 +58,15 @@ function expression_bind(expr, model, cntx, controller, callback) {
 			}
 			
 			x = x.ref;
+		} else if (obj_isDefined(model, x)) {
+			
+			obj = model;
+		} else if (obj_isDefined(controller, x)) {
+			
+			obj = controller;
+		} else {
+			
+			obj = model;
 		}
 		
 		obj_addObserver(obj, x, callback);

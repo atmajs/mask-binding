@@ -103,7 +103,7 @@ function obj_addObserver(obj, property, callback) {
 				return;
 			}
 
-			for (var i = 0, length = callbacks.length; i < length; i++) {
+			for (var i = 0, imax = callbacks.length; i < imax; i++) {
 				callbacks[i](x);
 			}
 		}
@@ -184,4 +184,20 @@ function obj_extend(obj, source) {
 		obj[key] = source[key];
 	}
 	return obj;
+}
+
+
+function obj_isDefined(obj, path) {
+	var parts = path.split('.'),
+		imax = parts.length,
+		i = 0;
+	
+	while (imax--) {
+		
+		if ((obj = obj[parts[i++]]) == null) {
+			return false;
+		}
+	}
+	
+	return true;
 }
