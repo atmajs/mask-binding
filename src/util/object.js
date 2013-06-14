@@ -47,7 +47,34 @@ function obj_setProperty(obj, property, value) {
 	obj[chain[i]] = value;
 }
 
+/*
+ * @TODO refactor - add observer to direct parent with path tracking
+ *
+ * "a.b.c.d" (add observer to "c" on "d" property change)
+ * track if needed also "b" and "a"
+ */ 
+
 function obj_addObserver(obj, property, callback) {
+	
+	// closest observer
+	var parts = property.split('.'),
+		imax  = parts.length,
+		i = 0, at = 0, x = obj;
+	while (imax--) {
+		x = x[parts[i++]];
+		if (x == null) {
+			break;
+		}
+		if (x.__observers != null) {
+			at = i;
+			obj = x;
+		}
+	}
+	if (at > 0) {
+		property = parts.slice(at).join('.');
+	}
+	
+	
 	if (obj.__observers == null) {
 		Object.defineProperty(obj, '__observers', {
 			value: {
@@ -153,7 +180,22 @@ function obj_unlockObservers(obj) {
 
 
 function obj_removeObserver(obj, property, callback) {
-
+	// nested observer
+	var parts = property.split('.'),
+		imax  = parts.length,
+		i = 0, x = obj;
+	while (imax--) {
+		x = x[parts[i++]];
+		if (x == null) {
+			break;
+		}
+		if (x.__observers != null) {
+			obj_removeObserver(obj, parts.slice(i).join('.'), callback);
+			break;
+		}
+	}
+	
+	
 	if (obj.__observers == null || obj.__observers[property] == null) {
 		return;
 	}
