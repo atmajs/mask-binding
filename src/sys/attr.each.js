@@ -60,7 +60,8 @@ var attr_each = (function() {
 				this.nodes = list_prepairNodes(this, array);
 
 				dom_insertBefore(compo_render(this, this.nodes), this.placeholder);
-
+				
+				arr_each(this.components, compo_inserted);
 				return;
 			}
 
