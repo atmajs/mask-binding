@@ -1,6 +1,11 @@
 var Expression = mask.Utils.Expression,
 	expression_eval_origin = Expression.eval,
 	expression_eval = function(expr, model, cntx, controller){
+		
+		if (expr === '.') {
+			return model;
+		}
+		
 		var value = expression_eval_origin(expr, model, cntx, controller);
 
 		return value == null ? '' : value;
@@ -10,6 +15,16 @@ var Expression = mask.Utils.Expression,
 
 
 function expression_bind(expr, model, cntx, controller, callback) {
+	
+	if (expr === '.') {
+		
+		if (arr_isArray(model)) {
+			arr_addObserver(model, callback);
+		}
+		
+		return;
+	}
+	
 	var ast = expression_parse(expr),
 		vars = expression_varRefs(ast),
 		obj, ref;
@@ -76,21 +91,19 @@ function expression_bind(expr, model, cntx, controller, callback) {
 }
 
 function expression_unbind(expr, model, callback) {
-	var ast = expression_parse(expr),
-		vars = expression_varRefs(ast),
+	var vars = expression_varRefs(expr),
 		x, ref;
 
 	if (vars == null) {
 		return;
 	}
-
-
+	
 	if (typeof vars === 'string') {
 		obj_removeObserver(model, vars, callback);
 		return;
 	}
 
-	for (var i = 0, length = vars.length; i < length; i++) {
+	for (var i = 0, imax = vars.length; i < imax; i++) {
 		obj_removeObserver(model, vars[i], callback);
 	}
 }

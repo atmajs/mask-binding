@@ -60,15 +60,16 @@ function arr_addObserver(arr, callback) {
 function arr_removeObserver(arr, callback) {
 	var obs = arr.__observers;
 	if (obs != null) {
-		for (var i = 0, imax = arr.length; i < imax; i++) {
-			if (arr[i] === callback) {
-				imax--;
-				arr.length--;
-				arr[i] = null;
+		for (var i = 0, imax = obs.length; i < imax; i++) {
+			if (obs[i] === callback) {
+				obs[i] = null;
 
 				for (var j = i; j < imax; j++) {
-					arr[j] = arr[j + 1];
+					obs[j] = obs[j + 1];
 				}
+				
+				imax--;
+				obs.length--;
 			}
 		}
 	}

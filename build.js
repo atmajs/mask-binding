@@ -34,7 +34,8 @@ global.config = {
 	'import.mask': {
 		action: 'copy',
 		files: {
-			'../mask/lib/mask.js': '.import/mask.js'
+			'../mask/lib/mask.js': '.import/mask.js',
+			'../mask/lib/mask.node.js': '.import/mask.node.js'
 		}
 	},
 

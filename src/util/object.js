@@ -202,7 +202,7 @@ function obj_removeObserver(obj, property, callback) {
 
 	var currentValue = obj_getProperty(obj, property);
 	if (arguments.length === 2) {
-		obj_setProperty(obj, property, currentValue);
+		//-?-obj_setProperty(obj, property, currentValue);
 		delete obj.__observers[property];
 		return;
 	}

@@ -1,45 +1,60 @@
 // source ../src/umd-head.js
 (function (root, factory) {
     'use strict';
+    
+    var _global, _exports, _document;
 
-    if (root == null && typeof global !== 'undefined'){
-        root = global;
+    
+	if (typeof exports !== 'undefined' && (root === exports || root == null)){
+		// raw nodejs module
+    	_global = global;
     }
+	
+	if (_global == null) {
+		_global = typeof window === 'undefined' || window.document == null ? global : window;
+	}
+    
+    _document = _global.document;
+	_exports = root || _global;
+    
 
-    var doc = typeof document === 'undefined' ? null : document,
-        construct = function(plugins){
+    function construct(plugins){
 
-            if (plugins == null) {
-                plugins = {};
-            }
-            var lib = factory(root, doc, plugins),
-                key;
+        if (plugins == null) {
+            plugins = {};
+        }
+        var lib = factory(_global, plugins, _document),
+            key;
 
-            for (key in plugins) {
-                lib[key] = plugins[key];
-            }
-
-            return lib;
-        };
-
-    if (typeof module !== 'undefined') {
-        module.exports = construct();
-    } else if (typeof define === 'function' && define.amd) {
-        define(construct);
-    } else {
-
-        var plugins = {},
-            lib = construct(plugins);
-
-        root.mask = lib;
-
-        for (var key in plugins) {
-            root[key] = plugins[key];
+        for (key in plugins) {
+            lib[key] = plugins[key];
         }
 
+        return lib;
+    };
+
+    
+    if (typeof module !== 'undefined') {
+        module.exports = construct();
+        return;
+    }
+    if (typeof define === 'function' && define.amd) {
+        define(construct);
+        return;
+    }
+    
+    var plugins = {},
+        lib = construct(plugins);
+
+    _exports.mask = lib;
+
+    for (var key in plugins) {
+        _exports[key] = plugins[key];
     }
 
-}(this, function (global, document, exports) {
+    
+
+}(this, function (global, exports, document) {
     'use strict';
 
 
@@ -1464,14 +1479,22 @@
 			 */
 		
 		
-			return function _extractVars(expr) {
+			return function(expr){
+				if (typeof expr === 'string') {
+					expr = expression_parse(expr);
+				}
+				
+				return _extractVars(expr);
+				
+				
+			};
+			
+			
+			
+			function _extractVars(expr) {
 		
 				if (expr == null) {
 					return null;
-				}
-		
-				if (typeof expr === 'string') {
-					expr = expression_parse(expr);
 				}
 		
 				var refs, x;
@@ -1515,6 +1538,7 @@
 						break;
 				}
 				
+				// get also from case1 and case2
 				if (type_Ternary === expr.type) {
 					x = _extractVars(ast.case1);
 					refs = _append(refs, x);
@@ -1545,6 +1569,7 @@
 								break outer;
 						}
 					}
+					
 					if (x != null) {
 						refs = _append(refs, x);
 					}
@@ -1556,7 +1581,7 @@
 				}
 		
 				return refs;
-			};
+			}
 			
 			function _append(current, x) {
 				if (current == null) {
@@ -1572,11 +1597,21 @@
 				}
 		
 				if (!(typeof x === 'object' && x.length != null)) {
-					current.push(x);
+					
+					if (current.indexOf(x) === -1) {
+						current.push(x);
+					}
+					
 					return current;
 				}
-		
-				return current.concat(x);
+				
+				for (var i = 0, imax = x.length; i < imax; i++) {
+					if (current.indexOf(x[i]) === -1) {
+						current.push(x[i]);
+					}
+				}
+				
+				return current;
 		
 			}
 			
@@ -3299,6 +3334,14 @@
 			return copy;
 		}
 		
+		// source ../src/util/function.js
+		function fn_proxy(fn, context) {
+			
+			return function(){
+				return fn.apply(context, arguments);
+			};
+			
+		}
 		// source ../src/util/selector.js
 		function selector_parse(selector, type, direction) {
 			if (selector == null){
@@ -3525,7 +3568,7 @@
 							type = EventDecorator(type);
 						}
 		
-						domLib_on($element, type, selector, fn.bind(component));
+						domLib_on($element, type, selector, fn_proxy(fn, component));
 					}
 				}
 			}
@@ -4273,6 +4316,25 @@
 				remove: function() {
 					if (this.$ != null){
 						this.$.remove();
+						
+						var parents = this.parent && this.parent.elements;
+						if (parents != null) {
+							for (var i = 0, x, imax = parents.length; i < imax; i++){
+								x = parents[i];
+								
+								for (var j = 0, jmax = this.$.length; j < jmax; j++){
+									if (x === this.$[j]){
+										parents.splice(i, 1);
+										
+										i--;
+										imax--;
+									}
+									
+								}
+								
+							}
+						}
+			
 						this.$ = null;
 					}
 		
@@ -4289,7 +4351,7 @@
 		
 						components.splice(i, 1);
 					}
-		
+					
 					return this;
 				},
 		
@@ -4366,12 +4428,16 @@
 		
 			// @param sender - event if sent from DOM Event or CONTROLLER instance
 			function _fire(controller, slot, sender, args, direction) {
-		
+				
 				if (controller == null) {
-					return;
+					return false;
 				}
+				
+				var found = false;
 		
 				if (controller.slots != null && typeof controller.slots[slot] === 'function') {
+					found = true;
+					
 					var fn = controller.slots[slot],
 						isDisabled = controller.slots.__disabled != null && controller.slots.__disabled[slot];
 		
@@ -4380,20 +4446,28 @@
 						var result = args == null ? fn.call(controller, sender) : fn.apply(controller, [sender].concat(args));
 		
 						if (result === false) {
-							return;
+							return true;
 						}
 					}
 				}
 		
 				if (direction === -1 && controller.parent != null) {
-					_fire(controller.parent, slot, sender, args, direction);
+					return _fire(controller.parent, slot, sender, args, direction) || found;
 				}
 		
 				if (direction === 1 && controller.components != null) {
-					for (var i = 0, length = controller.components.length; i < length; i++) {
-						_fire(controller.components[i], slot, sender, args, direction);
+					var compos = controller.components,
+						imax = compos.length,
+						i = 0,
+						r;
+					for (; i < imax; i++) {
+						r = _fire(compos[i], slot, sender, args, direction);
+						
+						!found && (found = r);
 					}
 				}
+				
+				return found;
 			}
 		
 			function _hasSlot(controller, slot, direction, isActive) {
@@ -4524,7 +4598,12 @@
 		
 					// to parent
 					emitOut: function(controller, slot, sender, args) {
-						_fire(controller, slot, sender, args, -1);
+						var captured = _fire(controller, slot, sender, args, -1);
+						
+						// if DEBUG
+						!captured && console.warn('Signal %c%s','font-weight:bold;', slot, 'was not captured');
+						// endif
+						
 					},
 					// to children
 					emitIn: function(controller, slot, sender, args) {
@@ -5718,7 +5797,34 @@
 			obj[chain[i]] = value;
 		}
 		
+		/*
+		 * @TODO refactor - add observer to direct parent with path tracking
+		 *
+		 * "a.b.c.d" (add observer to "c" on "d" property change)
+		 * track if needed also "b" and "a"
+		 */ 
+		
 		function obj_addObserver(obj, property, callback) {
+			
+			// closest observer
+			var parts = property.split('.'),
+				imax  = parts.length,
+				i = 0, at = 0, x = obj;
+			while (imax--) {
+				x = x[parts[i++]];
+				if (x == null) {
+					break;
+				}
+				if (x.__observers != null) {
+					at = i;
+					obj = x;
+				}
+			}
+			if (at > 0) {
+				property = parts.slice(at).join('.');
+			}
+			
+			
 			if (obj.__observers == null) {
 				Object.defineProperty(obj, '__observers', {
 					value: {
@@ -5774,7 +5880,7 @@
 						return;
 					}
 		
-					for (var i = 0, length = callbacks.length; i < length; i++) {
+					for (var i = 0, imax = callbacks.length; i < imax; i++) {
 						callbacks[i](x);
 					}
 				}
@@ -5824,7 +5930,22 @@
 		
 		
 		function obj_removeObserver(obj, property, callback) {
-		
+			// nested observer
+			var parts = property.split('.'),
+				imax  = parts.length,
+				i = 0, x = obj;
+			while (imax--) {
+				x = x[parts[i++]];
+				if (x == null) {
+					break;
+				}
+				if (x.__observers != null) {
+					obj_removeObserver(obj, parts.slice(i).join('.'), callback);
+					break;
+				}
+			}
+			
+			
 			if (obj.__observers == null || obj.__observers[property] == null) {
 				return;
 			}
@@ -5857,6 +5978,21 @@
 			return obj;
 		}
 		
+		
+		function obj_isDefined(obj, path) {
+			var parts = path.split('.'),
+				imax = parts.length,
+				i = 0;
+			
+			while (imax--) {
+				
+				if ((obj = obj[parts[i++]]) == null) {
+					return false;
+				}
+			}
+			
+			return true;
+		}
 		// source ../src/util/array.js
 		
 		function arr_isArray(x) {
@@ -6187,19 +6323,65 @@
 		
 		function expression_bind(expr, model, cntx, controller, callback) {
 			var ast = expression_parse(expr),
-				vars = expression_varRefs(ast);
+				vars = expression_varRefs(ast),
+				obj, ref;
 		
 			if (vars == null) {
 				return;
 			}
 		
 			if (typeof vars === 'string') {
-				obj_addObserver(model, vars, callback);
+				
+				if (obj_isDefined(model, vars)) {
+					obj = model;
+				}
+				
+				if (obj == null && obj_isDefined(controller, vars)) {
+					obj = controller;
+				}
+				
+				if (obj == null) {
+					obj = model;
+				}
+				
+				obj_addObserver(obj, vars, callback);
 				return;
 			}
 		
-			for (var i = 0, length = vars.length; i < length; i++) {
-				obj_addObserver(model, vars[i], callback);
+			var isArray = vars.length != null && typeof vars.splice === 'function',
+				imax = isArray === true ? vars.length : 1,
+				i = 0,
+				x;
+			
+			for (; i < imax; i++) {
+				x = isArray ? vars[i] : vars;
+				if (x == null) {
+					continue;
+				}
+				
+				
+				if (typeof x === 'object') {
+					
+					obj = expression_eval_origin(x.accessor, model, cntx, controller);
+					
+					if (obj == null || typeof obj !== 'object') {
+						console.error('Binding failed to an object over accessor', x);
+						continue;
+					}
+					
+					x = x.ref;
+				} else if (obj_isDefined(model, x)) {
+					
+					obj = model;
+				} else if (obj_isDefined(controller, x)) {
+					
+					obj = controller;
+				} else {
+					
+					obj = model;
+				}
+				
+				obj_addObserver(obj, x, callback);
 			}
 		
 			return;
@@ -6207,7 +6389,8 @@
 		
 		function expression_unbind(expr, model, callback) {
 			var ast = expression_parse(expr),
-				vars = expression_varRefs(ast);
+				vars = expression_varRefs(ast),
+				x, ref;
 		
 			if (vars == null) {
 				return;
@@ -6218,7 +6401,6 @@
 				obj_removeObserver(model, vars, callback);
 				return;
 			}
-		
 		
 			for (var i = 0, length = vars.length; i < length; i++) {
 				obj_removeObserver(model, vars[i], callback);
@@ -6236,7 +6418,19 @@
 					console.warn('Concurent binder detected', expr);
 					return;
 				}
-				callback(expression_eval(expr, model, cntx, controller));
+				
+				var value = expression_eval(expr, model, cntx, controller);
+				if (arguments.length > 1) {
+					var args = __array_slice.call(arguments);
+					
+					args[0] = value;
+					callback.apply(this, args);
+					
+				}else{
+					
+					callback(value);
+				}
+				
 				lockes--;
 			};
 		}
@@ -6344,6 +6538,9 @@
 							break;
 						case 'TEXTAREA':
 							this.property = 'element.value';
+							break;
+						case 'SELECT':
+							this.domWay = DomWaysProto.SELECT;
 							break;
 						default:
 							this.property = 'element.innerHTML';
@@ -6571,6 +6768,33 @@
 							controller[provider.setter](value);
 						} else {
 							obj_setProperty(provider, provider.property, value);
+						}
+		
+					}
+				}
+			};
+			
+			var DomWaysProto = {
+				SELECT: {
+					get: function(provider) {
+						var element = provider.element;
+						
+						if (element.selectedIndex === -1) {
+							return '';
+						}
+						
+						return element.options[element.selectedIndex].getAttribute('name');
+					},
+					set: function(provider, value) {
+						var element = provider.element;
+						
+						for (var i = 0, x, imax = element.options.length; i < imax; i++){
+							x = element.options[i];
+							
+							if (x.getAttribute('name') === value) {
+								element.selectedIndex = i;
+								return;
+							}
 						}
 		
 					}
@@ -7394,7 +7618,8 @@
 							this.nodes = list_prepairNodes(this, array);
 			
 							dom_insertBefore(compo_render(this, this.nodes), this.placeholder);
-			
+							
+							arr_each(this.components, compo_inserted);
 							return;
 						}
 			
