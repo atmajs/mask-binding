@@ -62,6 +62,9 @@ var BindingProvider = (function() {
 			}
 		}
 
+		/**
+		 *	Send signal on OBJECT or DOM change
+		 */
 		if (attr['x-signal']) {
 			var signal = signal_parse(attr['x-signal'], null, 'dom')[0];
 			
@@ -99,8 +102,28 @@ var BindingProvider = (function() {
 			}
 		}
 		
-		if (attr['x-pipe-slot']) {
-			var str = attr['x-pipe-slot'],
+		
+		if (attr['dom-slot']) {
+			this.slots = {};
+			// @hack - place dualb. provider on the way of a signal
+			// 
+			var parent = controller.parent,
+				newparent = parent.parent;
+				
+			parent.parent = this;
+			this.parent = newparent;
+			
+			this.slots[attr['dom-slot']] = function(sender, value){
+				this.domChanged(sender, value);
+			}
+		}
+		
+		/*
+		 *  @obsolete: attr name : 'x-pipe-slot'
+		 */
+		var pipeSlot = attr['object-pipe-slot'] || attr['x-pipe-slot'];
+		if (pipeSlot) {
+			var str = pipeSlot,
 				index = str.indexOf('.'),
 				pipeName = str.substring(0, index),
 				signal = str.substring(index + 1);
@@ -188,7 +211,7 @@ var BindingProvider = (function() {
 
 			this.locked = false;
 		},
-		domChanged: function() {
+		domChanged: function(event, value) {
 
 			if (this.locked === true) {
 				console.warn('Concurance change detected', this);
@@ -196,7 +219,7 @@ var BindingProvider = (function() {
 			}
 			this.locked = true;
 
-			var x = this.domWay.get(this),
+			var x = value || this.domWay.get(this),
 				valid = true;
 
 			if (this.node.validations) {
@@ -321,11 +344,18 @@ var BindingProvider = (function() {
 		expression_bind(expr, model, provider.cntx, provider.node, provider.binder);
 
 		if (provider.bindingType === 'dual') {
-			var element = provider.element,
-				eventType = provider.node.attr.changeEvent || 'change',
-				onDomChange = provider.domChanged.bind(provider);
-
-			dom_addEventListener(element, eventType, onDomChange);
+			var attr = provider.node.attr;
+			
+			if (!attr['change-slot'] && !attr['change-pipe-event']) {
+				var element = provider.element,
+					/*
+					 * @obsolete: attr name : 'changeEvent'
+					 */
+					eventType = attr['change-event'] || attr.changeEvent || 'change',
+					onDomChange = provider.domChanged.bind(provider);
+	
+				dom_addEventListener(element, eventType, onDomChange);
+			}
 		}
 
 		// trigger update

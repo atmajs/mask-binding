@@ -35,6 +35,22 @@ DualbindHandler.prototype = {
 		}
 
 		this.provider = BindingProvider.create(model, container, this);
+		
+		if (typeof model.Validate === 'object') {
+			
+			var validator = model.Validate[this.provider.value];
+			if (typeof validator === 'function') {
+			
+				validator = mask
+					.getHandler(':validate')
+					.createCustom(container, validator);
+				
+			
+				(this.validations || (this.validations = []))
+					.push(validator);
+				
+			}
+		}
 	},
 	dispose: function(){
 		if (this.provider && typeof this.provider.dispose === 'function') {
