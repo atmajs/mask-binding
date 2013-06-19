@@ -37,12 +37,17 @@ function arr_addObserver(arr, callback) {
 	if (arr.__observers == null) {
 		Object.defineProperty(arr, '__observers', {
 			value: {
-				length: 0
+				__dirty: null
 			},
 			enumerable: false
 		});
 	}
-
+	
+	var observers = arr.__observers.__array;
+	if (observers == null) {
+		observers = arr.__observers.__array = [];
+	}
+	
 	var i = 0,
 		fns = ['push', 'unshift', 'splice', 'pop', 'shift', 'reverse', 'sort'],
 		length = fns.length,
@@ -53,12 +58,11 @@ function arr_addObserver(arr, callback) {
 		arr[method] = _array_createWrapper(arr, arr[method], method);
 	}
 
-	var observers = arr.__observers;
 	observers[observers.length++] = callback;
 }
 
 function arr_removeObserver(arr, callback) {
-	var obs = arr.__observers;
+	var obs = arr.__observers && arr.__observers.__array;
 	if (obs != null) {
 		for (var i = 0, imax = obs.length; i < imax; i++) {
 			if (obs[i] === callback) {
@@ -82,16 +86,18 @@ function arr_lockObservers(arr) {
 }
 
 function arr_unlockObservers(arr) {
-	var obs = arr.__observers;
+	var list = arr.__observers,
+		obs = list && list.__array;
+		
 	if (obs != null) {
-		if (obs.__dirty === true) {
+		if (list.__dirty === true) {
 			for (var i = 0, x, imax = obs.length; i < imax; i++) {
 				x = obs[i];
 				if (typeof x === 'function') {
 					x(arr);
 				}
 			}
-			obs.__dirty = null;
+			list.__dirty = null;
 		}
 	}
 }
@@ -104,7 +110,7 @@ function _array_createWrapper(array, originalFn, overridenFn) {
 
 
 function _array_methodWrapper(array, original, method, args) {
-	var callbacks = array.__observers,
+	var callbacks = array.__observers && array.__observers.__array,
 		result = original.apply(array, args);
 
 
@@ -112,8 +118,8 @@ function _array_methodWrapper(array, original, method, args) {
 		return result;
 	}
 
-	if (callbacks.__dirty != null) {
-		callbacks.__dirty = true;
+	if (array.__observers.__dirty != null) {
+		array.__observers.__dirty = true;
 		return result;
 	}
 

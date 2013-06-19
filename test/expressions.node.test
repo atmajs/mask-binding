@@ -34,8 +34,8 @@ include
 				check.apply(this, arguments);
 			});
 			
-			eq(array.__observers.length, 1);
-			eq(array.__observers[0], callback);
+			eq(array.__observers.__array.length, 1);
+			eq(array.__observers.__array[0], callback);
 			
 			check = createAssertion([1], 'push', [1]);
 			array.push(1);
@@ -73,7 +73,7 @@ include
 			
 			
 			arr_removeObserver(array, callback);
-			eq(array.__observers.length, 0);
+			eq(array.__observers.__array.length, 0);
 		},
 		
 		
