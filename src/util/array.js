@@ -98,7 +98,7 @@ function arr_unlockObservers(arr) {
 
 function _array_createWrapper(array, originalFn, overridenFn) {
 	return function() {
-		_array_methodWrapper(array, originalFn, overridenFn, __array_slice.call(arguments));
+		return _array_methodWrapper(array, originalFn, overridenFn, __array_slice.call(arguments));
 	};
 }
 
