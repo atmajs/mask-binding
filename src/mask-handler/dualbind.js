@@ -36,7 +36,7 @@ DualbindHandler.prototype = {
 
 		this.provider = BindingProvider.create(model, container, this);
 		
-		if (typeof model.Validate === 'object') {
+		if (typeof model.Validate === 'object' && !this.attr['no-validation']) {
 			
 			var validator = model.Validate[this.provider.value];
 			if (typeof validator === 'function') {
