@@ -56,5 +56,11 @@ DualbindHandler.prototype = {
 		if (this.provider && typeof this.provider.dispose === 'function') {
 			this.provider.dispose();
 		}
+	},
+	
+	handlers: {
+		attr: {
+			'x-signal' : function(){}
+		}
 	}
 };

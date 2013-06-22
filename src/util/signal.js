@@ -20,7 +20,7 @@ function signal_parse(str, isPiped, defaultType) {
 		type = x.length == 2 ? x[0] : defaultType;
 		signalName = x[x.length == 2 ? 1 : 0];
 		
-		signal = signal_create(signalName, type, isPiped);
+		signal = signal_create(signalName.trim(), type, isPiped);
 		
 		if (signal != null) {
 			set.push(signal);
