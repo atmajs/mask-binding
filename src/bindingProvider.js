@@ -65,25 +65,25 @@ var BindingProvider = (function() {
 		/**
 		 *	Send signal on OBJECT or DOM change
 		 */
-		//if (attr['x-signal']) {
-		//	var signal = signal_parse(attr['x-signal'], null, 'dom')[0];
-		//	
-		//	if (signal) {
-		//			
-		//		if (signal.type === 'dom') {
-		//			this.signal_domChanged = signal.signal;
-		//		}
-		//		
-		//		else if (signal.type === 'object') {
-		//			this.signal_objectChanged = signal.signal;
-		//		}
-		//		
-		//		else {
-		//			console.error('Type is not supported', signal);
-		//		}
-		//	}
-		//	
-		//}
+		if (attr['x-signal']) {
+			var signal = signal_parse(attr['x-signal'], null, 'dom')[0];
+			
+			if (signal) {
+					
+				if (signal.type === 'dom') {
+					this.signal_domChanged = signal.signal;
+				}
+				
+				else if (signal.type === 'object') {
+					this.signal_objectChanged = signal.signal;
+				}
+				
+				else {
+					console.error('Type is not supported', signal);
+				}
+			}
+			
+		}
 		
 		if (attr['x-pipe-signal']) {
 			var signal = signal_parse(attr['x-pipe-signal'], true, 'dom')[0];
@@ -179,28 +179,28 @@ var BindingProvider = (function() {
 	BindingProvider.prototype = {
 		constructor: BindingProvider,
 		
-		handlers: {
-			attr: {
-				'x-signal': function(provider, value){
-					var signal = signal_parse(value, null, 'dom')[0];
-			
-					if (signal) {
-							
-						if (signal.type === 'dom') {
-							provider.signal_domChanged = signal.signal;
-						}
-						
-						else if (signal.type === 'object') {
-							provider.signal_objectChanged = signal.signal;
-						}
-						
-						else {
-							console.error('Type is not supported', signal);
-						}
-					}
-				}
-			}
-		},
+		//////handlers: {
+		//////	attr: {
+		//////		'x-signal': function(provider, value){
+		//////			var signal = signal_parse(value, null, 'dom')[0];
+		//////	
+		//////			if (signal) {
+		//////					
+		//////				if (signal.type === 'dom') {
+		//////					provider.signal_domChanged = signal.signal;
+		//////				}
+		//////				
+		//////				else if (signal.type === 'object') {
+		//////					provider.signal_objectChanged = signal.signal;
+		//////				}
+		//////				
+		//////				else {
+		//////					console.error('Type is not supported', signal);
+		//////				}
+		//////			}
+		//////		}
+		//////	}
+		//////},
 		
 		dispose: function() {
 			expression_unbind(this.expression, this.model, this.binder);

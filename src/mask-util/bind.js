@@ -4,6 +4,18 @@
  */
 
 (function(){
+	
+	function attr_strReplace(attrValue, currentValue, newValue) {
+		if (!attrValue) {
+			return newValue;
+		}
+		
+		if (!currentValue) {
+			return attrValue + ' ' + newValue;
+		}
+		
+		return attrValue.replace(currentValue, newValue);
+	}
 
 	function create_refresher(type, expr, element, currentValue, attrName) {
 
@@ -24,12 +36,12 @@
 					}
 
 					if ('string' === _typeof) {
-						currentValue = element[attrName] = element[attrName].replace(currentValue, value);
+						currentValue = element[attrName] = attr_strReplace(element[attrName], currentValue, value);
 						return;
 					}
 
 					currentAttr = element.getAttribute(attrName);
-					attr = currentAttr ? currentAttr.replace(currentValue, value) : value;
+					attr = attr_strReplace(currentAttr, currentValue, value);
 
 
 					element.setAttribute(attrName, attr);
