@@ -8,11 +8,10 @@ var attr_visible = (function() {
 			}
 			this.refreshing = true;
 
-			var visible = expression_eval(this.attr.visible, this.model, this.cntx, this);
+			var visible = expression_eval(this.expr, this.model, this.cntx, this);
 
-			for(var i = 0, x, length = this.elements.length; i < length; i++){
-				x = this.elements[i];
-				x.style.display = visible ? '' : 'none';
+			for(var i = 0, imax = this.elements.length; i < imax; i++){
+				this.elements[i].style.display = visible ? '' : 'none';
 			}
 
 			this.refreshing = false;
