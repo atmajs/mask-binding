@@ -20,7 +20,7 @@ var attr_use = (function() {
 
 		},
 		dispose: function(){
-			expression_unbind(this.expr, this.originalModel, this.binder);
+			expression_unbind(this.expr, this.originalModel, this, this.binder);
 		}
 	};
 

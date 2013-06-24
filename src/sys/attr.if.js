@@ -29,7 +29,7 @@ var attr_if = (function() {
 
 		},
 		dispose: function(){
-			expression_unbind(this.expr, this.model, this.binder);
+			expression_unbind(this.expr, this.model, this, this.binder);
 			this.onchange = null;
 			this.elements = null;
 		}

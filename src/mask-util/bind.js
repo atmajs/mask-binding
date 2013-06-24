@@ -68,7 +68,7 @@
 
 
 		compo_attachDisposer(controller, function(){
-			expression_unbind(expr, model, binder);
+			expression_unbind(expr, model, controller, binder);
 		});
 
 		return type === 'node' ? element : current;

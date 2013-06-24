@@ -106,7 +106,7 @@ var attr_each = (function() {
 
 		},
 		dispose: function() {
-			expression_unbind(this.expr, this.model, this.refresh);
+			expression_unbind(this.expr, this.model, this, this.refresh);
 		}
 	};
 

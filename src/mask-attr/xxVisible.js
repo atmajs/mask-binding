@@ -9,7 +9,7 @@ mask.registerAttrHandler('xx-visible', function(node, attrValue, model, cntx, el
 	expression_bind(attrValue, model, cntx, controller, binder);
 	
 	compo_attachDisposer(controller, function(){
-		expression_unbind(attrValue, model, cntx, binder);
+		expression_unbind(attrValue, model,  controller, binder);
 	});
 	
 	

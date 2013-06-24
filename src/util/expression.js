@@ -90,7 +90,13 @@ function expression_bind(expr, model, cntx, controller, callback) {
 	return;
 }
 
-function expression_unbind(expr, model, callback) {
+function expression_unbind(expr, model, controller, callback) {
+	
+	if (expr === '.') {
+		arr_removeObserver(model, callback);
+		return;
+	}
+	
 	var vars = expression_varRefs(expr),
 		x, ref;
 
@@ -99,13 +105,53 @@ function expression_unbind(expr, model, callback) {
 	}
 	
 	if (typeof vars === 'string') {
-		obj_removeObserver(model, vars, callback);
+		if (obj_isDefined(model, vars) === true) {
+			obj_removeObserver(model, vars, callback);
+		}
+		
+		if (obj_isDefined(controller, vars)) {
+			obj_removeObserver(controller, vars, callback);
+		}
+		
 		return;
 	}
 
-	for (var i = 0, imax = vars.length; i < imax; i++) {
-		obj_removeObserver(model, vars[i], callback);
+	//for (var i = 0, imax = vars.length; i < imax; i++) {
+	//	obj_removeObserver(model, vars[i], callback);
+	//}
+	
+	var isArray = vars.length != null && typeof vars.splice === 'function',
+		imax = isArray === true ? vars.length : 1,
+		i = 0,
+		x;
+	
+	for (; i < imax; i++) {
+		x = isArray ? vars[i] : vars;
+		if (x == null) {
+			continue;
+		}
+		
+		
+		if (typeof x === 'object') {
+			
+			var obj = expression_eval_origin(x.accessor, model, null, controller);
+			
+			if (obj) {
+				obj_removeObserver(obj, x.ref, callback);
+			}
+			
+			continue;
+		}
+		
+		if (obj_isDefined(model, x)) {
+			obj_removeObserver(model, x, callback);
+		}
+		
+		if (obj_isDefined(controller, x)) {
+			obj_removeObserver(controller, x, callback);
+		}
 	}
+
 }
 
 /**

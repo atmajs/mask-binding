@@ -14,7 +14,7 @@ var attr_log = (function() {
 
 
 		compo_attachDisposer(self, function(){
-			expression_unbind(expr, model, binder);
+			expression_unbind(expr, model, self, binder);
 		});
 
 		log(value);

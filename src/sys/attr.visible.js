@@ -18,7 +18,7 @@ var attr_visible = (function() {
 		},
 
 		dispose: function(){
-			expression_unbind(this.expr, this.model, this.binder);
+			expression_unbind(this.expr, this.model, this, this.binder);
 		}
 	};
 

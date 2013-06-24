@@ -203,7 +203,7 @@ var BindingProvider = (function() {
 		//////},
 		
 		dispose: function() {
-			expression_unbind(this.expression, this.model, this.binder);
+			expression_unbind(this.expression, this.model, this.controller, this.binder);
 		},
 		objectChanged: function(x) {
 			if (this.dismiss-- > 0) {
