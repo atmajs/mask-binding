@@ -136,7 +136,7 @@
 			array = null,
 			string = '',
 			even = true,
-			utility, value, index, key;
+			utility, value, index, key, handler;
 	
 		for (; i < length; i++) {
 			if (even === true) {
@@ -153,15 +153,21 @@
 				if (index === -1) {
 					value = util_getProperty(model, key);
 				} else {
-					utility = index > 0 ? key.substring(0, index).replace(regexpWhitespace, '') : '';
+					utility = index > 0
+						? str_trim(key.substring(0, index))
+						: '';
+						
 					if (utility === '') {
 						utility = 'expression';
 					}
 	
 					key = key.substring(index + 1);
-					if (typeof ModelUtils[utility] === 'function'){
-						value = ModelUtils[utility](key, model, cntx, element, controller, name, type);
-					}
+					handler = custom_Utils[utility];
+					
+					value = fn_isFunction(handler)
+						? handler(key, model, cntx, element, controller, name, type)
+						: handler.process(key, model, cntx, element, controller, name, type);
+						
 				}
 	
 				if (value != null){
@@ -185,7 +191,7 @@
 		return array == null ? string : array;
 	}
 	
-	// source ../src/util/string.js
+	// source ../src/util/template.js
 	function Template(template) {
 		this.template = template;
 		this.index = 0;
@@ -257,6 +263,39 @@
 	
 	};
 	
+	// source ../src/util/string.js
+	function str_trim(str) {
+	
+		var length = str.length,
+			i = 0,
+			j = length - 1,
+			c;
+	
+		for (; i < length; i++) {
+			c = str.charCodeAt(i);
+			if (c < 33) {
+				continue;
+			}
+			break;
+	
+		}
+		
+		for (; j >= i; j--) {
+			c = str.charCodeAt(j);
+			if (c < 33) {
+				continue;
+			}
+			break;
+		}
+	
+		return i === 0 && j === length - 1
+			? str
+			: str.substring(i, j + 1);
+	}
+	// source ../src/util/function.js
+	function fn_isFunction(x) {
+		return typeof x === 'function';
+	}
 	// source ../src/util/condition.js
 	/**
 	 *	ConditionUtil
@@ -1693,21 +1732,21 @@
 	
 	}());
 	
-	// source ../src/extends.js
-	var ModelUtils = {
+	// source ../src/custom.js
+	var custom_Utils = {
 		condition: ConditionUtil.condition,
 		expression: function(value, model, cntx, element, controller){
 			return ExpressionUtil.eval(value, model, cntx, controller);
 		},
 	},
-		CustomAttributes = {
+		custom_Attributes = {
 			'class': null,
 			id: null,
 			style: null,
 			name: null,
 			type: null
 		},
-		CustomTags = {
+		custom_Tags = {
 			// Most common html tags
 			// http://jsperf.com/not-in-vs-null/3
 			div: null,
@@ -1942,7 +1981,14 @@
 					last = 3,
 					index = 0,
 					length = template.length,
-					classNames, token, key, value, next, c, start;
+					classNames,
+					token,
+					key,
+					value,
+					next,
+					c, // charCode
+					start,
+					nextC;
 	
 				var go_tag = 2,
 					state_tag = 3,
@@ -2006,7 +2052,9 @@
 	
 						} else if (last === state_tag) {
 	
-							next = CustomTags[token] != null ? new Component(token, current, CustomTags[token]) : new Node(token, current);
+							next = custom_Tags[token] != null
+								? new Component(token, current, custom_Tags[token])
+								: new Node(token, current);
 	
 							if (current.nodes == null) {
 								current.nodes = [next];
@@ -2128,11 +2176,12 @@
 						}
 	
 						if (start === index) {
-							if (template.charCodeAt(index+1) === 124) {
-								//|
+							nextC = template.charCodeAt(index + 1);
+							if (nextC === 124 || nextC === c) {
+								// | (obsolete) or triple quote
 								isUnescapedBlock = true;
 								start = index + 2;
-								index = nindex = template.indexOf('|' + _char + _char, start);
+								index = nindex = template.indexOf((nextC === 124 ? '|' : _char) + _char + _char, start);
 	
 								if (index === -1) {
 									index = length;
@@ -2304,7 +2353,9 @@
 				interp_code_CLOSE = end.charCodeAt(0);
 				interp_CLOSE = end;
 				interp_START = start.charAt(0);
-			}
+			},
+			
+			ensureTemplateFunction: ensureTemplateFunction
 		};
 	}(Node, TextNode, Fragment, Component));
 	
@@ -2374,6 +2425,12 @@
 				attr['x-compo-id'] = controller.ID;
 			}
 			
+			// ++ insert tag into container before setting attributes, so that in any
+			// custom util parentNode is available. This is for mask.node important
+			// http://jsperf.com/setattribute-before-after-dom-insertion/2
+			if (container != null) {
+				container.appendChild(tag);
+			}
 			
 			
 			for (key in attr) {
@@ -2396,8 +2453,8 @@
 			
 				// null or empty string will not be handled
 				if (value) {
-					if (typeof CustomAttributes[key] === 'function') {
-						CustomAttributes[key](node, value, model, cntx, tag, controller);
+					if (typeof custom_Attributes[key] === 'function') {
+						custom_Attributes[key](node, value, model, cntx, tag, controller, container);
 					} else {
 						tag.setAttribute(key, value);
 					}
@@ -2405,9 +2462,6 @@
 			
 			}
 			
-			if (container != null) {
-				container.appendChild(tag);
-			}
 			
 			container = tag;
 			
@@ -2570,15 +2624,41 @@
 	
 		}
 	
-		if (type === 4 && typeof node.renderEnd === 'function') {
-			/* if (!DEBUG)
-			try{
-			*/
-			node.renderEnd(elements, model, cntx, container);
-			/* if (!DEBUG)
-			} catch(error){ console.error('Custom Tag Handler:', node.tagName, error); }
-			*/
-	
+		if (type === 4) {
+			
+			// use or override custom attr handlers
+			// in Compo.handlers.attr object
+			// but only on a component, not a tag controller
+			if (node.tagName == null) {
+				var attrHandlers = node.handlers && node.handlers.attr,
+					attrFn;
+				for (key in node.attr) {
+					
+					attrFn = null;
+					
+					if (attrHandlers && fn_isFunction(attrHandlers[key])) {
+						attrFn = attrHandlers[key];
+					}
+					
+					if (attrFn == null && fn_isFunction(custom_Attributes[key])) {
+						attrFn = custom_Attributes[key];
+					}
+					
+					if (attrFn != null) {
+						attrFn(node, node.attr[key], model, cntx, elements[0], controller);
+					}
+				}
+			}
+			
+			if (fn_isFunction(node.renderEnd)) {
+				/* if !DEBUG
+				try{
+				*/
+				node.renderEnd(elements, model, cntx, container);
+				/* if !DEBUG
+				} catch(error){ console.error('Custom Tag Handler:', node.tagName, error); }
+				*/
+			}
 		}
 	
 		if (childs != null && childs !== elements){
@@ -2633,6 +2713,11 @@
 						template = cache[template] = Parser.parse(template);
 					}
 				}
+				
+				if (cntx == null) {
+					cntx = {};
+				}
+				
 				return builder_build(template, model, cntx, container, controller);
 			},
 	
@@ -2667,7 +2752,7 @@
 			 *	mask.render(this.nodes, model, container, cntx);
 			 **/
 			registerHandler: function (tagName, TagHandler) {
-				CustomTags[tagName] = TagHandler;
+				custom_Tags[tagName] = TagHandler;
 			},
 			/**
 			 *	mask.getHandler(tagName) -> Function | Object
@@ -2676,7 +2761,9 @@
 			 *	Get Registered Handler
 			 **/
 			getHandler: function (tagName) {
-				return tagName != null ? CustomTags[tagName] : CustomTags;
+				return tagName != null
+					? custom_Tags[tagName]
+					: custom_Tags;
 			},
 	
 	
@@ -2694,17 +2781,24 @@
 			 * Note: Attribute wont be set to an element.
 			 **/
 			registerAttrHandler: function(attrName, Handler){
-				CustomAttributes[attrName] = Handler;
+				custom_Attributes[attrName] = Handler;
+			},
+			
+			getAttrHandler: function(attrName){
+				return attrName != null
+					? custom_Attributes[attrName]
+					: custom_Attributes;
 			},
 			/**
-			 *	mask.registerUtility(utilName, fn) -> void
+			 *	mask.registerUtil(utilName, mix) -> void
 			 * - utilName (String): name of the utility
-			 * - fn (Function): util handler
+			 * - mix (Function, Object): Util Handler
 			 *
-			 *	Register Utility Function. Template Example: '~[myUtil: value]'
-			 *		utility interface:
+			 *	Register Util Handler. Template Example: '~[myUtil: value]'
+			 *
+			 *	Function interface:
 			 *	```
-			 *	function(value, model, type, cntx, element, name);
+			 *	function(expr, model, cntx, element, controller, attrName, type);
 			 *	```
 			 *
 			 *	- value (String): string from interpolation part after util definition
@@ -2714,9 +2808,58 @@
 			 *	- element (HTMLNode): current html node
 			 *	- name (String): If interpolation is in node attribute, then this will contain attribute name
 			 *
+			 *  Object interface:
+			 *  ```
+			 *  {
+			 *  	nodeRenderStart: function(expr, model, cntx, element, controller){}
+			 *  	node: function(expr, model, cntx, element, controller){}
+			 *
+			 *  	attrRenderStart: function(expr, model, cntx, element, controller, attrName){}
+			 *  	attr: function(expr, model, cntx, element, controller, attrName){}
+			 *  }
+			 *  ```
+			 *
+			 *	This diff nodeRenderStart/node is needed to seperate util logic.
+			 *	Mask in node.js will call only node-/attrRenderStart,
+			 *  
 			 **/
+			
+			registerUtil: function(utilName, mix){
+				if (typeof mix === 'function') {
+					custom_Utils[utilName] = mix;
+					return;
+				}
+				
+				if (typeof mix.process !== 'function') {
+					mix.process = function(expr, model, cntx, element, controller, attrName, type){
+						if ('node' === type) {
+							
+							this.nodeRenderStart(expr, model, cntx, element, controller);
+							return this.node(expr, model, cntx, element, controller);
+						}
+						
+						// asume 'attr'
+						
+						this.attrRenderStart(expr, model, cntx, element, controller, attrName);
+						return this.attr(expr, model, cntx, element, controller, attrName);
+					};
+				
+				}
+				
+				custom_Utils[utilName] = mix;
+			},
+			
 			registerUtility: function (utilityName, fn) {
-				ModelUtils[utilityName] = fn;
+				console.log('@registerUtility - obsolete - use registerUtil(utilName, mix)');
+				
+				this.registerUtility = this.registerUtil;
+				this.registerUtil(utilityName, fn);
+			},
+			
+			getUtility: function(util){
+				return util != null
+					? custom_Utils[util]
+					: custom_Utils;
 			},
 			////// time for remove
 			//////serialize: function (template) {
@@ -2799,7 +2942,9 @@
 				 *	mask.render('span > ~[.]', 'Some string') // -> <span>Some string</span>
 				 *	```
 				 **/
-				getProperty: util_getProperty
+				getProperty: util_getProperty,
+				
+				ensureTmplFn: Parser.ensureTemplateFunction
 			},
 			Dom: Dom,
 			plugin: function(source){
@@ -3016,6 +3161,10 @@
 			 *	- settings (Number | Object) - Indention Number (0 - for minification)
 			 **/
 			return function(input, settings) {
+				if (input == null) {
+					return '';
+				}
+				
 				if (typeof input === 'string') {
 					input = mask.parse(input);
 				}
@@ -3053,7 +3202,8 @@
 				'if': null,
 				'else': null,
 				'each': null,
-				'log': null
+				'log': null,
+				'visible': null
 			};
 		}
 	
@@ -3071,6 +3221,14 @@
 	
 				if (attr['debugger'] != null) {
 					debugger;
+					return;
+				}
+				
+				if (attr['visible'] != null) {
+					var state = ExpressionUtil.eval(attr.visible, model, cntx, this.parent);
+					if (!state) {
+						this.nodes = null;
+					}
 					return;
 				}
 	
@@ -3128,7 +3286,8 @@
 				Compo.ensureTemplate(compo);
 			}
 	
-			var array = util_getProperty(model, compo.attr.foreach || compo.attr.each),
+			var prop = compo.attr.foreach || compo.attr.each,
+				array = util_getProperty(model, prop),
 				nodes = compo.nodes,
 				item = null,
 				indexAttr = compo.attr.index || 'index';
@@ -3136,8 +3295,19 @@
 			compo.nodes = [];
 			compo.template = nodes;
 			compo.container = container;
+			
+			if (array == null) {
+				var parent = compo;
+				while (parent != null && array == null) {
+					array = util_getProperty(parent, prop);
+					parent = parent.parent;
+				}
+			}
 	
 			if (array == null || typeof array !== 'object' || array.length == null){
+				// if DEBUG
+				console.warn('List Model not exists', prop);
+				// endif
 				return;
 			}
 	
@@ -3301,7 +3471,16 @@
 		// source ../src/scope-vars.js
 		var domLib = global.jQuery || global.Zepto || global.$,
 			Dom = mask.Dom,
-			__array_slice = Array.prototype.slice;
+			__array_slice = Array.prototype.slice,
+			
+			_mask_ensureTmplFnOrig = mask.Utils.ensureTmplFn;
+		
+		function _mask_ensureTmplFn(value) {
+			if (typeof value !== 'string') {
+				return value;
+			}
+			return _mask_ensureTmplFnOrig(value);
+		}
 		
 		if (document != null && domLib == null){
 			console.warn('jQuery / Zepto etc. was not loaded before compo.js, please use Compo.config.setDOMLibrary to define dom engine');
@@ -3434,6 +3613,13 @@
 		
 		// source ../src/util/dom.js
 		function dom_addEventListener(element, event, listener) {
+			
+			// allows custom events - in x-signal, for example
+			if (domLib != null) {
+				domLib(element).on(event, listener);
+				return;
+			}
+			
 			if (element.addEventListener != null) {
 				element.addEventListener(event, listener, false);
 				return;
@@ -3868,20 +4054,30 @@
 					controller = {};
 				}
 		
+				if (controller.attr != null) {
+					
+					for (var key in controller.attr) {
+						controller.attr[key] = _mask_ensureTmplFn(controller.attr[key]);
+					}
+					
+				}
+				
+				var slots = controller.slots;
+				if (slots != null) {
+					for (var key in slots) {
+						if (typeof slots[key] === 'string'){
+							//if DEBUG
+							typeof controller[slots[key]] !== 'function' && console.error('Not a Function @Slot.',slots[key]);
+							// endif
+							slots[key] = controller[slots[key]];
+						}
+					}
+				}
+				
 				if (controller.hasOwnProperty('constructor')){
 					klass = controller.constructor;
 				}
 		
-				//if (controller.hasOwnProperty('compos') === true) {
-				//	var constructor = klass,
-				//		compos = controller.compos;
-				//	klass = function CompoBase(){
-				//		this.compos = obj_copy(compos);
-				//		if (typeof constructor === 'function') {
-				//			constructor.call(this);
-				//		}
-				//	};
-				//}
 		
 				klass = compo_createConstructor(klass, controller);
 		
@@ -3981,25 +4177,36 @@
 			}
 			
 			
-			function compo_createConstructor(current, proto) {
+			function compo_createConstructor(ctor, proto) {
 				var compos = proto.compos,
-					pipes = proto.pipes;
-				if (compos == null && pipes == null) {
-					return current;
+					pipes = proto.pipes,
+					attr = proto.attr;
+					
+				if (compos == null && pipes == null && proto.attr == null) {
+					return ctor;
 				}
 			
+				/* extend compos / attr to keep
+				 * original prototyped values untouched
+				 */
 				return function CompoBase(){
 			
 					if (compos != null) {
-						this.compos = obj_copy(compos);
+						// use this.compos instead of compos from upper scope
+						// : in case compos from proto was extended after
+						this.compos = obj_copy(this.compos);
 					}
 			
 					if (pipes != null) {
 						Pipes.addController(this);
 					}
+					
+					if (attr != null) {
+						this.attr = obj_copy(this.attr);
+					}
 			
-					if (typeof current === 'function') {
-						current.call(this);
+					if (typeof ctor === 'function') {
+						ctor.call(this);
 					}
 				};
 			}
@@ -4057,6 +4264,8 @@
 				},
 			
 				initialize: function(compo, model, cntx, container, parent) {
+					
+					var compoName;
 			
 					if (container == null){
 						if (cntx && cntx.nodeType != null){
@@ -4069,7 +4278,9 @@
 					}
 			
 					if (typeof compo === 'string'){
-						compo = mask.getHandler(compo);
+						compoName = compo;
+						
+						compo = mask.getHandler(compoName);
 						if (!compo){
 							console.error('Compo not found:', compo);
 						}
@@ -4077,7 +4288,8 @@
 			
 					var node = {
 						controller: compo,
-						type: Dom.COMPONENT
+						type: Dom.COMPONENT,
+						tagName: compoName
 					};
 			
 					if (parent == null && container != null){
@@ -4094,7 +4306,6 @@
 					if (container != null){
 						container.appendChild(dom);
 			
-						//- Compo.shots.emit(instance, 'DOMInsert');
 						Compo.signal.emitIn(instance, 'domInsert');
 					}
 			
@@ -4182,12 +4393,18 @@
 		
 			var Proto = {
 				type: Dom.CONTROLLER,
+				
 				tagName: null,
 				compoName: null,
 				nodes: null,
 				attr: null,
+				
 				slots: null,
 				pipes: null,
+				
+				compos: null,
+				events: null,
+				
 				onRenderStart: null,
 				onRenderEnd: null,
 				render: null,
@@ -4238,13 +4455,9 @@
 					}
 				},
 				appendTo: function(x) {
-					var element;
-		
-					if (typeof x === 'string') {
-						element = document.querySelector(x);
-					} else {
-						element = x;
-					}
+					
+					var element = typeof x === 'string' ? document.querySelector(x) : x;
+					
 		
 					if (element == null) {
 						console.warn('Compo.appendTo: parent is undefined. Args:', arguments);
@@ -4256,7 +4469,6 @@
 					}
 		
 					this.emitIn('domInsert');
-					//- Shots.emit(this, 'DOMInsert');
 					return this;
 				},
 				append: function(template, model, selector) {
@@ -4424,7 +4636,7 @@
 					element.setAttribute('data-signals', signals);
 				}
 		
-			});
+			}, 'client');
 		
 			// @param sender - event if sent from DOM Event or CONTROLLER instance
 			function _fire(controller, slot, sender, args, direction) {
@@ -4433,20 +4645,30 @@
 					return false;
 				}
 				
-				var found = false;
+				var found = false,
+					fn = controller.slots != null && controller.slots[slot];
+					
+				if (typeof fn === 'string') {
+					fn = controller[fn];
+				}
 		
-				if (controller.slots != null && typeof controller.slots[slot] === 'function') {
+				if (typeof fn === 'function') {
 					found = true;
 					
-					var fn = controller.slots[slot],
-						isDisabled = controller.slots.__disabled != null && controller.slots.__disabled[slot];
+					var isDisabled = controller.slots.__disabled != null && controller.slots.__disabled[slot];
 		
 					if (isDisabled !== true) {
 		
-						var result = args == null ? fn.call(controller, sender) : fn.apply(controller, [sender].concat(args));
+						var result = args == null
+								? fn.call(controller, sender)
+								: fn.apply(controller, [sender].concat(args));
 		
 						if (result === false) {
 							return true;
+						}
+						
+						if (result != null && typeof result === 'object' && result.length != null) {
+							args = result;
 						}
 					}
 				}
@@ -4515,7 +4737,9 @@
 				}
 		
 				return function(event) {
-					_fire(controller, slot, event, null, -1);
+					var args = arguments.length > 1 ? __array_slice.call(arguments, 1) : null;
+					
+					_fire(controller, slot, event, args, -1);
 				};
 			}
 		
@@ -4719,7 +4943,16 @@
 		var Dom = mask.Dom,
 			_mask_render = mask.render,
 			_mask_parse = mask.parse,
+			_mask_ensureTmplFnOrig = mask.Utils.ensureTmplFn,
 			_signal_emitIn = (global.Compo || mask.Compo || Compo).signal.emitIn;
+			
+		
+		function _mask_ensureTmplFn(value) {
+			if (typeof value !== 'string') {
+				return value;
+			}
+			return _mask_ensureTmplFnOrig(value);
+		}
 		
 		
 	
@@ -4762,6 +4995,9 @@
 			array.splice(index, 1);
 		}
 		
+		function arr_isArray(x) {
+			return x != null && typeof x === 'object' && x.length != null && typeof x.slice === 'function';
+		}
 		
 		var arr_unique = (function() {
 		
@@ -5177,7 +5413,7 @@
 					mix = _mask_parse(mix);
 				}
 		
-				if (mix instanceof Array) {
+				if (arr_isArray(mix)) {
 					for (i = 0, length = mix.length; i < length; i++) {
 						this.add(mix[i]);
 					}
@@ -5468,11 +5704,11 @@
 								}
 		
 								for (var x in key) {
-									node.attr[x] = key[x];
+									node.attr[x] = _mask_ensureTmplFn(key[x]);
 								}
 		
 							} else if (args === 2) {
-								node.attr[key] = value;
+								node.attr[key] = _mask_ensureTmplFn(value);
 							}
 							break;
 						case 'removeAttr':
@@ -5651,9 +5887,9 @@
 		
 		// source ../src/jmask/traverse.js
 		util_extend(jMask.prototype, {
-			each: function(fn) {
-				for (var i = 0, length = this.length; i < length; i++) {
-					fn(this[i], i);
+			each: function(fn, cntx) {
+				for (var i = 0; i < this.length; i++) {
+					fn.call(cntx || this, this[i], i)
 				}
 				return this;
 			},
@@ -5674,13 +5910,13 @@
 			jMask.prototype[method] = function(selector) {
 				var result = [],
 					matcher = selector == null ? null : selector_parse(selector, this.type, method === 'closest' ? 'up' : 'down'),
-					i, x, length;
+					i, x;
 		
 				switch (method) {
 				case 'filter':
 					return jMask(jmask_filter(this, matcher));
 				case 'children':
-					for (i = 0, length = this.length; i < length; i++) {
+					for (i = 0; i < this.length; i++) {
 						x = this[i];
 						if (x.nodes == null) {
 							continue;
@@ -5689,7 +5925,7 @@
 					}
 					break;
 				case 'parent':
-					for (i = 0, length = this.length; i < length; i++) {
+					for (i = 0; i < this.length; i++) {
 						x = this[i].parent;
 						if (!x || x.type === Dom.FRAGMENT || (matcher && selector_match(x, matcher))) {
 							continue;
@@ -5703,16 +5939,16 @@
 					if (matcher == null) {
 						break;
 					}
-					for (i = 0, length = this.length; i < length; i++) {
+					for (i = 0; i < this.length; i++) {
 						jmask_find(this[i][matcher.nextKey], matcher, result);
 					}
 					break;
 				case 'first':
 				case 'last':
 					var index;
-					for (i = 0, length = this.length; i < length; i++) {
+					for (i = 0; i < this.length; i++) {
 		
-						index = method === 'first' ? i : length - i - 1;
+						index = method === 'first' ? i : this.length - i - 1;
 						x = this[index];
 						if (matcher == null || selector_match(x, matcher)) {
 							result[0] = x;
@@ -5952,7 +6188,7 @@
 		
 			var currentValue = obj_getProperty(obj, property);
 			if (arguments.length === 2) {
-				obj_setProperty(obj, property, currentValue);
+				//-?-obj_setProperty(obj, property, currentValue);
 				delete obj.__observers[property];
 				return;
 			}
@@ -6033,12 +6269,17 @@
 			if (arr.__observers == null) {
 				Object.defineProperty(arr, '__observers', {
 					value: {
-						length: 0
+						__dirty: null
 					},
 					enumerable: false
 				});
 			}
-		
+			
+			var observers = arr.__observers.__array;
+			if (observers == null) {
+				observers = arr.__observers.__array = [];
+			}
+			
 			var i = 0,
 				fns = ['push', 'unshift', 'splice', 'pop', 'shift', 'reverse', 'sort'],
 				length = fns.length,
@@ -6049,22 +6290,22 @@
 				arr[method] = _array_createWrapper(arr, arr[method], method);
 			}
 		
-			var observers = arr.__observers;
 			observers[observers.length++] = callback;
 		}
 		
 		function arr_removeObserver(arr, callback) {
-			var obs = arr.__observers;
+			var obs = arr.__observers && arr.__observers.__array;
 			if (obs != null) {
-				for (var i = 0, imax = arr.length; i < imax; i++) {
-					if (arr[i] === callback) {
-						imax--;
-						arr.length--;
-						arr[i] = null;
+				for (var i = 0, imax = obs.length; i < imax; i++) {
+					if (obs[i] === callback) {
+						obs[i] = null;
 		
 						for (var j = i; j < imax; j++) {
-							arr[j] = arr[j + 1];
+							obs[j] = obs[j + 1];
 						}
+						
+						imax--;
+						obs.length--;
 					}
 				}
 			}
@@ -6077,29 +6318,31 @@
 		}
 		
 		function arr_unlockObservers(arr) {
-			var obs = arr.__observers;
+			var list = arr.__observers,
+				obs = list && list.__array;
+				
 			if (obs != null) {
-				if (obs.__dirty === true) {
+				if (list.__dirty === true) {
 					for (var i = 0, x, imax = obs.length; i < imax; i++) {
 						x = obs[i];
 						if (typeof x === 'function') {
 							x(arr);
 						}
 					}
-					obs.__dirty = null;
+					list.__dirty = null;
 				}
 			}
 		}
 		
 		function _array_createWrapper(array, originalFn, overridenFn) {
 			return function() {
-				_array_methodWrapper(array, originalFn, overridenFn, __array_slice.call(arguments));
+				return _array_methodWrapper(array, originalFn, overridenFn, __array_slice.call(arguments));
 			};
 		}
 		
 		
 		function _array_methodWrapper(array, original, method, args) {
-			var callbacks = array.__observers,
+			var callbacks = array.__observers && array.__observers.__array,
 				result = original.apply(array, args);
 		
 		
@@ -6107,8 +6350,8 @@
 				return result;
 			}
 		
-			if (callbacks.__dirty != null) {
-				callbacks.__dirty = true;
+			if (array.__observers.__dirty != null) {
+				array.__observers.__dirty = true;
 				return result;
 			}
 		
@@ -6313,6 +6556,11 @@
 		var Expression = mask.Utils.Expression,
 			expression_eval_origin = Expression.eval,
 			expression_eval = function(expr, model, cntx, controller){
+				
+				if (expr === '.') {
+					return model;
+				}
+				
 				var value = expression_eval_origin(expr, model, cntx, controller);
 		
 				return value == null ? '' : value;
@@ -6322,6 +6570,16 @@
 		
 		
 		function expression_bind(expr, model, cntx, controller, callback) {
+			
+			if (expr === '.') {
+				
+				if (arr_isArray(model)) {
+					arr_addObserver(model, callback);
+				}
+				
+				return;
+			}
+			
 			var ast = expression_parse(expr),
 				vars = expression_varRefs(ast),
 				obj, ref;
@@ -6387,24 +6645,68 @@
 			return;
 		}
 		
-		function expression_unbind(expr, model, callback) {
-			var ast = expression_parse(expr),
-				vars = expression_varRefs(ast),
+		function expression_unbind(expr, model, controller, callback) {
+			
+			if (expr === '.') {
+				arr_removeObserver(model, callback);
+				return;
+			}
+			
+			var vars = expression_varRefs(expr),
 				x, ref;
 		
 			if (vars == null) {
 				return;
 			}
-		
-		
+			
 			if (typeof vars === 'string') {
-				obj_removeObserver(model, vars, callback);
+				if (obj_isDefined(model, vars) === true) {
+					obj_removeObserver(model, vars, callback);
+				}
+				
+				if (obj_isDefined(controller, vars)) {
+					obj_removeObserver(controller, vars, callback);
+				}
+				
 				return;
 			}
 		
-			for (var i = 0, length = vars.length; i < length; i++) {
-				obj_removeObserver(model, vars[i], callback);
+			//for (var i = 0, imax = vars.length; i < imax; i++) {
+			//	obj_removeObserver(model, vars[i], callback);
+			//}
+			
+			var isArray = vars.length != null && typeof vars.splice === 'function',
+				imax = isArray === true ? vars.length : 1,
+				i = 0,
+				x;
+			
+			for (; i < imax; i++) {
+				x = isArray ? vars[i] : vars;
+				if (x == null) {
+					continue;
+				}
+				
+				
+				if (typeof x === 'object') {
+					
+					var obj = expression_eval_origin(x.accessor, model, null, controller);
+					
+					if (obj) {
+						obj_removeObserver(obj, x.ref, callback);
+					}
+					
+					continue;
+				}
+				
+				if (obj_isDefined(model, x)) {
+					obj_removeObserver(model, x, callback);
+				}
+				
+				if (obj_isDefined(controller, x)) {
+					obj_removeObserver(controller, x, callback);
+				}
 			}
+		
 		}
 		
 		/**
@@ -6435,6 +6737,8 @@
 			};
 		}
 		
+		
+		
 		// source ../src/util/signal.js
 		function signal_parse(str, isPiped, defaultType) {
 			var signals = str.split(';'),
@@ -6458,7 +6762,7 @@
 				type = x.length == 2 ? x[0] : defaultType;
 				signalName = x[x.length == 2 ? 1 : 0];
 				
-				signal = signal_create(signalName, type, isPiped);
+				signal = signal_create(signalName.trim(), type, isPiped);
 				
 				if (signal != null) {
 					set.push(signal);
@@ -6555,6 +6859,9 @@
 					}
 				}
 		
+				/**
+				 *	Send signal on OBJECT or DOM change
+				 */
 				if (attr['x-signal']) {
 					var signal = signal_parse(attr['x-signal'], null, 'dom')[0];
 					
@@ -6592,8 +6899,28 @@
 					}
 				}
 				
-				if (attr['x-pipe-slot']) {
-					var str = attr['x-pipe-slot'],
+				
+				if (attr['dom-slot']) {
+					this.slots = {};
+					// @hack - place dualb. provider on the way of a signal
+					// 
+					var parent = controller.parent,
+						newparent = parent.parent;
+						
+					parent.parent = this;
+					this.parent = newparent;
+					
+					this.slots[attr['dom-slot']] = function(sender, value){
+						this.domChanged(sender, value);
+					}
+				}
+				
+				/*
+				 *  @obsolete: attr name : 'x-pipe-slot'
+				 */
+				var pipeSlot = attr['object-pipe-slot'] || attr['x-pipe-slot'];
+				if (pipeSlot) {
+					var str = pipeSlot,
 						index = str.indexOf('.'),
 						pipeName = str.substring(0, index),
 						signal = str.substring(index + 1);
@@ -6648,8 +6975,32 @@
 		
 			BindingProvider.prototype = {
 				constructor: BindingProvider,
+				
+				//////handlers: {
+				//////	attr: {
+				//////		'x-signal': function(provider, value){
+				//////			var signal = signal_parse(value, null, 'dom')[0];
+				//////	
+				//////			if (signal) {
+				//////					
+				//////				if (signal.type === 'dom') {
+				//////					provider.signal_domChanged = signal.signal;
+				//////				}
+				//////				
+				//////				else if (signal.type === 'object') {
+				//////					provider.signal_objectChanged = signal.signal;
+				//////				}
+				//////				
+				//////				else {
+				//////					console.error('Type is not supported', signal);
+				//////				}
+				//////			}
+				//////		}
+				//////	}
+				//////},
+				
 				dispose: function() {
-					expression_unbind(this.expression, this.model, this.binder);
+					expression_unbind(this.expression, this.model, this.controller, this.binder);
 				},
 				objectChanged: function(x) {
 					if (this.dismiss-- > 0) {
@@ -6681,7 +7032,7 @@
 		
 					this.locked = false;
 				},
-				domChanged: function() {
+				domChanged: function(event, value) {
 		
 					if (this.locked === true) {
 						console.warn('Concurance change detected', this);
@@ -6689,7 +7040,7 @@
 					}
 					this.locked = true;
 		
-					var x = this.domWay.get(this),
+					var x = value || this.domWay.get(this),
 						valid = true;
 		
 					if (this.node.validations) {
@@ -6814,11 +7165,18 @@
 				expression_bind(expr, model, provider.cntx, provider.node, provider.binder);
 		
 				if (provider.bindingType === 'dual') {
-					var element = provider.element,
-						eventType = provider.node.attr.changeEvent || 'change',
-						onDomChange = provider.domChanged.bind(provider);
-		
-					dom_addEventListener(element, eventType, onDomChange);
+					var attr = provider.node.attr;
+					
+					if (!attr['change-slot'] && !attr['change-pipe-event']) {
+						var element = provider.element,
+							/*
+							 * @obsolete: attr name : 'changeEvent'
+							 */
+							eventType = attr['change-event'] || attr.changeEvent || 'change',
+							onDomChange = provider.domChanged.bind(provider);
+			
+						dom_addEventListener(element, eventType, onDomChange);
+					}
 				}
 		
 				// trigger update
@@ -6951,10 +7309,32 @@
 				}
 		
 				this.provider = BindingProvider.create(model, container, this);
+				
+				if (typeof model.Validate === 'object' && !this.attr['no-validation']) {
+					
+					var validator = model.Validate[this.provider.value];
+					if (typeof validator === 'function') {
+					
+						validator = mask
+							.getHandler(':validate')
+							.createCustom(container, validator);
+						
+					
+						(this.validations || (this.validations = []))
+							.push(validator);
+						
+					}
+				}
 			},
 			dispose: function(){
 				if (this.provider && typeof this.provider.dispose === 'function') {
 					this.provider.dispose();
+				}
+			},
+			
+			handlers: {
+				attr: {
+					'x-signal' : function(){}
 				}
 			}
 		};
@@ -6979,7 +7359,14 @@
 				constructor: Validate,
 				renderStart: function(model, cntx, container) {
 					this.element = container;
-					this.model = model;
+					
+					if (this.attr.value) {
+						var validatorFn = Validate.resolveFromModel(model, this.attr.value);
+							
+						if (validatorFn) {
+							this.validators = [new Validator(validatorFn)];
+						}
+					}
 				},
 				/**
 				 * @param input - {control specific} - value to validate
@@ -6993,47 +7380,97 @@
 						element = this.element;
 					}
 		
-					if (this.attr.getter) {
-						input = obj_getProperty({
-							node: this,
-							element: element
-						}, this.attr.getter);
+					if (this.attr) {
+						
+						if (input == null && this.attr.getter) {
+							input = obj_getProperty({
+								node: this,
+								element: element
+							}, this.attr.getter);
+						}
+						
+						if (input == null && this.attr.value) {
+							input = obj_getProperty(this.model, this.attr.value);
+						}
 					}
+					
+					
 		
 					if (this.validators == null) {
 						this.initValidators();
 					}
 		
-					for (var i = 0, x, length = this.validators.length; i < length; i++) {
-						x = this.validators[i];
-						if (x.validate(this, input) === false) {
-							notifyInvalid(element, this.message, oncancel);
+					for (var i = 0, x, imax = this.validators.length; i < imax; i++) {
+						x = this.validators[i].validate(input)
+						
+						if (x && !this.attr.silent) {
+							this.notifyInvalid(element, x, oncancel);
 							return false;
 						}
 					}
 		
-					makeValid(element);
+					this.makeValid(element);
 					return true;
+				},
+				notifyInvalid: function(element, message, oncancel){
+					return notifyInvalid(element, message, oncancel);
+				},
+				makeValid: function(element){
+					return makeValid(element);
 				},
 				initValidators: function() {
 					this.validators = [];
-					this.message = this.attr.message;
-					delete this.attr.message;
-		
+					
 					for (var key in this.attr) {
+						
+						
+						switch (key) {
+							case 'message':
+							case 'value':
+							case 'getter':
+								continue;
+						}
+						
 						if (key in Validators === false) {
 							console.error('Unknown Validator:', key, this);
 							continue;
 						}
-						var Validator = Validators[key];
-						if (typeof Validator === 'function') {
-							Validator = new Validator(this);
-						}
-						this.validators.push(Validator);
+						
+						var x = Validators[key];
+						
+						this.validators.push(new Validator(x(this.attr[key], this), this.attr.message));
 					}
 				}
 			};
 		
+			
+			Validate.resolveFromModel = function(model, property){
+				return obj_getProperty(model.Validate, property);
+			};
+			
+			Validate.createCustom = function(element, validator){
+				var validate = new Validate();
+				
+				validate.renderStart(null, element);
+				validate.validators = [new Validator(validator)];
+				
+				return validate;
+			};
+			
+			
+			function Validator(fn, defaultMessage) {
+				this.fn = fn;
+				this.message = defaultMessage;
+			}
+			Validator.prototype.validate = function(value){
+				var result = this.fn(value);
+				
+				if (result === false) {
+					return this.message || ('Invalid - ' + value);
+				}
+				return result;
+			};
+			
 		
 			function notifyInvalid(element, message, oncancel) {
 				console.warn('Validate Notification:', element, message);
@@ -7046,7 +7483,7 @@
 						.insertAfter(element);
 				}
 		
-				next
+				return next
 					.children('button')
 					.off()
 					.on('click', function() {
@@ -7061,35 +7498,78 @@
 			}
 		
 			function makeValid(element) {
-				domLib(element).next('.' + class_INVALID).hide();
+				return domLib(element).next('.' + class_INVALID).hide();
 			}
 		
-			var Validators = {
-				match: {
-					validate: function(node, str) {
-						return new RegExp(node.attr.match).test(str);
+			mask.registerHandler(':validate:message', Compo({
+				template: 'div.' + class_INVALID + ' { span > "~[bind:message]" button > "~[cancel]" }',
+				
+				onRenderStart: function(model){
+					if (typeof model === 'string') {
+						model = {
+							message: model
+						};
 					}
+					
+					if (!model.cancel) {
+						model.cancel = 'cancel';
+					}
+					
+					this.model = model;
 				},
-				unmatch: {
-					validate: function(node, str) {
-						return !(new RegExp(node.attr.unmatch)).test(str);
-					}
+				compos: {
+					button: '$: button',
 				},
-				minLength: {
-					validate: function(node, str) {
-						return str.length >= parseInt(node.attr.minLength, 10);
-					}
+				show: function(message, oncancel){
+					var that = this;
+					
+					this.model.message = message;
+					this.compos.button.off().on(function(){
+						that.hide();
+						oncancel && oncancel();
+						
+					});
+					
+					this.$.show();
 				},
-				maxLength: {
-					validate: function(node, str) {
-						return str.length <= parseInt(node.attr.maxLength, 10);
-					}
-				},
-				check: {
-					validate: function(node, str){
-						return expression_eval('x' + node.attr.check, node.model, {x: str}, node);
-					}
+				hide: function(){
+					this.$.hide();
 				}
+			}));
+			
+			
+			var Validators = {
+				match: function(match) {
+					
+					return function(str){
+						return new RegExp(match).test(str);
+					};
+				},
+				unmatch:function(unmatch) {
+					
+					return function(str){
+						return !(new RegExp(unmatch).test(str));
+					};
+				},
+				minLength: function(min) {
+					
+					return function(str){
+						return str.length >= parseInt(min, 10);
+					};
+				},
+				maxLength: function(max) {
+					
+					return function(str){
+						return str.length <= parseInt(max, 10);
+					};
+				},
+				check: function(condition, node){
+					
+					return function(str){
+						return expression_eval('x' + condition, node.model, {x: str}, node);
+					};
+				}
+				
 		
 			};
 		
@@ -7149,6 +7629,18 @@
 		 */
 		
 		(function(){
+			
+			function attr_strReplace(attrValue, currentValue, newValue) {
+				if (!attrValue) {
+					return newValue;
+				}
+				
+				if (!currentValue) {
+					return attrValue + ' ' + newValue;
+				}
+				
+				return attrValue.replace(currentValue, newValue);
+			}
 		
 			function create_refresher(type, expr, element, currentValue, attrName) {
 		
@@ -7169,12 +7661,12 @@
 							}
 		
 							if ('string' === _typeof) {
-								currentValue = element[attrName] = element[attrName].replace(currentValue, value);
+								currentValue = element[attrName] = attr_strReplace(element[attrName], currentValue, value);
 								return;
 							}
 		
 							currentAttr = element.getAttribute(attrName);
-							attr = currentAttr ? currentAttr.replace(currentValue, value) : value;
+							attr = attr_strReplace(currentAttr, currentValue, value);
 		
 		
 							element.setAttribute(attrName, attr);
@@ -7201,7 +7693,7 @@
 		
 		
 				compo_attachDisposer(controller, function(){
-					expression_unbind(expr, model, binder);
+					expression_unbind(expr, model, controller, binder);
 				});
 		
 				return type === 'node' ? element : current;
@@ -7210,6 +7702,29 @@
 		
 		}());
 		
+		
+		// source ../src/mask-attr/xxVisible.js
+		
+		
+		mask.registerAttrHandler('xx-visible', function(node, attrValue, model, cntx, element, controller) {
+			
+			var binder = expression_createBinder(attrValue, model, cntx, controller, function(value){
+				element.style.display = value ? '' : 'none';
+			});
+			
+			expression_bind(attrValue, model, cntx, controller, binder);
+			
+			compo_attachDisposer(controller, function(){
+				expression_unbind(attrValue, model,  controller, binder);
+			});
+			
+			
+			
+			if (!expression_eval(attrValue, model, cntx, controller)) {
+				
+				element.style.display = 'none';
+			}
+		});
 	
 		// source ../src/sys/sys.js
 		(function(mask) {
@@ -7251,7 +7766,7 @@
 			
 					},
 					dispose: function(){
-						expression_unbind(this.expr, this.originalModel, this.binder);
+						expression_unbind(this.expr, this.originalModel, this, this.binder);
 					}
 				};
 			
@@ -7295,7 +7810,7 @@
 			
 			
 					compo_attachDisposer(self, function(){
-						expression_unbind(expr, model, binder);
+						expression_unbind(expr, model, self, binder);
 					});
 			
 					log(value);
@@ -7335,7 +7850,7 @@
 			
 					},
 					dispose: function(){
-						expression_unbind(this.expr, this.model, this.binder);
+						expression_unbind(this.expr, this.model, this, this.binder);
 						this.onchange = null;
 						this.elements = null;
 					}
@@ -7664,7 +8179,7 @@
 			
 					},
 					dispose: function() {
-						expression_unbind(this.expr, this.model, this.refresh);
+						expression_unbind(this.expr, this.model, this, this.refresh);
 					}
 				};
 			
@@ -7713,18 +8228,17 @@
 						}
 						this.refreshing = true;
 			
-						var visible = expression_eval(this.attr.visible, this.model, this.cntx, this);
+						var visible = expression_eval(this.expr, this.model, this.cntx, this);
 			
-						for(var i = 0, x, length = this.elements.length; i < length; i++){
-							x = this.elements[i];
-							x.style.display = visible ? '' : 'none';
+						for(var i = 0, imax = this.elements.length; i < imax; i++){
+							this.elements[i].style.display = visible ? '' : 'none';
 						}
 			
 						this.refreshing = false;
 					},
 			
 					dispose: function(){
-						expression_unbind(this.expr, this.model, this.binder);
+						expression_unbind(this.expr, this.model, this, this.binder);
 					}
 				};
 			

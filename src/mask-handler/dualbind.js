@@ -23,6 +23,10 @@ mask.registerHandler(':dualbind', DualbindHandler);
 
 DualbindHandler.prototype = {
 	constructor: DualbindHandler,
+	renderStart: function(model, cntx, container){
+		
+		this.provider = BindingProvider.create(model, container, this);
+	},
 	renderEnd: function(elements, model, cntx, container) {
 		if (this.components) {
 			for (var i = 0, x, length = this.components.length; i < length; i++) {
@@ -34,8 +38,6 @@ DualbindHandler.prototype = {
 			}
 		}
 
-		this.provider = BindingProvider.create(model, container, this);
-		
 		if (typeof model.Validate === 'object' && !this.attr['no-validation']) {
 			
 			var validator = model.Validate[this.provider.value];

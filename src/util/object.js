@@ -202,7 +202,7 @@ function obj_removeObserver(obj, property, callback) {
 
 	var currentValue = obj_getProperty(obj, property);
 	if (arguments.length === 2) {
-		//-?-obj_setProperty(obj, property, currentValue);
+		
 		delete obj.__observers[property];
 		return;
 	}
@@ -230,6 +230,10 @@ function obj_extend(obj, source) {
 
 
 function obj_isDefined(obj, path) {
+	if (obj == null) {
+		return false;
+	}
+	
 	var parts = path.split('.'),
 		imax = parts.length,
 		i = 0;

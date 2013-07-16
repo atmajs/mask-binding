@@ -19,7 +19,11 @@
 		renderStart: function(model, cntx, container) {
 
 			this.provider = BindingProvider.create(model, container, this, 'single');
-
+		},
+		
+		renderEnd: function(){
+			
+			BindingProvider.bind(this.provider);
 		},
 		dispose: function(){
 			if (this.provider && typeof this.provider.dispose === 'function') {

@@ -172,8 +172,12 @@ var BindingProvider = (function() {
 		}
 
 
-		return apply_bind(provider);
+		return provider;
 	};
+	
+	BindingProvider.bind = function(provider){
+		return apply_bind(provider);
+	}
 
 
 	BindingProvider.prototype = {

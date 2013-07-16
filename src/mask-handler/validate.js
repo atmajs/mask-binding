@@ -17,6 +17,14 @@
 		constructor: Validate,
 		renderStart: function(model, cntx, container) {
 			this.element = container;
+			
+			if (this.attr.value) {
+				var validatorFn = Validate.resolveFromModel(model, this.attr.value);
+					
+				if (validatorFn) {
+					this.validators = [new Validator(validatorFn)];
+				}
+			}
 		},
 		/**
 		 * @param input - {control specific} - value to validate
@@ -30,12 +38,21 @@
 				element = this.element;
 			}
 
-			if (this.attr && this.attr.getter) {
-				input = obj_getProperty({
-					node: this,
-					element: element
-				}, this.attr.getter);
+			if (this.attr) {
+				
+				if (input == null && this.attr.getter) {
+					input = obj_getProperty({
+						node: this,
+						element: element
+					}, this.attr.getter);
+				}
+				
+				if (input == null && this.attr.value) {
+					input = obj_getProperty(this.model, this.attr.value);
+				}
 			}
+			
+			
 
 			if (this.validators == null) {
 				this.initValidators();
@@ -44,22 +61,33 @@
 			for (var i = 0, x, imax = this.validators.length; i < imax; i++) {
 				x = this.validators[i].validate(input)
 				
-				if (x) {
-					notifyInvalid(element, x, oncancel);
+				if (x && !this.attr.silent) {
+					this.notifyInvalid(element, x, oncancel);
 					return false;
 				}
 			}
 
-			makeValid(element);
+			this.makeValid(element);
 			return true;
+		},
+		notifyInvalid: function(element, message, oncancel){
+			return notifyInvalid(element, message, oncancel);
+		},
+		makeValid: function(element){
+			return makeValid(element);
 		},
 		initValidators: function() {
 			this.validators = [];
 			
 			for (var key in this.attr) {
 				
-				if (key === 'message') 
-					continue;
+				
+				switch (key) {
+					case 'message':
+					case 'value':
+					case 'getter':
+						continue;
+				}
 				
 				if (key in Validators === false) {
 					console.error('Unknown Validator:', key, this);
@@ -73,6 +101,11 @@
 		}
 	};
 
+	
+	Validate.resolveFromModel = function(model, property){
+		return obj_getProperty(model.Validate, property);
+	};
+	
 	Validate.createCustom = function(element, validator){
 		var validate = new Validate();
 		
@@ -108,7 +141,7 @@
 				.insertAfter(element);
 		}
 
-		next
+		return next
 			.children('button')
 			.off()
 			.on('click', function() {
@@ -123,9 +156,46 @@
 	}
 
 	function makeValid(element) {
-		domLib(element).next('.' + class_INVALID).hide();
+		return domLib(element).next('.' + class_INVALID).hide();
 	}
 
+	mask.registerHandler(':validate:message', Compo({
+		template: 'div.' + class_INVALID + ' { span > "~[bind:message]" button > "~[cancel]" }',
+		
+		onRenderStart: function(model){
+			if (typeof model === 'string') {
+				model = {
+					message: model
+				};
+			}
+			
+			if (!model.cancel) {
+				model.cancel = 'cancel';
+			}
+			
+			this.model = model;
+		},
+		compos: {
+			button: '$: button',
+		},
+		show: function(message, oncancel){
+			var that = this;
+			
+			this.model.message = message;
+			this.compos.button.off().on(function(){
+				that.hide();
+				oncancel && oncancel();
+				
+			});
+			
+			this.$.show();
+		},
+		hide: function(){
+			this.$.hide();
+		}
+	}));
+	
+	
 	var Validators = {
 		match: function(match) {
 			

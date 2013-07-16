@@ -114,7 +114,7 @@ include
 			model.y.sub -= 5;
 			
 			
-			expression_unbind(expression, model, callback);
+			expression_unbind(expression, model, null, callback);
 			eq(model.__observers['x'].length, 0);
 			eq(model.__observers['y.sub'].length, 0);
 			

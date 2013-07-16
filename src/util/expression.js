@@ -92,6 +92,10 @@ function expression_bind(expr, model, cntx, controller, callback) {
 
 function expression_unbind(expr, model, controller, callback) {
 	
+	if (typeof controller === 'function') {
+		console.warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
+	}
+	
 	if (expr === '.') {
 		arr_removeObserver(model, callback);
 		return;
@@ -105,7 +109,7 @@ function expression_unbind(expr, model, controller, callback) {
 	}
 	
 	if (typeof vars === 'string') {
-		if (obj_isDefined(model, vars) === true) {
+		if (obj_isDefined(model, vars)) {
 			obj_removeObserver(model, vars, callback);
 		}
 		
@@ -115,10 +119,6 @@ function expression_unbind(expr, model, controller, callback) {
 		
 		return;
 	}
-
-	//for (var i = 0, imax = vars.length; i < imax; i++) {
-	//	obj_removeObserver(model, vars[i], callback);
-	//}
 	
 	var isArray = vars.length != null && typeof vars.splice === 'function',
 		imax = isArray === true ? vars.length : 1,
