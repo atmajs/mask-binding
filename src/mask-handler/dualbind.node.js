@@ -24,37 +24,9 @@ mask.registerHandler(':dualbind', DualbindHandler);
 DualbindHandler.prototype = {
 	constructor: DualbindHandler,
 	
-	renderEnd: function(elements, model, cntx, container) {
+	renderStart: function(elements, model, cntx, container) {
 		this.provider = BindingProvider.create(model, container, this);
-		
-		if (this.components) {
-			for (var i = 0, x, length = this.components.length; i < length; i++) {
-				x = this.components[i];
-
-				if (x.compoName === ':validate') {
-					(this.validations || (this.validations = [])).push(x);
-				}
-			}
-		}
-
-		if (typeof model.Validate === 'object' && !this.attr['no-validation']) {
-			
-			var validator = model.Validate[this.provider.value];
-			if (typeof validator === 'function') {
-			
-				validator = mask
-					.getHandler(':validate')
-					.createCustom(container, validator);
-				
-			
-				(this.validations || (this.validations = []))
-					.push(validator);
-				
-			}
-		}
-		
-		
-		BindingProvider.bind(this.provider);
+		this.provider.objectChanged();
 	},
 	dispose: function(){
 		if (this.provider && typeof this.provider.dispose === 'function') {

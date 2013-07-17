@@ -86,7 +86,7 @@
 		});
 	}
 
-	mask.registerUtil('bind',{
+	mask.registerUtil('bind', {
 		current: null,
 		element: null,
 		nodeRenderStart: function(expr, model, cntx, element, controller){

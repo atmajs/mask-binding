@@ -18,17 +18,17 @@ global.config = {
 		output: 'lib/'
 	},
 	'jshint': {
-		files: ['lib/mask.binding.js'],
+		files: ['lib/binding.js'],
 		jshint: JSHint()
 	},
 	'uglify': {
-		files: 'lib/mask.binding.js'
+		files: 'lib/binding.js'
 	},
 
 	'export.embed': {
 		action: 'copy',
 		files: {
-			'lib/mask.binding.embed.js': '../mask/src/libs/mask.binding.js'
+			'lib/binding.embed.js': '../mask/src/libs/mask.binding.js'
 		}
 	},
 	'import.mask': {

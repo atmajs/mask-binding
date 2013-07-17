@@ -16,12 +16,9 @@
 
 	Bind.prototype = {
 		constructor: Bind,
-		renderStart: function(model, cntx, container) {
-
+		renderEnd: function(els, model, cntx, container){
+			
 			this.provider = BindingProvider.create(model, container, this, 'single');
-		},
-		
-		renderEnd: function(){
 			
 			BindingProvider.bind(this.provider);
 		},
