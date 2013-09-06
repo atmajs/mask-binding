@@ -48,14 +48,17 @@ function arr_addObserver(arr, callback) {
 		observers = arr.__observers.__array = [];
 	}
 	
-	var i = 0,
-		fns = ['push', 'unshift', 'splice', 'pop', 'shift', 'reverse', 'sort'],
-		length = fns.length,
-		method;
-
-	for (; i < length; i++) {
-		method = fns[i];
-		arr[method] = _array_createWrapper(arr, arr[method], method);
+	if (observers.length === 0) {
+		// create wrappers for first time
+		var i = 0,
+			fns = ['push', 'unshift', 'splice', 'pop', 'shift', 'reverse', 'sort'],
+			length = fns.length,
+			method;
+	
+		for (; i < length; i++) {
+			method = fns[i];
+			arr[method] = _array_createWrapper(arr, arr[method], method);
+		}
 	}
 
 	observers[observers.length++] = callback;
