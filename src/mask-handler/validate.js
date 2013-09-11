@@ -15,6 +15,7 @@
 
 	Validate.prototype = {
 		constructor: Validate,
+        attr: {},
 		renderStart: function(model, cntx, container) {
 			this.element = container;
 			
@@ -109,7 +110,7 @@
 	Validate.createCustom = function(element, validator){
 		var validate = new Validate();
 		
-		validate.renderStart(null, element);
+		validate.element = element;
 		validate.validators = [new Validator(validator)];
 		
 		return validate;
