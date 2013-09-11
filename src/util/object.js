@@ -96,51 +96,131 @@ function obj_addObserver(obj, property, callback) {
 
 		return;
 	}
-
-	var callbacks = observers[property] = [callback],
-		chain = property.split('.'),
-		length = chain.length,
-		parent = length > 1 ? obj_ensure(obj, chain) : obj,
-		key = chain[length - 1],
-		currentValue = parent[key];
-
-	if (key === 'length' && arr_isArray(parent)) {
-		// we cannot redefine array properties like 'length'
-		arr_addObserver(parent, callback);
-		return;
-	}
-
-
-	Object.defineProperty(parent, key, {
-		get: function() {
-			return currentValue;
-		},
-		set: function(x) {
-			if (x === currentValue) {
-				return;
-			}
-			currentValue = x;
-
-			if (arr_isArray(x)) {
-				arr_addObserver(x, callback);
-			}
-
-			if (observers.__dirties != null) {
-				observers.__dirties[property] = 1;
-				return;
-			}
-
-			for (var i = 0, imax = callbacks.length; i < imax; i++) {
-				callbacks[i](x);
-			}
-		}
-	});
+    
+    observers[property] = [callback];
+    
+    var currentValue = obj_attachProxy(obj, property, true);
+    
 
 	if (arr_isArray(currentValue)) {
 		arr_addObserver(currentValue, callback);
 	}
 }
 
+function obj_attachProxy(obj, property, attachCrumbs) {
+    var listeners = obj.__observers[property],
+		chain = property.split('.'),
+		length = chain.length,
+		parent = length > 1
+            ? obj_ensure(obj, chain)
+            : obj,
+		key = chain[length - 1],
+		currentValue = parent[key];
+        
+    if (attachCrumbs && length > 1) {
+        obj_defineCrumbs(obj, chain);
+    }
+        
+    if (key === 'length' && arr_isArray(parent)) {
+		// we cannot redefine array properties like 'length'
+		arr_addObserver(parent, callback);
+		return currentValue;
+	}
+    
+	Object.defineProperty(parent, key, {
+		get: function() {
+			return currentValue;
+		},
+		set: function(x) {
+            var i = 0,
+                imax = listeners.length;
+                
+			if (x === currentValue) 
+				return;
+			
+			currentValue = x;
+
+			if (arr_isArray(x)) {
+                for (i = 0; i< imax; i++) {
+                    arr_addObserver(x, listeners[i]);
+                }
+			}
+
+			if (listeners.__dirties != null) {
+				listeners.__dirties[property] = 1;
+				return;
+			}
+
+			for (i = 0; i < imax; i++) {
+				listeners[i](x);
+			}
+		},
+        configurable: true
+	});
+
+    
+    return currentValue;
+}
+
+function obj_defineCrumbs(obj, chain) {
+    var rebinder = obj_crumbRebindDelegate(obj),
+        path = '',
+        key;
+        
+    for (var i = 0, imax = chain.length - 1; i < imax; i++) {
+        key = chain[i];
+        path += key + '.';
+        
+        obj_defineCrumb(path, obj, key, rebinder);
+        
+        obj = obj[key];
+    }
+}
+
+function obj_defineCrumb(path, obj, key, rebinder) {
+        
+    var value = obj[key];
+    
+    Object.defineProperty(obj, key, {
+		get: function() {
+			return value;
+		},
+		set: function(x) {
+			if (x === value) 
+				return;
+			
+			value = x;
+            rebinder(path);
+		}
+	});
+}
+
+function obj_crumbRebindDelegate(obj) {
+    return function(path){
+        
+        var observers = obj.__observers;
+        if (observers == null) 
+            return;
+        for (var property in observers) {
+            if (property.indexOf(path) !== 0) 
+                continue;
+            
+            
+            obj_attachProxy(obj, property, false);
+            
+            var listeners = observers[property],
+                imax = listeners.length,
+                i = 0;
+            if (imax === 0) 
+                continue;
+            
+            var val = obj_getProperty(obj, property);
+            for (; i < imax; i++){
+                listeners[i](val);
+            }
+        }
+    }
+}
 
 function obj_lockObservers(obj) {
 	if (arr_isArray(obj)) {

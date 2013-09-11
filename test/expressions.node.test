@@ -76,6 +76,57 @@ include
 			eq(array.__observers.__array.length, 0);
 		},
 		
+        'object - observer': function(){
+            var obj = {
+                    value: 0,
+                    sub: {
+                        value: 0
+                    }
+                },
+				check, callback
+			
+			function createAssertion(prop, expect) {
+				
+				return assert.callback(function(currentValue){
+                    var value = obj_getProperty(obj, prop);
+                    
+                    deepEq(value, currentValue);
+                    deepEq(value, expect);
+				});
+				
+			};
+            
+            // add
+            obj_addObserver(obj, 'value', callback = function(currentValue){
+				check.call(this, currentValue);
+			});
+            eq(obj.__observers['value'][0], callback);
+            
+            // change
+            check = createAssertion('value', 2);
+            obj.value = 2;
+            
+            // remove
+            obj_removeObserver(obj, 'value', callback);
+            eq(obj.__observers['value'].length, 0);
+            
+            
+            // add
+            obj_addObserver(obj, 'sub.value', callback = function(currentValue){
+				check.call(this, currentValue);
+			});
+            
+            check = createAssertion('sub.value', 8);
+            obj.sub.value = 8;
+            
+            
+            check = createAssertion('sub.value', 10);
+            obj.sub = {
+                value: 10
+            };
+            
+            
+        },
 		
 		'expression': function(){
 			
