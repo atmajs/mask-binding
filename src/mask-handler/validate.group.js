@@ -1,6 +1,6 @@
 function ValidateGroup() {}
 
-mask.registerHandler(':validate:group', ValidateGroup);
+__mask_registerHandler(':validate:group', ValidateGroup);
 
 
 ValidateGroup.prototype = {

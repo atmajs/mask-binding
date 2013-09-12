@@ -8,7 +8,7 @@
 
 	function Validate() {}
 
-	mask.registerHandler(':validate', Validate);
+	__mask_registerHandler(':validate', Validate);
 
 
 
@@ -160,7 +160,7 @@
 		return domLib(element).next('.' + class_INVALID).hide();
 	}
 
-	mask.registerHandler(':validate:message', Compo({
+	__mask_registerHandler(':validate:message', Compo({
 		template: 'div.' + class_INVALID + ' { span > "~[bind:message]" button > "~[cancel]" }',
 		
 		onRenderStart: function(model){

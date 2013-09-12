@@ -8,7 +8,7 @@
 
 function VisibleHandler() {}
 
-mask.registerHandler(':visible', VisibleHandler);
+__mask_registerHandler(':visible', VisibleHandler);
 
 
 VisibleHandler.prototype = {

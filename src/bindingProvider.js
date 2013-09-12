@@ -382,7 +382,7 @@ var BindingProvider = (function() {
 					eventType = attr['change-event'] || attr.changeEvent || 'change',
 					onDomChange = provider.domChanged.bind(provider);
 	
-				dom_addEventListener(element, eventType, onDomChange);
+				__dom_addEventListener(element, eventType, onDomChange);
 			}
 		}
 
