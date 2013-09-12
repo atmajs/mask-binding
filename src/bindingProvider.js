@@ -349,7 +349,8 @@ var BindingProvider = (function() {
 				for (var i = 0, x, imax = element.options.length; i < imax; i++){
 					x = element.options[i];
 					
-					if (x.getAttribute('name') === value) {
+                    // eqeq (not strict compare)
+					if (x.getAttribute('name') == value) {
 						element.selectedIndex = i;
 						return;
 					}
