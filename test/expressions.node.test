@@ -1,4 +1,3 @@
-
 global.window = global;
 
 include
@@ -8,180 +7,240 @@ include
 })
 
 .inject({
-	_ : '/src/vars.js',
+	_: '/src/vars.js',
 	util: ['array', 'object', 'expression']
 })
 
-.done(function(){
-	
+.done(function() {
+
 	UTest({
-		
-		'array - observer': function(){
+
+		'array - observer': function() {
 			var array = [],
 				check, callback
-			
-			function createAssertion(current, fn, args) {
-				
-				return assert.callback(function(_current, _fn, _args){
-					eq(_current.join(''), current.join(''));
-					eq(fn, _fn);
-					deepEq(args, _args);
-				});
-				
-			};
-			
-			arr_addObserver(array, callback = function(){
+
+				function createAssertion(current, fn, args) {
+
+					return assert.callback(function(_current, _fn, _args) {
+						eq(_current.join(''), current.join(''));
+						eq(fn, _fn);
+						deepEq(args, _args);
+					});
+
+				};
+
+			arr_addObserver(array, callback = function() {
 				check.apply(this, arguments);
 			});
-			
+
 			eq(array.__observers.__array.length, 1);
 			eq(array.__observers.__array[0], callback);
-			
+
 			check = createAssertion([1], 'push', [1]);
 			array.push(1);
-			
+
 			check = createAssertion([], 'pop', []);
 			array.pop();
-			
-			check = createAssertion([1,2,3], 'splice', [0, 0, 1, 2, 3]);
-			array.splice(0,0, 1,2,3);
-			
-			check = createAssertion([5, 1,2,3], 'unshift', [5]);
+
+			check = createAssertion([1, 2, 3], 'splice', [0, 0, 1, 2, 3]);
+			array.splice(0, 0, 1, 2, 3);
+
+			check = createAssertion([5, 1, 2, 3], 'unshift', [5]);
 			array.unshift(5);
-			
-			check = createAssertion([1,2,3], 'shift', []);
+
+			check = createAssertion([1, 2, 3], 'shift', []);
 			array.shift();
-			
+
 			check = createAssertion([3, 2, 1], 'reverse', []);
 			array.reverse();
-			
-			check = createAssertion([1,2,3], 'sort', []);
+
+			check = createAssertion([1, 2, 3], 'sort', []);
 			array.sort();
-			
-			
-			
+
+
+
 			// locking >>
 			arr_lockObservers(array);
-			
+
 			eq(array.__observers.__dirty, false);
-			check = function() { eq('Should not be called'); }
+			check = function() {
+				eq('Should not be called');
+			}
 			array.push('4');
-			
+
 			check = createAssertion([1, 2, 3, 4]);
 			arr_unlockObservers(array);
 			// <<
-			
-			
+
+
 			arr_removeObserver(array, callback);
 			eq(array.__observers.__array.length, 0);
 		},
-		
-        'object - observer': function(){
-            var obj = {
-                    value: 0,
-                    sub: {
-                        value: 0
-                    }
-                },
+
+		'object - observer': function() {
+			var obj = {
+				value: 0,
+				sub: {
+					value: 0
+				}
+			},
 				check, callback
-			
-			function createAssertion(prop, expect) {
-				
-				return assert.callback(function(currentValue){
-                    var value = obj_getProperty(obj, prop);
-                    
-                    deepEq(value, currentValue);
-                    deepEq(value, expect);
-				});
-				
+
+				function createAssertion(prop, expect) {
+
+					return assert.callback(function(currentValue) {
+						var value = obj_getProperty(obj, prop);
+
+						deepEq(value, currentValue);
+						deepEq(value, expect);
+					});
+
+				};
+
+			// add
+			obj_addObserver(obj, 'value', callback = function(currentValue) {
+				check.call(this, currentValue);
+			});
+			eq(obj.__observers['value'][0], callback);
+
+			// change
+			check = createAssertion('value', 2);
+			obj.value = 2;
+
+			// remove
+			obj_removeObserver(obj, 'value', callback);
+			eq(obj.__observers['value'].length, 0);
+
+
+			// add
+			obj_addObserver(obj, 'sub.value', callback = function(currentValue) {
+				check.call(this, currentValue);
+			});
+
+			check = createAssertion('sub.value', 8);
+			obj.sub.value = 8;
+
+
+			check = createAssertion('sub.value', 10);
+			obj.sub = {
+				value: 10
 			};
-            
-            // add
-            obj_addObserver(obj, 'value', callback = function(currentValue){
-				check.call(this, currentValue);
+
+
+		},
+
+		'objectS - observers': function() {
+			// playing around with nested objects
+			var obj = {
+				title: 'O0'
+			},
+				model = {
+					sub: {
+						title: 'M0'
+					}
+				};
+
+			var obj_Count = 2,
+				obj_Expect;
+			obj_addObserver(obj, 'title', function(value) {
+				obj_Count--;
+				deepEq(obj_Expect, value);
 			});
-            eq(obj.__observers['value'][0], callback);
-            
-            // change
-            check = createAssertion('value', 2);
-            obj.value = 2;
-            
-            // remove
-            obj_removeObserver(obj, 'value', callback);
-            eq(obj.__observers['value'].length, 0);
-            
-            
-            // add
-            obj_addObserver(obj, 'sub.value', callback = function(currentValue){
-				check.call(this, currentValue);
+
+			var model_Count = 4,
+				model_Expect;
+			obj_addObserver(model, 'sub.title', function(value) {
+				model_Count--;
+				deepEq(model_Expect, value);
 			});
-            
-            check = createAssertion('sub.value', 8);
-            obj.sub.value = 8;
-            
-            
-            check = createAssertion('sub.value', 10);
-            obj.sub = {
-                value: 10
-            };
-            
-            
-        },
-		
-		'expression': function(){
+
+			
+			model.sub.title = model_Expect = 'M1';
+			obj.title = obj_Expect = 'O1';
+
+			model_Expect = obj_Expect;
+			model.sub = obj;
+			obj.title = model_Expect = obj_Expect = 'O3';
+
+			eq(obj_Count, 0);
+			eq(model_Count, 1);
+			eq(model.sub.title, 'O3');
 			
 			
+			model_Expect = 'M2';
+			model.sub = {
+				title: 'M2'
+			};
+			
+			eq(model_Count, 0);
+			model.sub.title = model_Expect = 'M3';
+			eq(model_Count, -1);
+			
+			obj_Expect = 'O4';
+			obj.title = 'O4';
+			eq(model_Count, -1);
+			eq(obj_Count, -1);
+		},
+
+		'expression': function() {
+
+
 			var model, check, callback, expression;
-			
+
 			function createAssertion(expect, assertFn) {
-				return assert.callback(function(value){
+				return assert.callback(function(value) {
 					(assertFn || eq)(expect, value);
 				});
 			}
-			
+
 			function createBinder(expression, model, cb) {
 				return (callback = expression_createBinder(expression, model, null, null, cb));
 			}
-			
+
 			function bind(expression, model) {
-				expression_bind(expression, model, null, null, createBinder(expression, model, function(){
+				expression_bind(expression, model, null, null, createBinder(expression, model, function() {
 					check.apply(this, arguments);
 				}));
 			}
-			
-			
-			model = {x: 1, y: {sub: 2}};
-			expression = 'x + y.sub'; 
+
+
+			model = {
+				x: 1,
+				y: {
+					sub: 2
+				}
+			};
+			expression = 'x + y.sub';
 			bind(expression, model);
-			
+
 			eq(model.__observers['x'].length, 1);
 			eq(model.__observers['y.sub'].length, 1);
-			
-			
+
+
 			check = createAssertion(5);
 			model.x = 3;
-			
+
 			check = createAssertion(0);
 			model.y.sub -= 5;
-			
-			
+
+
 			expression_unbind(expression, model, null, callback);
 			eq(model.__observers['x'].length, 0);
 			eq(model.__observers['y.sub'].length, 0);
-			
-			
+
+
 			expression = '.';
 			model = [1];
 			bind(expression, model);
-			
-			check = createAssertion([1, 2], function(a,b){
+
+			check = createAssertion([1, 2], function(a, b) {
 				eq(a.join(''), b.join(''));
 			});
-			
+
 			model.push(2);
-			
+
 		}
-		
+
 	})
-	
+
 })
