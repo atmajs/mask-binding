@@ -176,7 +176,8 @@ function obj_defineCrumb(path, obj, key, rebinder) {
 			old = value;
             value = x;
             rebinder(path, old);
-		}
+		},
+        configurable: true
 	});
 }
 
