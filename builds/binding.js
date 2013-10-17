@@ -24,6 +24,7 @@
 	// import ../src/mask-util/bind.js
 	// import ../src/mask-attr/xxVisible.js
     // import ../src/mask-attr/xToggle.js
+	// import ../src/mask-attr/xClassToggle.js
 
 	// import ../src/sys/sys.js
 
