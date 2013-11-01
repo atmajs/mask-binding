@@ -38,7 +38,7 @@ var attr_each = (function() {
 
 
 	var EachProto = {
-		refresh: function(array, method, args) {
+		refresh: function(array, method, args, result) {
 			var i = 0,
 				x, imax;
 
@@ -101,6 +101,11 @@ var attr_each = (function() {
 			case 'sort':
 			case 'reverse':
 				list_sort(this, array);
+				break;
+			case 'remove':
+				if (result != null && result.length) {
+					list_remove(this, result);
+				}
 				break;
 			}
 

@@ -51,13 +51,30 @@ function arr_addObserver(arr, callback) {
 	if (observers.length === 0) {
 		// create wrappers for first time
 		var i = 0,
-			fns = ['push', 'unshift', 'splice', 'pop', 'shift', 'reverse', 'sort'],
+			fns = [
+				// native mutators
+				'push',
+				'unshift',
+				'splice',
+				'pop',
+				'shift',
+				'reverse',
+				'sort',
+				
+				// collections mutator
+				'remove'],
 			length = fns.length,
+			fn,
 			method;
 	
 		for (; i < length; i++) {
 			method = fns[i];
-			arr[method] = _array_createWrapper(arr, arr[method], method);
+			fn = arr[method];
+			
+			if (fn != null) {
+				arr[method] = _array_createWrapper(arr, fn, method);
+			}
+
 		}
 	}
 
@@ -126,11 +143,13 @@ function _array_methodWrapper(array, original, method, args) {
 		return result;
 	}
 
-
-	for (var i = 0, x, length = callbacks.length; i < length; i++) {
+	var i = 0,
+		imax = callbacks.length,
+		x;
+	for (; i < imax; i++) {
 		x = callbacks[i];
 		if (typeof x === 'function') {
-			x(array, method, args);
+			x(array, method, args, result);
 		}
 	}
 

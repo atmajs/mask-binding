@@ -121,3 +121,17 @@ function list_update(self, deleteIndex, deleteCount, insertIndex, rangeModel) {
 		self.components.splice.apply(self.components, [insertIndex, 0].concat(compos));
 	}
 }
+
+function list_remove(self, removed){
+	var compos = self.components,
+		i = compos.length,
+		x;
+	while(--i > -1){
+		x = compos[i];
+		
+		if (removed.indexOf(x.model) === -1) 
+			continue;
+		
+		compo_dispose(x, self);
+	}
+}
