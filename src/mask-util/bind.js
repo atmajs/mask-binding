@@ -66,14 +66,16 @@
 	}
 
 	__mask_registerUtil('bind', {
+		mode: 'partial',
 		current: null,
 		element: null,
 		nodeRenderStart: function(expr, model, ctx, element, controller){
 			
 			var current = expression_eval(expr, model, ctx, controller);
 			
-			this.current = current;
 			this.element = document.createTextNode(current);
+			
+			return (this.current = current);
 		},
 		node: function(expr, model, ctx, element, controller){
 			bind(
@@ -90,7 +92,7 @@
 		},
 		
 		attrRenderStart: function(expr, model, ctx, element, controller){
-			this.current = expression_eval(expr, model, ctx, controller);
+			return (this.current = expression_eval(expr, model, ctx, controller));
 		},
 		attr: function(expr, model, ctx, element, controller, attrName){
 			bind(
