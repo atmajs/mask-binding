@@ -33,7 +33,7 @@ var BindingProvider = (function() {
 		this.locked = false;
 		
 		
-		if (this.property == null) {
+		if (this.property == null && this.getter == null) {
 
 			switch (element.tagName) {
 				case 'INPUT':

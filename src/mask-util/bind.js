@@ -73,6 +73,9 @@
 			
 			var current = expression_eval(expr, model, ctx, controller);
 			
+			// though we apply value's to `this` context, but it is only for immediat use
+			// in .node() function, as `this` context is a static object that share all bind
+			// utils
 			this.element = document.createTextNode(current);
 			
 			return (this.current = current);
