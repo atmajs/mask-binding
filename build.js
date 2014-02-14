@@ -1,11 +1,11 @@
 /**
- *	IncludeJSBuild
+ *	Atma.Toolkit Configuration
  *
- *	``` $ includejs build.js ```
+ *	``` $ atma ```
  **/
 
 
-global.config = {
+module.exports = {
 	'settings': {
 		io: {
 			extensions: {
