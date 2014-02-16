@@ -104,7 +104,7 @@ UTest({
 			},
 			dom;
 		
-		dom = mask.render('div > "~[bind: name + someFn().age]"', model, null, null, controller);
+		dom = mask.render('div > "~[bind: name + $c.someFn().age]"', model, null, null, controller);
 		eq(dom.textContent, 'A10');
 		
 		model.name = 'B'
@@ -113,7 +113,7 @@ UTest({
 		controller.x.age = 5;
 		eq(dom.textContent, 'B5');
 		
-		dom = mask.render('div > "~[bind: someFn().age]"', model, null, null, controller);
+		dom = mask.render('div > "~[bind: $c.someFn().age]"', model, null, null, controller);
 		controller.x.age = 7;
 		eq(dom.textContent, '7');
 		

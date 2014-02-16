@@ -49,11 +49,13 @@ var obj_getProperty,
 			x = obj;
 		while ( ++i < imax ) {
 			x = x[parts[i]];
+			
 			if (x == null) 
 				break;
 			
 			if (x.__observers != null) {
-				var prop = parts.slice(i).join('.');
+				
+				var prop = parts.slice(i + 1).join('.');
 				
 				if (x.__observers[prop]) {
 					x.__observers[prop].push(callback);
@@ -231,7 +233,7 @@ var obj_getProperty,
 			set: function(x) {
 				var i = 0,
 					imax = listeners.length;
-					
+				
 				if (x === currentValue) 
 					return;
 				
@@ -301,13 +303,16 @@ var obj_getProperty,
 			var observers = obj.__observers;
 			if (observers == null) 
 				return;
+			
 			for (var property in observers) {
+				
 				if (property.indexOf(path) !== 0) 
 					continue;
 				
 				var listeners = observers[property].slice(0),
 					imax = listeners.length,
 					i = 0;
+				
 				if (imax === 0) 
 					continue;
 				
@@ -324,6 +329,7 @@ var obj_getProperty,
 				for (i = 0; i < imax; i++){
 					listeners[i](val);
 				}
+				
 				for (i = 0; i < imax; i++){
 					obj_addObserver(obj, property, listeners[i]);
 				}

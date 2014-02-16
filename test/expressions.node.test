@@ -128,8 +128,21 @@ include
 
 
 		},
+		
+		'object - observer - calls': function(){
+			var obj = { title: 'xx' },
+				CALLS = 2;
+				
+			obj_addObserver(obj, 'title', function(){
+				CALLS--;
+			});
+			
+			obj.title = 'foo';
+			obj.title = 'baz';
+			eq(CALLS, 0);
+		},
 
-		'objectS - observers': function() {
+		'object merge - observers': function() {
 			// playing around with nested objects
 			var obj = {
 				title: 'O0'
@@ -143,25 +156,35 @@ include
 			var obj_Count = 2,
 				obj_Expect;
 			obj_addObserver(obj, 'title', function(value) {
+				
 				obj_Count--;
 				deepEq(obj_Expect, value);
 			});
+			
+			eq(obj.__observers.title.length, 1);
 
 			var model_Count = 4,
 				model_Expect;
 			obj_addObserver(model, 'sub.title', function(value) {
+				
 				model_Count--;
 				deepEq(model_Expect, value);
 			});
 
 			
 			model.sub.title = model_Expect = 'M1';
+			eq(model_Count, 3);
+			
 			obj.title = obj_Expect = 'O1';
-
+			eq(obj_Count, 1);
+			
+			// MERGE !
 			model_Expect = obj_Expect;
 			model.sub = obj;
+			
+			
 			obj.title = model_Expect = obj_Expect = 'O3';
-
+			
 			eq(obj_Count, 0);
 			eq(model_Count, 1);
 			eq(model.sub.title, 'O3');
