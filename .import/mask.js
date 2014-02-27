@@ -70,6 +70,8 @@
 			 */
 			allowCache: true
 		};
+		
+	var _Array_slice = Array.prototype.slice;
 	
 	// end:source /src/scope-vars.js
     // source /src/util/is.js
@@ -282,6 +284,23 @@
 	
 	// end:source /src/util/template.js
     
+	// source /src/util/array.js
+	var arr_pushMany;
+	
+	(function(){
+		
+		arr_pushMany = function(arr, arrSource){
+			var il = arr.length,
+				jl = arrSource.length,
+				j = -1
+				;
+			while( ++j < jl ){
+				arr[il + j] = arrSource[j];
+			}
+		};
+		
+	}());
+	// end:source /src/util/array.js
 	// source /src/util/string.js
 	function str_trim(str) {
 	
@@ -924,15 +943,33 @@
 				if ('$c' === key) {
 					value = controller;
 					
-					var next = current.next;
-					if (next != null
-						&& next.type === type_FunctionRef
-						&& value[next.body] == null
-						&& typeof Compo.prototype[next.body] === 'function') {
+					var next = current.next,
+						nextBody = next != null && next.body;
 						
-						object = controller;
-						value = Compo.prototype[next.body];
-						current = next;
+					if (nextBody != null && value[nextBody] == null){
+							
+						if (next.type === type_FunctionRef
+								&& typeof Compo.prototype[nextBody] === 'function') {
+							// use fn from prototype if possible, like `closest`
+							object = controller;
+							value = Compo.prototype[nextBody];
+							current = next;
+						} else {
+							// find the closest controller, which has the property
+							while (true) {
+								value = value.parent;
+								if (value == null) 
+									break;
+								
+								if (value[nextBody] == null) 
+									continue;
+								
+								object = value;
+								value = value[nextBody];
+								current = next;
+								break;
+							}
+						}
 					}
 					
 				}
@@ -1516,10 +1553,12 @@
 		
 			var result, ast;
 		
-			if (mix == null)
+			if (null == mix)
 				return null;
 			
-		
+			if ('.' === mix) 
+				return model;
+			
 			if (typeof mix === 'string'){
 				ast = cache.hasOwnProperty(mix) === true
 					? (cache[mix])
@@ -1897,37 +1936,44 @@
 	// end:source /src/expression/exports.js
 	// source /src/statements/exports.js
 	// source 1.if.js
-	custom_Statements['if'] = function(node, model, ctx, container, controller, childs){
+	(function(){
 		
-		var nodes;
-		
-		function evaluate(expr){
-			return ExpressionUtil.eval(expr, model, ctx, controller);
-		}
-		
-		if (evaluate(node.expression)) {
-			
-			nodes = node.nodes;
-		}
-		
-		while (nodes == null) {
-			node = node.nextSibling;
-			
-			if (node == null || node.tagName !== 'else') 
-				break;
-			
-			var expr = node.expression;
-			if (expr == null || expr === '' || evaluate(expr)) {
-				nodes = node.nodes;
-				break;
+		function getNodes(node, model, ctx, controller){
+			function evaluate(expr){
+				return ExpressionUtil.eval(expr, model, ctx, controller);
 			}
+			
+			if (evaluate(node.expression)) 
+				return node.nodes;
+			
+			while (true) {
+				node = node.nextSibling;
+				
+				if (node == null || node.tagName !== 'else') 
+					break;
+				
+				var expr = node.expression;
+				if (expr == null || expr === '' || evaluate(expr)) 
+					return node.nodes;
+			}
+			
+			return null;
 		}
 		
-		if (nodes == null) 
-			return;
+		custom_Statements['if'] = {
+			getNodes: getNodes,
+			render: function(node, model, ctx, container, controller, childs){
+				
+				var nodes = getNodes(node, model, ctx, controller);
+				if (nodes == null) 
+					return;
+				
+				builder_build(nodes, model, ctx, container, controller, childs);
+			}
+		};
 		
-		builder_build(nodes, model, ctx, container, controller, childs);
-	};
+	}());
+	
 	// end:source 1.if.js
 	// source 2.for.js
 	
@@ -3131,13 +3177,30 @@
 	
 	// end:source /src/parse/parser.js
 	// source /src/build/builder.dom.js
-	var _controllerID = 0;
+	var builder_componentID = 0,
+		
+		builder_build;
 	
-	var builder_build = (function(custom_Attributes, custom_Tags, Component){
+	(function(custom_Attributes, custom_Tags, Component){
 		
 		
 			
 		// source util.js
+		function listeners_emit(name) {
+			if (listeners == null || listeners[name] == null) 
+				return;
+			
+			var fns = listeners.compoCreated,
+				imax = fns.length,
+				i = -1,
+				args = _Array_slice.call(arguments, 1)
+				;
+				
+			while ( ++i < imax) 
+				fns[i].apply(null, args);
+			
+		}
+		
 		function build_resumeDelegate(controller, model, cntx, container, childs){
 			var anchor = container.appendChild(document.createComment(''));
 			
@@ -3232,6 +3295,18 @@
 			}
 		}
 		// end:source util.js
+		// source util.controller.js
+		function controller_pushCompo(controller, compo) {
+			
+			if (controller.components == null) {
+				controller.components = [ compo ];
+				return;
+			} 
+			
+			controller.components.push(compo);
+		}
+		// end:source util.controller.js
+		
 		// source type.textNode.js
 		
 		var build_textNode = (function(){
@@ -3374,97 +3449,164 @@
 		}());
 		// end:source type.node.js
 		// source type.component.js
+		var build_compo;
 		
-		function build_compo(node, model, ctx, container, controller){
-			
-			var Handler; 
-			
-			if (node.controller != null) 
-				Handler = node.controller;
-			
-			if (Handler == null) 
-				Handler = custom_Tags[node.tagName];
+		(function(){
 			
 			
-			var handler = is_Function(Handler)
-					? new Handler(model)
-					: Handler,
-				attr,
-				key;
-			
-			if (handler != null) {
+			build_compo = function(node, model, ctx, container, controller, childs){
 				
+				var compoName = node.tagName,
+					Handler;
+				
+				if (node.controller != null) 
+					Handler = node.controller;
+				
+				if (Handler == null) 
+					Handler = custom_Tags[compoName];
+				
+				if (Handler == null) 
+					return build_NodeAsCompo(node, model, ctx, container, controller, childs);
+				
+				
+				var isStatic = false,
+					handler, attr, key;
+				
+				if (typeof Handler === 'function') {
+					handler = new Handler(model);
+				} else{
+					handler = Handler;
+					isStatic = true;
+				}
+				
+				var fn = isStatic
+					? build_Static
+					: build_Component
+					;
+				
+				return fn(handler, node, model, ctx, container, controller, childs);
+			}
 			
-				handler.compoName = node.tagName;
-				handler.attr = attr = attr_extend(handler.attr, node.attr);
-				handler.parent = controller;
+			
+			// PRIVATE
+			
+			function build_Component(compo, node, model, ctx, container, controller, childs){
 				
-				if (handler.model == null) 
-					handler.model = model;
+				var attr, key;
 				
-				if (handler.nodes == null) 
-					handler.nodes = node.nodes;
+				compo.compoName = node.tagName;
+				compo.attr = attr = attr_extend(compo.attr, node.attr);
+				compo.parent = controller;
+				compo.ID = ++builder_componentID;
+				
+				if (compo.model == null) 
+					compo.model = model;
+				
+				if (compo.nodes == null) 
+					compo.nodes = node.nodes;
 				
 				for (key in attr) {
-					if (typeof attr[key] === 'function') {
+					if (typeof attr[key] === 'function') 
 						attr[key] = attr[key]('attr', model, ctx, container, controller, key);
-					}
 				}
 			
-				if (listeners != null && listeners['compoCreated'] != null) {
-					var fns = listeners.compoCreated,
-						jmax = fns.length,
-						j = 0;
-					for (; j < jmax; j++) {
-						fns[j](handler, model, ctx, container);
-					}
+				if (listeners != null) 
+					listeners_emit('compoCreated', compo, model, ctx, container);
+					
+			
+				if (typeof compo.renderStart === 'function') 
+					compo.renderStart(model, ctx, container);
+				
+				
+				controller_pushCompo(controller, compo);
+				
+				if (compo.async === true) {
+					compo.await(build_resumeDelegate(compo, model, ctx, container, childs));
+					return null;
+				}
+				
+				if (compo.tagName != null) {
+					compo.nodes = {
+						tagName: compo.tagName,
+						attr: compo.attr,
+						nodes: compo.nodes,
+						type: 1
+					};
+				}
+				
+				
+				if (typeof compo.render === 'function') {
+					
+					compo.render(compo.model, ctx, container);
+					// Overriden render behaviour - do not render subnodes
+					return null;
 				}
 			
-				if (typeof handler.renderStart === 'function') 
-					handler.renderStart(model, ctx, container);
+				return compo;
+			}
+			
+			
+			function build_Static(static_, node, model, ctx, container, controller, childs) {
 				
-				node = handler;
-			}
-			
-			
-			if (controller.components == null) {
-				controller.components = [node];
-			} else {
-				controller.components.push(node);
-			}
-			
-			controller = node;
-			controller.ID = ++_controllerID;
-			
-			
-			if (controller.async === true) {
-				controller.await(build_resumeDelegate(controller, model, ctx, container));
-				return null;
-			}
-			
-			if (handler != null && handler.tagName != null) {
-				handler.nodes = {
-					tagName: handler.tagName,
-					attr: handler.attr,
-					nodes: handler.nodes,
-					type: 1
-				};
-			}
-			
-			
-			if (typeof controller.render === 'function') {
+				var elements,
+					compo;
+					
+				var clone = static_;
 				
-				controller.render(controller.model || model, ctx, container);
-				// Overriden render behaviour - do not render subnodes
+				for (var key in node) 
+					clone[key] = node[key];
+				
+				var attr = clone.attr;
+				if (attr != null) {
+					for (var key in attr) {
+						if (typeof attr[key] === 'function') 
+							attr[key] = attr[key]('attr', model, ctx, container, controller, key);
+					}
+				}
+				
+				if (is_Function(clone.renderStart)) 
+					clone.renderStart(model, ctx, container, controller, childs);
+				
+				if (is_Function(clone.render) === false)
+					return clone;
+				
+				elements = clone.render(model, ctx, container, controller, childs);
+					
+				if (is_Function(clone.renderEnd)) {
+					compo = clone.renderEnd(elements, model, ctx, container, controller);
+					
+					if (compo != null) 
+						controller_pushCompo(controller, compo);
+				}
+				
 				return null;
+			
 			}
+			
+			
+			function build_NodeAsCompo(node, model, ctx, container, controller, childs){
+				node.ID = ++builder_componentID;
+				
+				controller_pushCompo(controller, node);
+				
+				if (node.model == null) 
+					node.model = model;
+				
+				var els = node.elements = [];
+				builder_build(node.nodes, node.model, ctx, container, node, els);
+				
+				if (childs != null && els.length !== 0)
+					arr_pushMany(childs, els);
 		
-			return controller;
-		}
+				return null;
+			}
+			
+		}());
+		
 		// end:source type.component.js
 		
 	
-		return function builder_build(node, model, ctx, container, controller, childs) {
+		builder_build = function(node, model, ctx, container, controller, childs) {
 		
 			if (node == null) 
 				return container;
@@ -3475,6 +3617,9 @@
 				value,
 				j, jmax;
 			
+			if (controller == null) 
+				controller = new Component();
+				
 			if (type == null){
 				// in case if node was added manually, but type was not set
 				
@@ -3497,9 +3642,6 @@
 			if (container == null && type !== 1) 
 				container = document.createDocumentFragment();
 			
-			if (controller == null) 
-				controller = new Component();
-			
 			// Dom.SET
 			if (type === 10) {
 				
@@ -3515,17 +3657,37 @@
 			// Dom.STATEMENT
 			if (type === 15) {
 				var Handler = custom_Statements[node.tagName];
-				if (is_Function(Handler)) {
+				if (Handler == null) {
 					
-					Handler(node, model, ctx, container, controller, childs);
+					if (custom_Tags[node.tagName] != null) {
+						// Dom.COMPONENT
+						type = 4;
+					} else {
+						console.error('<mask: statement is undefined', node.tagName);
+						return container;
+					}
+					
 				}
 				
-				// if DEBUG
-				else 
-					console.error('<mask: statement is undefined', node.tagName);
-				// endif
-				
-				return container;
+				if (type === 15) {
+					
+					if (is_Function(Handler)) {
+						//@ obsolete for <Handler>.render
+						Handler(node, model, ctx, container, controller, childs);
+						
+					} else if (is_Function(Handler.render)) {
+						
+						Handler.render(node, model, ctx, container, controller, childs);
+					}
+					
+					else {
+						console.error('<mask:build> Invalid Statement Handler', Handler);
+					}
+					
+					
+					
+					return container;
+				}
 			}
 		
 			// Dom.NODE
@@ -3548,7 +3710,7 @@
 			// Dom.COMPONENT
 			if (type === 4) {
 		
-				controller = build_compo(node, model, ctx, container, controller);
+				controller = build_compo(node, model, ctx, container, controller, childs);
 				
 				if (controller == null) 
 					return container;
@@ -3620,17 +3782,18 @@
 			}
 		
 			if (childs != null && childs !== elements){
-				var il = childs.length,
-					jl = elements.length;
-		
-				j = -1;
-				while(++j < jl){
-					childs[il + j] = elements[j];
-				}
+				arr_pushMany(childs, elements);
+				//var il = childs.length,
+				//	jl = elements.length;
+				//
+				//j = -1;
+				//while(++j < jl){
+				//	childs[il + j] = elements[j];
+				//}
 			}
 		
 			return container;
-		}
+		};
 		
 		
 		
@@ -3725,13 +3888,24 @@
 			getHandler: function (tagName) {
 				return tagName != null
 					? custom_Tags[tagName]
-					: custom_Tags;
+					: custom_Tags
+					;
 			},
 			
 			registerStatement: function(name, handler){
 				//@TODO should it be not allowed to override system statements, if, switch?
 				
-				custom_Statements[name] = handler;
+				custom_Statements[name] = is_Function(handler)
+					? { render: handler }
+					: handler
+					;
+			},
+			
+			getStatement: function(name){
+				return name != null
+					? custom_Statements[name]
+					: custom_Statements
+					;
 			},
 			
 			/**
@@ -3914,7 +4088,7 @@
 			setInterpolationQuotes: Parser.setInterpolationQuotes,
 			
 			setCompoIndex: function(index){
-				_controllerID = index;
+				builder_componentID = index;
 			},
 			
 			cfg: function(){
@@ -4281,7 +4455,7 @@
 			
 	
 			var prop = compo.attr.each || compo.attr.foreach,
-				array = obj_getPropertyEx(prop, model, ctx, compo),
+				array = ExpressionUtil.eval(prop, model, ctx, compo),
 				nodes = compo.nodes
 				;
 			
@@ -4513,6 +4687,9 @@
 		var Dom = mask.Dom,
 		
 			_array_slice = Array.prototype.slice,
+			_Array_splice = Array.prototype.splice,
+			_Array_indexOf = Array.prototype.indexOf,
+			
 			_mask_ensureTmplFnOrig = mask.Utils.ensureTmplFn,
 			
 			domLib,
@@ -4914,10 +5091,17 @@
 						;
 					
 					if (compo) {
-						compo_dispose(compo);
-						compo_detachChild(compo);
+						
+						if (compo.$ == null || compo.$.length === 1) {
+							compo_dispose(compo);
+							compo_detachChild(compo);
+							return;
+						}
+						
+						var i = _Array_indexOf.call(compo.$, node);
+						if (i !== -1) 
+							_Array_splice.call(compo.$, i, 1);
 					}
-					return;
 				}
 				
 				node_tryDisposeChildren(node);
@@ -7734,11 +7918,21 @@
 		
 		// end:source ../src/vars.js
 	
+		// source ../src/util/function.js
+		function fn_proxy(fn, ctx) {
+		
+			return function() {
+				return fn.apply(ctx, arguments);
+			};
+		}
+		
+		// end:source ../src/util/function.js
 		// source ../src/util/object.js
 		
 		var obj_getProperty,
 			obj_setProperty,
 			obj_addObserver,
+			obj_hasObserver,
 			obj_removeObserver,
 			obj_lockObservers,
 			obj_unlockObservers,
@@ -7786,14 +7980,16 @@
 					x = obj;
 				while ( ++i < imax ) {
 					x = x[parts[i]];
+					
 					if (x == null) 
 						break;
 					
 					if (x.__observers != null) {
-						var prop = parts.slice(i).join('.');
+						
+						var prop = parts.slice(i + 1).join('.');
 						
 						if (x.__observers[prop]) {
-							x.__observers[prop].push(callback);
+							//--- x.__observers[prop].push(callback);
 							listener_push(obj, property, callback);
 							return;
 						}
@@ -7810,6 +8006,32 @@
 				if (arr_isArray(val)) 
 					arr_addObserver(val, callback);
 				
+			};
+			
+			obj_hasObserver = function(obj, property, callback){
+				// nested observer
+				var parts = property.split('.'),
+					imax  = parts.length,
+					i = -1,
+					x = obj;
+				while ( ++i < imax ) {
+					x = x[parts[i]];
+					if (x == null) 
+						break;
+					
+					if (x.__observers != null) {
+						if (obj_hasObserver(x, parts.slice(i).join('.'), callback))
+							return true;
+						
+						break;
+					}
+				}
+				
+				var obs = obj.__observers;
+				if (obs == null || obs[property] == null) 
+					return false;
+				
+				return arr_indexOf(obs[property], callback) !== -1;
 			};
 			
 			obj_removeObserver = function(obj, property, callback) {
@@ -7830,18 +8052,19 @@
 				}
 				
 				
-				if (obj.__observers == null || obj.__observers[property] == null) {
+				var obs = obj.__observers;
+				if (obs == null || obs[property] == null) 
 					return;
-				}
+				
 			
 				var currentValue = obj_getProperty(obj, property);
 				if (arguments.length === 2) {
-					
-					obj.__observers[property].length = 0;
+					// <callback> not provided -> remove all observers	
+					obs[property].length = 0;
 					return;
 				}
 			
-				arr_remove(obj.__observers[property], callback);
+				arr_remove(obs[property], callback);
 			
 				if (arr_isArray(currentValue)) 
 					arr_removeObserver(currentValue, callback);
@@ -7968,7 +8191,7 @@
 					set: function(x) {
 						var i = 0,
 							imax = listeners.length;
-							
+						
 						if (x === currentValue) 
 							return;
 						
@@ -8038,13 +8261,16 @@
 					var observers = obj.__observers;
 					if (observers == null) 
 						return;
+					
 					for (var property in observers) {
+						
 						if (property.indexOf(path) !== 0) 
 							continue;
 						
 						var listeners = observers[property].slice(0),
 							imax = listeners.length,
 							i = 0;
+						
 						if (imax === 0) 
 							continue;
 						
@@ -8061,6 +8287,7 @@
 						for (i = 0; i < imax; i++){
 							listeners[i](val);
 						}
+						
 						for (i = 0; i < imax; i++){
 							obj_addObserver(obj, property, listeners[i]);
 						}
@@ -8069,7 +8296,8 @@
 				}
 			}
 			
-				
+			
+			// Create Collection - Check If Exists - Add Listener
 			function listener_push(obj, property, callback) {
 				if (obj.__observers == null) {
 					Object.defineProperty(obj, '__observers', {
@@ -8081,7 +8309,9 @@
 				}
 				var obs = obj.__observers;
 				if (obs[property] != null) {
-					obs[property].push(callback);
+					
+					if (arr_indexOf(obs[property], callback) === -1) 
+						obs[property].push(callback);
 				}
 				else{
 					obs[property] = [callback];
@@ -8100,196 +8330,194 @@
 		// end:source ../src/util/object.js
 		// source ../src/util/array.js
 		
-		function arr_isArray(x) {
-			return x != null && typeof x === 'object' && x.length != null && typeof x.splice === 'function';
-		}
+		var arr_isArray,
+			arr_remove,
+			arr_each,
+			arr_indexOf,
+			arr_addObserver,
+			arr_removeObserver,
+			arr_lockObservers,
+			arr_unlockObservers
+			;
 		
-		function arr_remove(array /*, .. */ ) {
-			if (array == null) {
-				return false;
-			}
-		
-			var i = 0,
-				length = array.length,
-				x, j = 1,
-				jmax = arguments.length,
-				removed = 0;
-		
-			for (; i < length; i++) {
-				x = array[i];
-		
-				for (j = 1; j < jmax; j++) {
-					if (arguments[j] === x) {
-		
-						array.splice(i, 1);
-						i--;
-						length--;
-						removed++;
-						break;
-					}
+		(function(){
+			
+			arr_isArray = function(x) {
+				return x != null && typeof x === 'object' && x.length != null && typeof x.splice === 'function';
+			};
+			
+			arr_remove = function(array /*, .. */ ) {
+				if (array == null) {
+					return false;
 				}
-			}
-			return removed + 1 === jmax;
-		}
-		
-		
-		function arr_addObserver(arr, callback) {
-		
-			if (arr.__observers == null) {
-				Object.defineProperty(arr, '__observers', {
-					value: {
-						__dirty: null
-					},
-					enumerable: false
-				});
-			}
 			
-			var observers = arr.__observers.__array;
-			if (observers == null) {
-				observers = arr.__observers.__array = [];
-			}
-			
-			if (observers.length === 0) {
-				// create wrappers for first time
 				var i = 0,
-					fns = [
-						// native mutators
-						'push',
-						'unshift',
-						'splice',
-						'pop',
-						'shift',
-						'reverse',
-						'sort',
-						
-						// collections mutator
-						'remove'],
-					length = fns.length,
-					fn,
-					method;
+					length = array.length,
+					x, j = 1,
+					jmax = arguments.length,
+					removed = 0;
 			
 				for (; i < length; i++) {
-					method = fns[i];
-					fn = arr[method];
-					
-					if (fn != null) {
-						arr[method] = _array_createWrapper(arr, fn, method);
-					}
-		
-				}
-			}
-		
-			observers[observers.length++] = callback;
-		}
-		
-		function arr_removeObserver(arr, callback) {
-			var obs = arr.__observers && arr.__observers.__array;
-			if (obs != null) {
-				for (var i = 0, imax = obs.length; i < imax; i++) {
-					if (obs[i] === callback) {
-						obs[i] = null;
-		
-						for (var j = i; j < imax; j++) {
-							obs[j] = obs[j + 1];
-						}
-						
-						imax--;
-						obs.length--;
-					}
-				}
-			}
-		}
-		
-		function arr_lockObservers(arr) {
-			if (arr.__observers != null) {
-				arr.__observers.__dirty = false;
-			}
-		}
-		
-		function arr_unlockObservers(arr) {
-			var list = arr.__observers,
-				obs = list && list.__array;
-				
-			if (obs != null) {
-				if (list.__dirty === true) {
-					for (var i = 0, x, imax = obs.length; i < imax; i++) {
-						x = obs[i];
-						if (typeof x === 'function') {
-							x(arr);
+					x = array[i];
+			
+					for (j = 1; j < jmax; j++) {
+						if (arguments[j] === x) {
+			
+							array.splice(i, 1);
+							i--;
+							length--;
+							removed++;
+							break;
 						}
 					}
-					list.__dirty = null;
 				}
-			}
-		}
-		
-		function _array_createWrapper(array, originalFn, overridenFn) {
-			return function() {
-				return _array_methodWrapper(array, originalFn, overridenFn, __array_slice.call(arguments));
+				return removed + 1 === jmax;
 			};
-		}
-		
-		
-		function _array_methodWrapper(array, original, method, args) {
-			var callbacks = array.__observers && array.__observers.__array,
-				result = original.apply(array, args);
-		
-		
-			if (callbacks == null || callbacks.length === 0) {
-				return result;
-			}
-		
-			if (array.__observers.__dirty != null) {
-				array.__observers.__dirty = true;
-				return result;
-			}
-		
-			var i = 0,
-				imax = callbacks.length,
-				x;
-			for (; i < imax; i++) {
-				x = callbacks[i];
-				if (typeof x === 'function') {
-					x(array, method, args, result);
+			
+			
+			arr_addObserver = function(arr, callback) {
+			
+				if (arr.__observers == null) {
+					Object.defineProperty(arr, '__observers', {
+						value: {
+							__dirty: null
+						},
+						enumerable: false
+					});
 				}
+				
+				var observers = arr.__observers.__array;
+				if (observers == null) {
+					observers = arr.__observers.__array = [];
+				}
+				
+				if (observers.length === 0) {
+					// create wrappers for first time
+					var i = 0,
+						fns = [
+							// native mutators
+							'push',
+							'unshift',
+							'splice',
+							'pop',
+							'shift',
+							'reverse',
+							'sort',
+							
+							// collections mutator
+							'remove'],
+						length = fns.length,
+						fn,
+						method;
+				
+					for (; i < length; i++) {
+						method = fns[i];
+						fn = arr[method];
+						
+						if (fn != null) {
+							arr[method] = _array_createWrapper(arr, fn, method);
+						}
+			
+					}
+				}
+			
+				observers[observers.length++] = callback;
+			};
+			
+			arr_removeObserver = function(arr, callback) {
+				var obs = arr.__observers && arr.__observers.__array;
+				if (obs != null) {
+					for (var i = 0, imax = obs.length; i < imax; i++) {
+						if (obs[i] === callback) {
+							obs[i] = null;
+			
+							for (var j = i; j < imax; j++) {
+								obs[j] = obs[j + 1];
+							}
+							
+							imax--;
+							obs.length--;
+						}
+					}
+				}
+			};
+			
+			arr_lockObservers = function(arr) {
+				if (arr.__observers != null) {
+					arr.__observers.__dirty = false;
+				}
+			};
+			
+			arr_unlockObservers = function(arr) {
+				var list = arr.__observers,
+					obs = list && list.__array;
+					
+				if (obs != null) {
+					if (list.__dirty === true) {
+						for (var i = 0, x, imax = obs.length; i < imax; i++) {
+							x = obs[i];
+							if (typeof x === 'function') {
+								x(arr);
+							}
+						}
+						list.__dirty = null;
+					}
+				}
+			};
+			
+			
+			arr_each = function(array, fn) {
+				for (var i = 0, length = array.length; i < length; i++) {
+					fn(array[i]);
+				}
+			};
+			
+			arr_indexOf = function(arr, x){
+				return arr.indexOf(x);
+			};
+			
+			
+			//= private
+			
+			function _array_createWrapper(array, originalFn, overridenFn) {
+				return function() {
+					return _array_methodWrapper(array, originalFn, overridenFn, __array_slice.call(arguments));
+				};
 			}
-		
-			return result;
-		}
-		
-		
-		function arr_each(array, fn) {
-			for (var i = 0, length = array.length; i < length; i++) {
-				fn(array[i]);
+			
+			
+			function _array_methodWrapper(array, original, method, args) {
+				var callbacks = array.__observers && array.__observers.__array,
+					result = original.apply(array, args);
+			
+			
+				if (callbacks == null || callbacks.length === 0) {
+					return result;
+				}
+			
+				if (array.__observers.__dirty != null) {
+					array.__observers.__dirty = true;
+					return result;
+				}
+			
+				var i = 0,
+					imax = callbacks.length,
+					x;
+				for (; i < imax; i++) {
+					x = callbacks[i];
+					if (typeof x === 'function') {
+						x(array, method, args, result);
+					}
+				}
+			
+				return result;
 			}
-		}
-		//////
-		//////function arr_invoke(functions) {
-		//////	for(var i = 0, x, imax = functions.length; i < imax; i++){
-		//////		x = functions[i];
-		//////
-		//////		switch (arguments.length) {
-		//////			case 1:
-		//////				x();
-		//////				break;
-		//////			case 2:
-		//////				x(arguments[1]);
-		//////				break;
-		//////			case 3:
-		//////				x(arguments[1], arguments[2]);
-		//////				break;
-		//////			case 4:
-		//////				x(arguments[1], arguments[2], arguments[3]);
-		//////				break;
-		//////			case 5:
-		//////				x(arguments[1], arguments[2], arguments[3], arguments[4]);
-		//////				break;
-		//////			default:
-		//////				x.apply(null, __array_slice.call(arguments, 1));
-		//////				break;
-		//////		}
-		//////	}
-		//////}
+			
+			
+			
+			
+			
+		}());
 		
 		// end:source ../src/util/array.js
 		// source ../src/util/dom.js
@@ -8435,6 +8663,7 @@
 			expression_bind,
 			expression_unbind,
 			expression_createBinder,
+			expression_createListener,
 			
 			expression_parse,
 			expression_varRefs
@@ -8608,8 +8837,9 @@
 			expression_createBinder = function(expr, model, cntx, controller, callback) {
 				var locks = 0;
 				return function binder() {
-					if (locks++ > 10) {
-						console.warn('Concurent binder detected', expr);
+					if (++locks > 1) {
+						locks = 0;
+						console.warn('<mask:bind:expression> Concurent binder detected', expr);
 						return;
 					}
 					
@@ -8627,6 +8857,20 @@
 					
 					locks--;
 				};
+			};
+			
+			expression_createListener = function(callback){
+				var locks = 0;
+				return function(){
+					if (++locks > -1) {
+						locks = 0;
+						console.warn('<mask:listener:expression> concurent binder');
+						return;
+					}
+					
+					callback();
+					locks--;
+				}
 			};
 			
 		}());
@@ -9684,33 +9928,33 @@
 			}
 		});
 		// end:source ../src/mask-attr/xxVisible.js
-	    // source ../src/mask-attr/xToggle.js
-	    /**
-	     *	Toggle value with ternary operator on an event.
-	     *
-	     *	button x-toggle='click: foo === "bar" ? "zet" : "bar" > 'Toggle'
-	     */
-	    
-	    __mask_registerAttrHandler('x-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
-	        
-	        
-	        var event = attrValue.substring(0, attrValue.indexOf(':')),
-	            expression = attrValue.substring(event.length + 1),
-	            ref = expression_varRefs(expression);
-	        
-	    	if (typeof ref !== 'string') {
-	    		// assume is an array
-	    		ref = ref[0];
-	    	}
-	    	
-	        __dom_addEventListener(element, event, function(){
-	            var value = expression_eval(expression, model, ctx, controller);
-	            
-	            obj_setProperty(model, ref, value);
-	        });
-	    });
-	    
-	    // end:source ../src/mask-attr/xToggle.js
+		// source ../src/mask-attr/xToggle.js
+		/**
+		 *	Toggle value with ternary operator on an event.
+		 *
+		 *	button x-toggle='click: foo === "bar" ? "zet" : "bar" > 'Toggle'
+		 */
+		
+		__mask_registerAttrHandler('x-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
+		    
+		    
+		    var event = attrValue.substring(0, attrValue.indexOf(':')),
+		        expression = attrValue.substring(event.length + 1),
+		        ref = expression_varRefs(expression);
+		    
+			if (typeof ref !== 'string') {
+				// assume is an array
+				ref = ref[0];
+			}
+			
+		    __dom_addEventListener(element, event, function(){
+		        var value = expression_eval(expression, model, ctx, controller);
+		        
+		        obj_setProperty(model, ref, value);
+		    });
+		});
+		
+		// end:source ../src/mask-attr/xToggle.js
 		// source ../src/mask-attr/xClassToggle.js
 		/**
 		 *	Toggle Class Name
@@ -9749,32 +9993,6 @@
 		
 			mask.registerHandler('%%', Sys);
 		
-			// source sys.plus.js
-			(function(){
-				
-				//function SysPlus(){
-				//	
-				//	this.attr = {
-				//		'if': null,
-				//		'else': null,
-				//		
-				//		'for': null,
-				//		'each': null,
-				//		'with': null,
-				//		'switch': null
-				//	};
-				//};
-				
-				mask.registerStatement('+', SysPlus);
-				
-				
-				function SysPlus(node, model, ctx, container, controller, childs) {
-					
-				}
-				
-			}());
-			// end:source sys.plus.js
-			
 			// source attr.use.js
 			var attr_use = (function() {
 			
@@ -10376,6 +10594,120 @@
 		}(mask));
 		
 		// end:source ../src/sys/sys.js
+		// source ../src/statements/exports.js
+		(function(){
+			var custom_Statements = mask.getStatement();
+			
+			// source 1.utils.js
+			var _getNodes,
+				_renderElements
+				;
+				
+			(function(){
+				
+				_getNodes = function(name, node, model, ctx, controller){
+					custom_Statements[name].getNodes(node, model, ctx, controller);
+				};
+				
+				_renderElements = function(nodes, model, ctx, container, controller, childs){
+					
+					var elements = [];
+					builder_build(nodes, model, ctx, container, controller, elements);
+					
+					if (childs == null) 
+						return elements;
+					
+					var il = childs.length,
+						jl = elements.length;
+			
+					var i = -1;
+					while (++i < jl) {
+						childs[il + i] = elements[i];
+					}
+				
+					return elements;
+					
+				};
+				
+				
+			}());
+			// end:source 1.utils.js
+			// source 2.if.js
+			var stat_IF;
+			
+			(function(){
+				
+				function IFStatement_bind(node, elements, model, ctx, container, controller) {
+					
+					this.model = model;
+					this.ctx = ctx;
+					this.controller = controller;
+					
+					this.refresh = fn_proxy(this.refresh, this);
+					this.binder = expression_createListener(this.refresh);
+					
+					this.Switch = [{
+						node: node,
+						elements: null
+					}];
+					expression_bind(node.expression, model, ctx, controller, this.binder);
+					
+					while (true) {
+						node = node.nextSibling;
+						if (node == null || node.tagName !== 'else') 
+							break;
+						
+						this.Switch.push({
+							node: node,
+							elements: null
+						});
+						
+						if (node.expression) 
+							expression_bind(node.expression, model, ctx, controller, this.binder);
+					}
+				}
+				
+				IFStatement_bind.prototype = {
+					refresh: function() {
+			
+						if (this.elements == null && !value) {
+							// was not render and still falsy
+							return;
+						}
+			
+						if (this.elements == null) {
+							// was not render - do it
+			
+							dom_insertBefore( //
+							compo_render(this, this.template, this.model, this.cntx), this.placeholder);
+			
+							this.$ = domLib(this.elements);
+						} else {
+			
+							if (this.$ == null) {
+								this.$ = domLib(this.elements);
+							}
+							this.$[value ? 'show' : 'hide']();
+						}
+			
+						if (this.onchange) {
+							this.onchange(value);
+						}
+			
+					},
+					dispose: function(){
+						expression_unbind(this.expr, this.model, this, this.binder);
+						this.onchange = null;
+						this.elements = null;
+					}
+				};
+				
+				mask.registerHandler('+if', IFStatement_bind);
+			}());
+			// end:source 2.if.js
+			
+		}());
+		// end:source ../src/statements/exports.js
 	
 	}(Mask, Compo));
 	

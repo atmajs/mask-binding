@@ -1,0 +1,19 @@
+
+UTest({
+	
+	
+	dualbind: function(done){
+		
+		UTest
+			.server
+			.render('.test;', null, function(error, document){
+				
+				eq(error, null);
+				notEq(document.querySelector('.test'), null);
+				
+				done();
+			})
+		
+	}
+	
+})

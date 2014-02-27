@@ -5,5 +5,5 @@ var domLib = global.jQuery || global.Zepto || global.$,
     __mask_registerAttrHandler = mask.registerAttrHandler,
     __mask_registerUtil = mask.registerUtil,
     
-	__array_slice = Array.prototype.slice;
+	_Array_slice = Array.prototype.slice;
 	

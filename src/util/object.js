@@ -2,6 +2,7 @@
 var obj_getProperty,
 	obj_setProperty,
 	obj_addObserver,
+	obj_hasObserver,
 	obj_removeObserver,
 	obj_lockObservers,
 	obj_unlockObservers,
@@ -58,8 +59,17 @@ var obj_getProperty,
 				var prop = parts.slice(i + 1).join('.');
 				
 				if (x.__observers[prop]) {
-					x.__observers[prop].push(callback);
-					listener_push(obj, property, callback);
+					
+					listener_push(x, prop, callback);
+					
+					var listeners = listener_push(obj, property, callback);
+					if (listeners.length === 1) {
+						var arr = parts.splice(0, i);
+						if (arr.length !== 0) 
+							obj_attachProxy(obj, property, listeners, arr, true);
+					}
+					
+					
 					return;
 				}
 			}
@@ -75,6 +85,32 @@ var obj_getProperty,
 		if (arr_isArray(val)) 
 			arr_addObserver(val, callback);
 		
+	};
+	
+	obj_hasObserver = function(obj, property, callback){
+		// nested observer
+		var parts = property.split('.'),
+			imax  = parts.length,
+			i = -1,
+			x = obj;
+		while ( ++i < imax ) {
+			x = x[parts[i]];
+			if (x == null) 
+				break;
+			
+			if (x.__observers != null) {
+				if (obj_hasObserver(x, parts.slice(i).join('.'), callback))
+					return true;
+				
+				break;
+			}
+		}
+		
+		var obs = obj.__observers;
+		if (obs == null || obs[property] == null) 
+			return false;
+		
+		return arr_indexOf(obs[property], callback) !== -1;
 	};
 	
 	obj_removeObserver = function(obj, property, callback) {
@@ -95,18 +131,19 @@ var obj_getProperty,
 		}
 		
 		
-		if (obj.__observers == null || obj.__observers[property] == null) {
+		var obs = obj.__observers;
+		if (obs == null || obs[property] == null) 
 			return;
-		}
+		
 	
 		var currentValue = obj_getProperty(obj, property);
 		if (arguments.length === 2) {
-			
-			obj.__observers[property].length = 0;
+			// <callback> not provided -> remove all observers	
+			obs[property].length = 0;
 			return;
 		}
 	
-		arr_remove(obj.__observers[property], callback);
+		arr_remove(obs[property], callback);
 	
 		if (arr_isArray(currentValue)) 
 			arr_removeObserver(currentValue, callback);
@@ -338,7 +375,8 @@ var obj_getProperty,
 		}
 	}
 	
-		
+	
+	// Create Collection - Check If Exists - Add Listener
 	function listener_push(obj, property, callback) {
 		if (obj.__observers == null) {
 			Object.defineProperty(obj, '__observers', {
@@ -350,7 +388,9 @@ var obj_getProperty,
 		}
 		var obs = obj.__observers;
 		if (obs[property] != null) {
-			obs[property].push(callback);
+			
+			if (arr_indexOf(obs[property], callback) === -1) 
+				obs[property].push(callback);
 		}
 		else{
 			obs[property] = [callback];

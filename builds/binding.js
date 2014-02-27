@@ -4,8 +4,11 @@
 
 	"use strict";
 
+	var builder_build = mask.build;
+	
 	// import ../src/vars.js
 
+	// import ../src/util/function.js
 	// import ../src/util/object.js
 	// import ../src/util/array.js
 	// import ../src/util/dom.js
@@ -27,7 +30,7 @@
 	// import ../src/mask-attr/xClassToggle.js
 
 	// import ../src/sys/sys.js
-
+	// import ../src/statements/exports.js
 
 }(typeof window === 'undefined' ? global : window, typeof mask === 'undefined' ? null : mask));
 

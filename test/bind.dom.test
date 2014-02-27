@@ -1,3 +1,8 @@
+
+var $render = function(){
+	return $(mask.render.apply(null, arguments));
+};
+
 UTest({
 	'binded sys': function() {
 

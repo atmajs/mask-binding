@@ -2,6 +2,7 @@ var expression_eval,
 	expression_bind,
 	expression_unbind,
 	expression_createBinder,
+	expression_createListener,
 	
 	expression_parse,
 	expression_varRefs
@@ -175,14 +176,15 @@ var expression_eval,
 	expression_createBinder = function(expr, model, cntx, controller, callback) {
 		var locks = 0;
 		return function binder() {
-			if (locks++ > 10) {
-				console.warn('Concurent binder detected', expr);
+			if (++locks > 1) {
+				locks = 0;
+				console.warn('<mask:bind:expression> Concurent binder detected', expr);
 				return;
 			}
 			
 			var value = expression_eval(expr, model, cntx, controller);
 			if (arguments.length > 1) {
-				var args = __array_slice.call(arguments);
+				var args = _Array_slice.call(arguments);
 				
 				args[0] = value;
 				callback.apply(this, args);
@@ -194,6 +196,20 @@ var expression_eval,
 			
 			locks--;
 		};
+	};
+	
+	expression_createListener = function(callback){
+		var locks = 0;
+		return function(){
+			if (++locks > 1) {
+				locks = 0;
+				console.warn('<mask:listener:expression> concurent binder');
+				return;
+			}
+			
+			callback();
+			locks--;
+		}
 	};
 	
 }());

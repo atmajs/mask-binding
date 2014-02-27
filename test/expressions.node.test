@@ -142,7 +142,7 @@ include
 			eq(CALLS, 0);
 		},
 
-		'object merge - observers': function() {
+		'object - observers - merge': function() {
 			// playing around with nested objects
 			var obj = {
 				title: 'O0'
@@ -182,7 +182,6 @@ include
 			model_Expect = obj_Expect;
 			model.sub = obj;
 			
-			
 			obj.title = model_Expect = obj_Expect = 'O3';
 			
 			eq(obj_Count, 0);
@@ -203,6 +202,35 @@ include
 			obj.title = 'O4';
 			eq(model_Count, -1);
 			eq(obj_Count, -1);
+		},
+		
+		'object - observer - bind once': function(){
+			
+			function listener() {
+				--count;
+			}
+			
+			var count = 1,
+				obj = { name: 'foo' },
+				root = { sub: { child: obj } }
+				;
+			
+			obj_addObserver(obj, 'name', listener);
+			obj_addObserver(root, 'sub.child.name', listener);
+			
+			obj.name = 'baz';
+			eq_(count, 0);
+			
+			obj_removeObserver(obj, 'name', listener);
+			obj.name = 'qux';
+			eq_(count, 0);
+			
+			root.sub = { child: { name: 'bic' } };
+			eq_(count, -1);
+			
+			
+			obj_removeObserver(root, 'sub.child.name', listener);
+			eq_(root.__observers['sub.child.name'].length, 0);
 		},
 
 		'expression': function() {
