@@ -53,9 +53,6 @@ function compo_fragmentInsert(compo, index, fragment, placeholder) {
 	if (insertBefore) 
 		return dom_insertBefore(fragment, anchor);
 	
-	if (anchor == null) {
-		debugger
-	}
 	return dom_insertAfter(fragment, anchor);
 }
 

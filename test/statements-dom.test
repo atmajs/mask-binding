@@ -70,7 +70,11 @@ UTest({
 		'> compo check'
 		For = Compo.find(controller, '+for');
 		notEq(For, null);
+		eq_(For.parent, controller)
+		eq_(For.parent.components.length, 1);
 		eq_(For.components.length, 2);
+		assert(For.components[0].parent != null);
+		
 		
 		'> render check'
 		$dom.eq_('text', 'foobar');
@@ -119,7 +123,10 @@ UTest({
 		$dom.eq_('text', 'ade');
 		
 		'> dispose'
-		Compo.dispose(controller);
+		eq_(controller.components.length, 1);
+		
+		Compo.dispose(For);
+		//eq_(controller.components.length, 0);
 		eq_(model.__observers.names.length, 0);
 		
 	},
@@ -142,7 +149,6 @@ UTest({
 			controller = {},
 			For;
 		
-		debugger;
 		$dom = $render(template, model, null, null, controller);
 		
 		'> compo check'
@@ -164,7 +170,7 @@ UTest({
 		$dom.has_('html', 'baz:Baz');
 		
 		'> dispose'
-		Compo.dispose(controller);
+		Compo.dispose(For);
 		eq_(model.__observers.user.length, 0);
 	}
 });

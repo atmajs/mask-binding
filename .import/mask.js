@@ -536,13 +536,14 @@
 			};
 			
 			
-			function wrapStatic(proto) {
+			function wrapStatic(proto, parent) {
 				function Ctor(node) {
 					this.tagName = node.tagName;
 					this.attr = node.attr;
 					this.expression = node.expression;
 					this.nodes = node.nodes;
-					
+		
+					this.parent = parent;
 					this.components = null;
 				}
 				
@@ -3638,12 +3639,13 @@
 					compo;
 					
 				var clone = Ctor != null
-						? new Ctor(static_)
+						? new Ctor(static_, controller)
 						: static_
 						,
 					wasRendered = false
 					;
 				
+				clone.parent = controller;
 				for (var key in node) 
 					clone[key] = node[key];
 				

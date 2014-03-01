@@ -115,7 +115,7 @@
 					var imax = compos.length,
 						i = -1;
 					while ( ++i < imax ){
-						if (compo_dispose(compos[i])){
+						if (compo_dispose(compos[i], node)){
 							i--;
 							imax--;
 						}
@@ -313,7 +313,7 @@
 			if (removed.indexOf(x.model) === -1) 
 				continue;
 			
-			compo_dispose(x, self);
+			compo_dispose(x, self.node);
 		}
 	}
 	
