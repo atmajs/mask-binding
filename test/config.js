@@ -9,7 +9,7 @@ module.exports = {
 				"lib/binding.js"
 			],
 			tests: [
-				"test/**.dom.test"
+				"test/**dom.test"
 			]
 		},
 		node: {
@@ -18,7 +18,7 @@ module.exports = {
 				".import/mask.node.js::mask"
 			],
 			tests: [
-				"test/**.node.test"
+				"test/**node.test"
 			]
 		}
 	}

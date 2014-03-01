@@ -1,52 +1,11 @@
-var stat_IF;
-
 (function(){
 	
-	function initialize(compo, node, index, elements, model, ctx, container, controller) {
-		
-		compo.model = model;
-		compo.ctx = ctx;
-		compo.controller = controller;
-		
-		compo.refresh = fn_proxy(compo.refresh, compo);
-		compo.binder = expression_createListener(compo.refresh);
-		compo.index = index;
-		compo.Switch = [{
-			node: node,
-			elements: null
-		}];
-		
-		
-		
-		expression_bind(node.expression, model, ctx, controller, compo.binder);
-		
-		while (true) {
-			node = node.nextSibling;
-			if (node == null || node.tagName !== 'else') 
-				break;
-			
-			compo.Switch.push({
-				node: node,
-				elements: null
-			});
-			
-			if (node.expression) 
-				expression_bind(node.expression, model, ctx, controller, compo.binder);
-		}
-		
-		compo.Switch[index].elements = elements;
-	};
-	
-	
-	
-	var IFStatement_bind = {
+	mask.registerHandler('+if', {
 		
 		render: function(model, ctx, container, controller, childs){
 			
 			var node = this,
-				compo = new IFStatement();
-			
-			var nodes = _getNodes('if', node, model, ctx, controller),
+				nodes = _getNodes('if', node, model, ctx, controller),
 				index = 0;
 				
 			var next = node;
@@ -60,8 +19,6 @@ var stat_IF;
 			}
 			
 			this.attr['switch-index'] = index;
-			
-			
 			return _renderElements(nodes, model, ctx, container, controller, childs);
 		},
 		
@@ -80,7 +37,8 @@ var stat_IF;
 			return compo;
 		}
 		
-	}
+	});
+	
 	
 	function IFStatement() {}
 	
@@ -164,8 +122,7 @@ var stat_IF;
 					expression_unbind(
 						expr,
 						this.model,
-						this.ctx,
-						/*this.controller*/
+						this.controller,
 						this.binder
 					);
 				}
@@ -174,8 +131,44 @@ var stat_IF;
 				x.elements = null;
 			}
 			
+			this.controller = null;
+			this.model = null;
+			this.ctx = null;
 		}
 	};
 	
-	mask.registerHandler('+if', IFStatement_bind);
+	function initialize(compo, node, index, elements, model, ctx, container, controller) {
+		
+		compo.model = model;
+		compo.ctx = ctx;
+		compo.controller = controller;
+		
+		compo.refresh = fn_proxy(compo.refresh, compo);
+		compo.binder = expression_createListener(compo.refresh);
+		compo.index = index;
+		compo.Switch = [{
+			node: node,
+			elements: null
+		}];
+		
+		expression_bind(node.expression, model, ctx, controller, compo.binder);
+		
+		while (true) {
+			node = node.nextSibling;
+			if (node == null || node.tagName !== 'else') 
+				break;
+			
+			compo.Switch.push({
+				node: node,
+				elements: null
+			});
+			
+			if (node.expression) 
+				expression_bind(node.expression, model, ctx, controller, compo.binder);
+		}
+		
+		compo.Switch[index].elements = elements;
+	}
+
+	
 }());

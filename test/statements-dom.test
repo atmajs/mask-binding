@@ -1,0 +1,186 @@
+var $dom;
+
+UTest({
+	'+if' () {
+		
+		var template = `
+				div { 
+					+if (foo == 1) > h1; 
+					else (foo == 2) > h2; 
+					else > h3;
+				}
+			`,
+		
+			model = {
+				foo: 2
+			},
+			controller = {};
+		
+		$dom = $render(template, model, null, null, controller);
+		
+		eq_(model.__observers.foo.length, 1);
+		
+		
+		$has('h1', false);
+		$has('h2', true);
+		$has('h3', false);
+			
+		model.foo = 1;
+		$has('h1', true);
+		$has('h2', true);
+		$has('h3', false);
+		$visible('h2', false);
+		
+		model.foo = 3;
+		$has('h1', true);
+		$has('h2', true);
+		$has('h3', true);
+		$visible('h1', false);
+		$visible('h2', false);
+		
+		
+		model.foo = 1;
+		$visible('h1', true);
+		$visible('h2', false);
+		$visible('h3', false);
+		
+		Compo.dispose(controller);
+		eq_(model.__observers.foo.length, 0);
+	},
+	
+	'+for..of' () {
+		
+		var template = `
+				div { 
+					+for (name of names) > 
+						span > 
+							"~[name]"; 
+				}
+			`,
+		
+			model = {
+				names: ['foo', 'bar']
+			},
+			controller = {},
+			For
+            ;
+		
+		$dom = $render(template, model, null, null, controller);
+		
+		'> compo check'
+		For = Compo.find(controller, '+for');
+		notEq(For, null);
+		eq_(For.components.length, 2);
+		
+		'> render check'
+		$dom.eq_('text', 'foobar');
+		
+		'> push'
+		model.names.push('qux');
+		$dom
+			.has_('text', /qux$/)
+			.has_('span', 3)
+			;
+			
+		'> splice - remove'
+		model.names.splice(0, 1);
+		$dom.hasNot_('text', 'foo');
+		
+		'> splice - prepend' 
+		model.names.splice(0, 0, 'foo');
+		$dom.has_('text', /^foo/);
+	
+		'> sort'
+		model.names.sort();
+		$dom.eq_('text', 'barfooqux');
+		
+		'> reverse'
+		model.names.reverse();
+		$dom.eq_('text', 'quxfoobar');
+		
+		'> unshift'
+		model.names.unshift('baz');
+		$dom.eq_('text', 'bazquxfoobar');
+		
+		'> pop'
+		model.names.pop();
+		$dom.hasNot_('text', 'bar');
+		
+		'> shift'
+		model.names.shift();
+		$dom.eq_('text', 'quxfoo');
+		
+		'> reassign'
+		model.names = ['a', 'b', 'c'];
+		$dom.eq_('text', 'abc');
+		
+		'> splice - remove - add'
+		model.names.splice(1, 2, 'd', 'e');
+		$dom.eq_('text', 'ade');
+		
+		'> dispose'
+		Compo.dispose(controller);
+		eq_(model.__observers.names.length, 0);
+		
+	},
+	
+	'+for..in' () {
+		var template = `
+				div { 
+					+for ((key, name) in user) > 
+						span > 
+							"~[key]:~[name]"; 
+				}
+			`,
+		
+			model = {
+				user: {
+					foo: 'Foo',
+					bar: 'Bar'
+				}
+			},
+			controller = {},
+			For;
+		
+		debugger;
+		$dom = $render(template, model, null, null, controller);
+		
+		'> compo check'
+		For = Compo.find(controller, '+for');
+		notEq(For, null);
+		
+		eq_(For.components.length, 2);
+		
+		
+		'> render check'
+		$dom.has_('html', 'foo:Foo');
+		$dom.has_('html', 'bar:Bar');
+		
+		'> reassign'
+		model.user = { baz: 'Bazar' };
+		
+		$dom.hasNot_('html', 'foo:Foo');
+		$dom.hasNot_('html', 'bar:Bar');
+		$dom.has_('html', 'baz:Baz');
+		
+		'> dispose'
+		Compo.dispose(controller);
+		eq_(model.__observers.user.length, 0);
+	}
+});
+
+
+function $has(selector, state) {
+	$dom
+		[ state ? 'has_' : 'hasNot_' ](selector);
+}
+
+function $visible(selector, state){
+	$dom
+		.find(selector)
+		[state ? 'notEq_' : 'eq_' ]('css', 'display', 'none');
+}
+
+function $render(){
+	return $(mask.render.apply(null, arguments));
+}

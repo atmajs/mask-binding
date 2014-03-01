@@ -14,11 +14,10 @@
 ////////	return elements != null ? elements[elements.length - 1] : compo.placeholder;
 ////////}
 
-function compo_fragmentInsert(compo, index, fragment) {
-	if (compo.components == null) {
-		return dom_insertAfter(fragment, compo.placeholder);
-	}
-
+function compo_fragmentInsert(compo, index, fragment, placeholder) {
+	if (compo.components == null) 
+		return dom_insertAfter(fragment, placeholder || compo.placeholder);
+	
 	var compos = compo.components,
 		anchor = null,
 		insertBefore = true,
@@ -48,14 +47,15 @@ function compo_fragmentInsert(compo, index, fragment) {
 		}
 	}
 
-	if (anchor == null) {
-		anchor = compo.placeholder;
-	}
-
-	if (insertBefore) {
+	if (anchor == null) 
+		anchor = placeholder || compo.placeholder;
+	
+	if (insertBefore) 
 		return dom_insertBefore(fragment, anchor);
+	
+	if (anchor == null) {
+		debugger
 	}
-
 	return dom_insertAfter(fragment, anchor);
 }
 
@@ -64,17 +64,17 @@ function compo_render(parentController, template, model, cntx, container) {
 }
 
 function compo_dispose(compo, parent) {
-	if (compo == null) {
+	if (compo == null) 
 		return false;
+	
+	if (compo.elements != null) {
+		dom_removeAll(compo.elements);
+		compo.elements = null;
 	}
+	
 
-	dom_removeAll(compo.elements);
-
-	compo.elements = null;
-
-	if (__Compo != null) {
-		__Compo.dispose(compo);
-	}
+	__Compo.dispose(compo);
+	
 
 	var components = (parent && parent.components) || (compo.parent && compo.parent.components);
 	if (components == null) {
@@ -83,13 +83,11 @@ function compo_dispose(compo, parent) {
 	}
 
 	return arr_remove(components, compo);
-
 }
 
 function compo_inserted(compo) {
-	if (__Compo != null) {
-		__Compo.signal.emitIn(compo, 'domInsert');
-	}
+	
+	__Compo.signal.emitIn(compo, 'domInsert');
 }
 
 function compo_attachDisposer(controller, disposer) {
