@@ -5,7 +5,7 @@
 	
 	mask.registerHandler('+each', {
 		
-		render: function(model, ctx, container, controller, childs){
+		render: function(model, ctx, container, controller, children){
 			
 			var node = this;
 			
@@ -15,13 +15,13 @@
 			
 			arr_createRefs(array);
 			
-			Each.build(
+			build(
 				node.nodes,
 				array,
 				ctx,
 				container,
 				node,
-				childs
+				children
 			);
 		},
 		
@@ -41,6 +41,17 @@
 		
 	});
 	
+	function build(nodes, array, ctx, container, controller, elements) {
+		var imax = array.length,
+			i = -1,
+			itemCtr;
+		
+		while ( ++i < imax ){
+			
+			itemCtr = Each.createItem(i, nodes, controller);
+			builder_build(itemCtr, array[i], ctx, container, controller, elements);
+		}
+	}
 	
 	function EachStatement(node, attr) {
 		this.expr = node.expression;
@@ -65,7 +76,7 @@
 		_build: function(node, model, ctx, component) {
 			var fragment = document.createDocumentFragment();
 			
-			Each.build(node.nodes, model, ctx, fragment, component);
+			build(node.nodes, model, ctx, fragment, component);
 			
 			return fragment;
 		}

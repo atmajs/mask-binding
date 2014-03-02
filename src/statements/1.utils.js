@@ -1,6 +1,6 @@
 var _getNodes,
 	_renderElements,
-	
+	_renderPlaceholder,
 	_compo_initAndBind,
 	
 	els_toggle
@@ -13,23 +13,22 @@ var _getNodes,
 		return custom_Statements[name].getNodes(node, model, ctx, controller);
 	};
 	
-	_renderElements = function(nodes, model, ctx, container, controller, childs){
+	_renderElements = function(nodes, model, ctx, container, controller, children){
 		
 		var elements = [];
 		builder_build(nodes, model, ctx, container, controller, elements);
 		
-		if (childs == null) 
+		if (children == null) 
 			return elements;
 		
-		var il = childs.length,
-			jl = elements.length;
-
-		var i = -1;
-		while (++i < jl) {
-			childs[il + i] = elements[i];
-		}
-	
+		arr_pushMany(children, elements);
+		
 		return elements;
+	};
+	
+	_renderPlaceholder = function(compo, container){
+		compo.placeholder = document.createComment('');
+		container.appendChild(compo.placeholder);
 	};
 	
 	_compo_initAndBind = function(compo, node, model, ctx, container, controller) {

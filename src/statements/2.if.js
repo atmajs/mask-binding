@@ -2,7 +2,7 @@
 	
 	mask.registerHandler('+if', {
 		
-		render: function(model, ctx, container, controller, childs){
+		render: function(model, ctx, container, controller, children){
 			
 			var node = this,
 				nodes = _getNodes('if', node, model, ctx, controller),
@@ -19,7 +19,7 @@
 			}
 			
 			this.attr['switch-index'] = index;
-			return _renderElements(nodes, model, ctx, container, controller, childs);
+			return _renderElements(nodes, model, ctx, container, controller, children);
 		},
 		
 		renderEnd: function(els, model, ctx, container, controller){
@@ -43,7 +43,7 @@
 	function IFStatement() {}
 	
 	IFStatement.prototype = {
-		
+		compoName: '+if',
 		ctx : null,
 		model : null,
 		controller : null,
