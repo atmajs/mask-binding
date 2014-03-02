@@ -6,10 +6,11 @@ module.exports = {
 			exec: 'dom',
 			env: [
 				".import/mask.js",
-				"lib/binding.js"
+				"lib/binding.js",
+				"test/dom/utils.js"
 			],
 			tests: [
-				"test/**dom.test"
+				"test/dom/**.test"
 			]
 		},
 		node: {

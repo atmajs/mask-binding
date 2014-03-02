@@ -1,5 +1,8 @@
 var _getNodes,
 	_renderElements,
+	
+	_compo_initAndBind,
+	
 	els_toggle
 	
 	;
@@ -29,6 +32,23 @@ var _getNodes,
 		return elements;
 	};
 	
+	_compo_initAndBind = function(compo, node, model, ctx, container, controller) {
+		
+		compo.parent = controller;
+		compo.model = model;
+		
+		compo.refresh = fn_proxy(compo.refresh, compo);
+		compo.binder = expression_createBinder(
+			compo.expr,
+			model,
+			ctx,
+			controller,
+			compo.refresh
+		);
+		
+		
+		expression_bind(compo.expr, model, ctx, controller, compo.binder);
+	};
 	
 	
 	els_toggle = function(els, state){

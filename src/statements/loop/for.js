@@ -50,7 +50,7 @@
 			
 			
 			
-			initialize(compo, this, els, model, ctx, container, controller);
+			_compo_initAndBind(compo, this, model, ctx, container, controller);
 			
 			return compo;
 		}
@@ -93,7 +93,21 @@
 		compoName: '+for',
 		model: null,
 		parent: null,
-		refresh: function(value, method, args, result){
+		
+		refresh: LoopStatementProto.refresh,
+		dispose: LoopStatementProto.dispose,
+		
+		_getModel: function(compo) {
+			return compo.scope[this.prop1];
+		},
+		
+		_build: function(node, model, ctx, component) {
+			var nodes = For.getNodes(node.nodes, model, this.prop1, this.prop2, this.type);
+			
+			return builder_build(nodes, model, ctx, null, component);
+		},
+		
+		_refresh: function(value, method, args, result){
 			var i = 0,
 				x, imax;
 				
@@ -171,7 +185,7 @@
 			}
 		},
 		
-		dispose: function(){
+		_dispose: function(){
 			
 			expression_unbind(
 				this.expr, this.model, this.parent, this.binder
