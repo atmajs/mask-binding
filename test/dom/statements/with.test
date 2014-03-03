@@ -1,0 +1,32 @@
+UTest({
+	
+	'+with' () {
+		
+		var controller = {},
+			model = {
+				user: {
+					name: 'Foo'
+				}
+			},
+			
+			template = `
+				div >
+					+with (user) {
+						span > '~[name]';
+					}
+			`
+			;
+		
+		
+		$dom = $render(template, model, null, null, controller);
+		
+		var With = Compo.find(controller, '+with');
+		
+		notEq_(With, null);
+		$dom.eq_('text', 'Foo');
+		
+		model.user = { name: 'Bar' };
+		
+		$dom.eq_('text', 'Bar');
+	}
+})

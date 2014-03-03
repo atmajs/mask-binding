@@ -4,10 +4,12 @@ function dom_removeElement(node) {
 }
 
 function dom_removeAll(array) {
-	if (array == null) {
+	if (array == null) 
 		return;
-	}
-	for(var i = 0, length = array.length; i < length; i++){
+	
+	var imax = array.length,
+		i = -1;
+	while ( ++i < imax ) {
 		dom_removeElement(array[i]);
 	}
 }
