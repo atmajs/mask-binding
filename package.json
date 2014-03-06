@@ -33,6 +33,9 @@
             "atma-loader-traceur"
         ],
 		"settings": {
+            "traceur-options": {
+                "deferredFunctions": true
+            },
 			"traceur-extension": "test"
 		}
     }

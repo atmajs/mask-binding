@@ -14,6 +14,8 @@ var _getNodes,
 	};
 	
 	_renderElements = function(nodes, model, ctx, container, controller, children){
+		if (nodes == null) 
+			return null;
 		
 		var elements = [];
 		builder_build(nodes, model, ctx, container, controller, elements);

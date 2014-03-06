@@ -45,5 +45,65 @@ UTest({
 		
 		Compo.dispose(controller);
 		eq_(model.__observers.foo.length, 0);
+	},
+	
+	'!+if single': function(){
+		var template = `
+			div >
+				+if (message) {
+					.baz > '~[bind:message]'
+				}
+			`,
+			model = {message: false};
+		
+		var $dom = $render(template, model);
+		eq_(model.__observers.message.length, 1);
+		
+		$dom.hasNot_('.baz');
+		
+		model.message = 'success';
+		
+		$dom
+			.has_('.baz')
+			.eq_('text', 'success')
+			;
+	},
+	
+	
+	// BACKEND
+	
+	'$config': {
+		'http.eval': function(done){
+			include
+				.instance()
+				.js('/.import/mask.node.js::Mask')
+				.done(function(resp){
+					Object.extend(mask, resp.Mask.mask);
+					done();
+				})
+		}
+		
+	},
+	
+	'+if server' (done) {
+		
+		UTest
+			.server
+			.render(`
+				#foo {
+					if (1) > '!'
+					else > '?'
+				}
+			`, {}, function(error, document, window){
+				
+				
+				$(document)
+					.find('#foo')
+					.eq_('length', 1)
+					.eq_('text', '!')
+					;
+				done();
+			});
+		
 	}
 });

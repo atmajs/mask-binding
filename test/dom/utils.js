@@ -11,5 +11,9 @@ function $visible(selector, state){
 }
 
 function $render(){
-	return $(mask.render.apply(null, arguments));
+	var x = mask.render.apply(null, arguments);
+	if (x && x.nodeType === Node.DOCUMENT_FRAGMENT_NODE) 
+		x = x.childNodes;
+	
+	return $(x);
 }

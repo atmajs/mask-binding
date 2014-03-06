@@ -9,13 +9,18 @@
 				index = 0;
 				
 			var next = node;
-			while(next != null){
+			while(true){
 				
 				if (next.nodes === nodes) 
 					break;
 				
 				index++;
 				next = node.nextSibling;
+				
+				if (next == null || next.tagName !== 'else') {
+					index = null;
+					break;
+				}
 			}
 			
 			this.attr['switch-index'] = index;
@@ -167,7 +172,9 @@
 				expression_bind(node.expression, model, ctx, controller, compo.binder);
 		}
 		
-		compo.Switch[index].elements = elements;
+		if (index != null) 
+			compo.Switch[index].elements = elements;
+		
 	}
 
 	

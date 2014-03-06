@@ -19,8 +19,8 @@
 	// import ../src/bindingProvider.js
 
 	// import ../src/mask-handler/visible.js
-	// import ../src/mask-handler/bind.js
-	// import ../src/mask-handler/dualbind.js
+	// import ../src/mask-handler/bind.node.js
+	// import ../src/mask-handler/dualbind.node.js
 	// import ../src/mask-handler/validate.js
 	// import ../src/mask-handler/validate.group.js
 
