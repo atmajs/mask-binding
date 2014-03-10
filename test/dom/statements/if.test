@@ -47,7 +47,7 @@ UTest({
 		eq_(model.__observers.foo.length, 0);
 	},
 	
-	'!+if single': function(){
+	'+if single': function(){
 		var template = `
 			div >
 				+if (message) {
@@ -68,16 +68,19 @@ UTest({
 			.eq_('text', 'success')
 			;
 	},
-	
-	
+
 	// BACKEND
 	
 	'$config': {
 		'http.eval': function(done){
 			include
 				.instance()
-				.js('/.import/mask.node.js::Mask')
+				.js(
+					'/.import/mask.node.js::Mask',
+					'/lib/binding.node.js'
+				)
 				.done(function(resp){
+					
 					Object.extend(mask, resp.Mask.mask);
 					done();
 				})
@@ -91,16 +94,36 @@ UTest({
 			.server
 			.render(`
 				#foo {
-					if (1) > '!'
+					if (1) > 'bang'
 					else > '?'
 				}
-			`, {}, function(error, document, window){
+			`, {}, (error, document, window) => {
 				
 				
 				$(document)
 					.find('#foo')
 					.eq_('length', 1)
 					.eq_('text', '!')
+					;
+				done();
+			});
+	},
+	
+	'!if server - binded' (done) {
+		UTest
+			.server
+			.render(`
+				#foo {
+					+if data (1) > div > 'bang'
+					else > 'x'
+				}
+			`, {}, (error, document, window) => {
+				
+				
+				$(document)
+					.find('#foo')
+					.eq_('length', 1)
+					.eq_('text', 'bang')
 					;
 				done();
 			});

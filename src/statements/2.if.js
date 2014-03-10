@@ -7,7 +7,7 @@
 			var node = this,
 				nodes = _getNodes('if', node, model, ctx, controller),
 				index = 0;
-				
+			
 			var next = node;
 			while(true){
 				
@@ -24,6 +24,7 @@
 			}
 			
 			this.attr['switch-index'] = index;
+			
 			return _renderElements(nodes, model, ctx, container, controller, children);
 		},
 		

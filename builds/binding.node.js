@@ -32,5 +32,5 @@
 	// import ../src/sys/sys.js
 	// import ../src/statements/exports.js
 
-}(window, mask));
+}(global, mask));
 
