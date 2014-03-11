@@ -51,7 +51,6 @@
 		model: null,
 		parent: null,
 		refresh: function(val){
-			debugger
 			dom_removeAll(this.elements);
 			
 			if (this.components) {

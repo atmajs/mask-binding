@@ -1,77 +1,43 @@
-All possible bindings for MaskJS
------
+#### MaskJS Bindings System For Node.JS and Browsers
 
-<h4>One way binding</h4>
+[![Build Status](https://travis-ci.org/atmajs/mask-node.png?branch=master)](https://travis-ci.org/atmajs/mask-node)
 
-<ul>
+##### One-way binding
 
-	<li>
-		<h6>Inline Binding Utility</h6>
-		<div><code> "~[bind:EXPRESSION]"</code></div>
-		<div><code> "Users name is ~[bind: name +'!']"</code></div>
+- Inline Binding Util
+	**``` "~[bind:EXPRESSION]" ```**
+	
+	``` "Users name is ~[bind: name +'!']"```
+	
+	Can be used in literals and attribute values. Usually you would use this util for binding view with a model,
+	but sometimes you may also need some special bindings. For that cases you can use ":bind" tag and define some custom binding provider
+	for [setting/getting] [to/from] [DOM/Model]
 
-		<div>
-			Can be used in literals and attribute values. Usually you would use this util for binding view with a model,
-			but sometimes you may also need some special bindings. For that cases you can use ":bind" tag and define some custom binding provider
-			for [setting/getting] [to/from] [DOM/Model]
-		</div>
-	</li>
+- Binded Statements
+	- ``` +if (expression) {} ```
+	- ``` +for (key of ARRAY) {} ```
+	- ``` +each (expression) {} ```
+	- ``` +with (expression) {} ```
 
-	<li>
-		<h6>Custom Tag Handler</h6>
-		<code>:bind ...;</code><br\>
-		Binds Model Properties to parents node
-		<code>
-			div > :bind attr='data-name' value='name';
-		</code>
-		<div>Attributes</div>
-		<ul>
-			<li> <code>value</code> - path to the value in a model</li>
-			<li> <code>expression</code> - instead of value (simple property path) could be expression used </li>
-			<li> <code>bindingProvider</code> - {optional} - property name of a custom Binding Provider</li>
+- Custom Tag Handler
+		**`:bind ...;`**
+		```mask
+			div >
+				:bind attr='data-name' value='name';
+		```
+		
+		Attributes
+		- `value` - model's property
+		- `expression` - evaluate and bind to the expression
+		- `bindingProvider` - {optional} - property name of a custom Binding Provider
 
-			<li> <code>attr</code> - {optional} - attribute name of an element</li>
-			<li> <code>prop</code> - {optional} - property name of an element</li>
-			<li> <code>-</code> - {default} - binds to parents .innerHTML</li>
-		</ul>
-	</li>
+		- `attr` - {optional} - attribute name of an element
+		- `prop` - {optional} - property name of an element
+		- `-` - {default} - binds to parents .innerHTML
 
-	<li>
-		<h6>Binded Percent Handler</h6>
-		<code>%%</code>
-		<div>
-			<code>%% each="users" { // template </code>
-			Add object and array observer and modify list on any mutable functions call:
-			<code>push, pop, shift, unshift, splice, sort, reverse</code>
-		</div>
-		<div>
-			<code>%% if="x < 10" { // template </code>
-			Toggle/Render template on condition change
-		</div>
-		<div>
-			<code>%% else { // template </code>
-			Use after "IF"
-		</div>
 
-		<div>
-			<code>%% use="some.property" { // template </code>
-			Template will be re-rendered after "some.property = newObject"
-		</div>
+#### Two way data binding
 
-		<div>
-			<code>%% log="name" { // template </code>
-			Log "name" property any time it is changed
-		</div>
-		<div>
-			<code>%% visible="EXPRESSION" { // template </code>
-			Render underlined template, but set display:none, if expression fails, and change display
-			each time variable references in expression changes.
-		</div>
-
-	</li>
-</ul>
-
-<h4>Two way data binding</h4>
 <ul>
 	<li> Custom Tag Handler: <code>:dualbind ...;</code><br\>
 	Binds Model to parents node, and update model on parent node change

@@ -9,6 +9,7 @@ var expression_eval,
 	;
 	
 (function(){
+	
 	var Expression = mask.Utils.Expression,
 		expression_eval_origin = Expression.eval
 		;

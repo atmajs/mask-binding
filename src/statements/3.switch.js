@@ -149,9 +149,6 @@
 		_index = null;
 		
 		if (_nodes == null) 
-			debugger;
-		
-		if (_nodes == null) 
 			return;
 		
 		var imax = nodes.length,
