@@ -2060,7 +2060,11 @@
 			build: build,
 			parseFor: parse_For,
 			createForItem: createForItem,
-			getNodes: getNodes
+			getNodes: getNodes,
+			
+			getHandler: function(compoName, model){
+				return createHandler(compoName, model);
+			}
 		};
 		
 		function build(value, For, nodes, model, ctx, container, ctr, childs) {
@@ -2151,12 +2155,21 @@
 				controller: {
 					compoName: name,
 					scope: scope,
-					
-					renderEnd: function(elements){
-						this.elements = elements
-					}
+					renderEnd: handler_proto_renderEnd
 				}
 			};
+		}
+		
+		function createHandler(name, scope) {
+			return {
+				compoName: name,
+				scope: scope,
+				renderEnd: handler_proto_renderEnd
+			}
+		}
+		
+		function handler_proto_renderEnd(elements) {
+			this.elements = elements;
 		}
 	
 		
@@ -10799,12 +10812,16 @@
 				
 				mask.registerHandler('+if', {
 					
+					$meta: {
+						serializeNodes: true
+					},
+					
 					render: function(model, ctx, container, controller, children){
 						
 						var node = this,
 							nodes = _getNodes('if', node, model, ctx, controller),
 							index = 0;
-							
+						
 						var next = node;
 						while(true){
 							
@@ -10821,6 +10838,7 @@
 						}
 						
 						this.attr['switch-index'] = index;
+						
 						return _renderElements(nodes, model, ctx, container, controller, children);
 					},
 					
@@ -10832,11 +10850,24 @@
 						compo.placeholder = document.createComment('');
 						container.appendChild(compo.placeholder);
 						
-						
-						
 						initialize(compo, this, index, els, model, ctx, container, controller);
 						
+						
 						return compo;
+					},
+					
+					serializeNodes: function(current){
+						
+						var nodes = [ current ];
+						while (true) {
+							current = current.nextSibling;
+							if (current == null || current.tagName !== 'else') 
+								break;
+							
+							nodes.push(current);
+						}
+						
+						return mask.stringify(nodes);
 					}
 					
 				});
@@ -11480,6 +11511,13 @@
 						
 					
 					mask.registerHandler('+for', {
+						$meta: {
+							serializeNodes: true
+						},
+						
+						serializeNodes: function(node){
+							return mask.stringify(node);
+						},
 						
 						render: function(model, ctx, container, controller, childs){
 							

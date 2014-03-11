@@ -35,7 +35,8 @@ module.exports = {
 		action: 'copy',
 		files: {
 			'../mask/lib/mask.js': '.import/mask.js',
-			'../mask.node/lib/mask.node.js': '.import/mask.node.js'
+			'../mask.node/lib/mask.node.js': '.import/mask.node.js',
+			'../mask.node/lib/mask.bootstrap.js': '.import/mask.bootstrap.js'
 		}
 	},
 

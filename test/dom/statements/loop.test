@@ -62,6 +62,123 @@ UTest({
 		Compo.dispose(For);
 		eq_(model.__observers.user.length, 0);
 	},
+
+	// Backend
+	'$config': {
+		'http.eval': function(done){
+			include
+				.instance()
+				.js(
+					'/.import/mask.node.js::Mask',
+					'/lib/binding.node.js'
+				)
+				.done(function(resp){
+					
+					Object.extend(mask, resp.Mask.mask);
+					
+					var source = mask.getHandler(),
+						target = resp.Mask.mask.getHandler()
+						;
+					
+					for (var key in source) {
+						if (target[key] == null && source[key] != null)  {
+							target[key] = source[key];
+							logger.log('>> Override'.red.bold, key);
+						}
+					}
+					
+					done();
+				})
+		}
+		
+	},
+	
+	'!+for..in - server' (done) {
+		var template = `
+				#container { 
+					+for (username of users) > 
+						span > 
+							"~[username]";
+					
+					footer > 'Footer'
+				}
+			`,
+		
+			model = {
+				users: ['Baz']
+			},
+			For;
+			
+		UTest
+			.server
+			.render(template, model)
+			.done(function(doc, win){
+				var $dom = $(doc),
+					model = win.app.model,
+					users = win.app.model.users
+					;
+				
+				$dom
+					.find('#container')
+					.eq_('text', 'BazFooter')
+					;
+				
+				has_(users, 'Baz');
+				notEq_(model.__observers, null);
+				eq_(model.__observers.users.length, 1);
+				
+				users.push('Qux');
+				
+				$dom
+					.find('#container')
+					.eq_('length', 1)
+					.eq_('text', 'BazQuxFooter')
+					;
+				
+				'> pop'
+				users.pop();
+				$dom
+					.find('#container')
+					.eq_('text', 'BazFooter');
+				users.pop();
+				$dom
+					.find('#container')
+					.eq_('text', 'Footer');
+				
+				
+				'> dispose'
+				Compo.dispose(win.app);
+				eq_(model.__observers.users.length, 0);
+				
+				done();
+			});
+		
+		return;
+		
+		$dom = $render(template, model, null, null, controller);
+		
+		'> compo check'
+		For = Compo.find(controller, '+for');
+		notEq(For, null);
+		
+		eq_(For.components.length, 2);
+		
+		
+		'> render check'
+		$dom.has_('html', 'foo:Foo');
+		$dom.has_('html', 'bar:Bar');
+		
+		'> reassign'
+		model.user = { baz: 'Bazar' };
+		
+		$dom.hasNot_('html', 'foo:Foo');
+		$dom.hasNot_('html', 'bar:Bar');
+		$dom.has_('html', 'baz:Baz');
+		
+		'> dispose'
+		Compo.dispose(For);
+		eq_(model.__observers.user.length, 0);
+	},
 	
 	
 });

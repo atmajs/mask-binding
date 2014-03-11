@@ -82,6 +82,18 @@ UTest({
 				.done(function(resp){
 					
 					Object.extend(mask, resp.Mask.mask);
+					
+					var source = mask.getHandler(),
+						target = resp.Mask.mask.getHandler()
+						;
+					
+					for (var key in source) {
+						if (target[key] == null && source[key] != null)  {
+							target[key] = source[key];
+							logger.log('>> Override'.red.bold, key);
+						}
+					}
+					
 					done();
 				})
 		}
@@ -94,10 +106,10 @@ UTest({
 			.server
 			.render(`
 				#foo {
-					if (1) > 'bang'
+					if (foo) > 'bang'
 					else > '?'
 				}
-			`, {}, (error, document, window) => {
+			`, { foo: true }, (error, document, window) => {
 				
 				
 				$(document)
@@ -114,16 +126,46 @@ UTest({
 			.server
 			.render(`
 				#foo {
-					+if data (1) > div > 'bang'
-					else > 'x'
+					+if (foo) > .trueContainer > 'bang'
+					else > .falseContainer > 'big'
+					
+					footer > 'baz'
 				}
-			`, {}, (error, document, window) => {
+			`, { foo: true }, (error, doc, win) => {
 				
+				window.$dom = $(doc);
 				
-				$(document)
+				$has('#foo', true);
+				$has('.trueContainer', true);
+				$dom
 					.find('#foo')
 					.eq_('length', 1)
-					.eq_('text', 'bang')
+					.eq_('text', 'bangbaz')
+					;
+					
+				has_(doc.body.innerHTML, 'expression');
+				
+				has_(doc.body.innerHTML, '.falseContainer');
+				has_(doc.body.innerHTML, 'nodes:');
+				
+				
+				
+				notEq_(win.app, null);
+				notEq_(win.app.model, null);
+				eq_(win.app.model.foo, true);
+				
+				notEq_(win.app.model.__observers, null);
+				eq_(win.app.model.__observers.foo.length, 1);
+				
+				win.app.model.foo = false;
+				
+				$visible('.trueContainer', false);
+				$has('.falseContainer', true);
+				
+				
+				$dom
+					.find('#foo')
+					.eq_('text', 'bangbigbaz')
 					;
 				done();
 			});

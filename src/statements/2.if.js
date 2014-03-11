@@ -2,6 +2,10 @@
 	
 	mask.registerHandler('+if', {
 		
+		$meta: {
+			serializeNodes: true
+		},
+		
 		render: function(model, ctx, container, controller, children){
 			
 			var node = this,
@@ -36,11 +40,24 @@
 			compo.placeholder = document.createComment('');
 			container.appendChild(compo.placeholder);
 			
-			
-			
 			initialize(compo, this, index, els, model, ctx, container, controller);
 			
+			
 			return compo;
+		},
+		
+		serializeNodes: function(current){
+			
+			var nodes = [ current ];
+			while (true) {
+				current = current.nextSibling;
+				if (current == null || current.tagName !== 'else') 
+					break;
+				
+				nodes.push(current);
+			}
+			
+			return mask.stringify(nodes);
 		}
 		
 	});

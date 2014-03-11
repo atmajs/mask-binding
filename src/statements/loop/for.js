@@ -10,6 +10,13 @@
 		
 	
 	mask.registerHandler('+for', {
+		$meta: {
+			serializeNodes: true
+		},
+		
+		serializeNodes: function(node){
+			return mask.stringify(node);
+		},
 		
 		render: function(model, ctx, container, controller, childs){
 			
@@ -53,6 +60,11 @@
 			_compo_initAndBind(compo, this, model, ctx, container, controller);
 			
 			return compo;
+		},
+		
+		getHandler: function(name, model){
+			
+			return For.getHandler(name, model);
 		}
 		
 	});

@@ -552,11 +552,27 @@
 		compo_renderMode_CLIENT = 2,
 		compo_renderMode_BOTH = 3,
 		
-		
+		compo_getMetaInfo,	
 		compo_getRenderMode
 		;
 		
 	(function(){
+		
+		compo_getMetaInfo = function(compo){
+			if (compo == null) 
+				return {};
+			
+			var $meta,
+				proto = typeof compo === 'function'
+					? compo.prototype
+					: compo
+					;
+				
+			$meta = proto.$meta || {};
+			$meta.mode = compo_getRenderMode(compo);
+			
+			return $meta;
+		};
 		
 		compo_getRenderMode = function(compo){
 			if (compo == null) 
@@ -567,7 +583,10 @@
 				: compo
 				;
 			
-			var meta = proto.$meta && proto.$meta.mode || proto.mode;
+			var meta = (proto.$meta && proto.$meta.mode) || proto.mode;
+			
+			if (typeof meta === 'number') 
+				return meta;
 			
 			if (meta == null || meta === 'both') 
 				return compo_renderMode_BOTH;
@@ -2907,7 +2926,11 @@
 			build: build,
 			parseFor: parse_For,
 			createForItem: createForItem,
-			getNodes: getNodes
+			getNodes: getNodes,
+			
+			getHandler: function(compoName, model){
+				return createHandler(compoName, model);
+			}
 		};
 		
 		function build(value, For, nodes, model, ctx, container, ctr, childs) {
@@ -2998,12 +3021,21 @@
 				controller: {
 					compoName: name,
 					scope: scope,
-					
-					renderEnd: function(elements){
-						this.elements = elements
-					}
+					renderEnd: handler_proto_renderEnd
 				}
 			};
+		}
+		
+		function createHandler(name, scope) {
+			return {
+				compoName: name,
+				scope: scope,
+				renderEnd: handler_proto_renderEnd
+			}
+		}
+		
+		function handler_proto_renderEnd(elements) {
+			this.elements = elements;
 		}
 	
 		
@@ -4327,6 +4359,7 @@
 			
 			
 			this.compo = compo;
+			this.node = node;
 			this.ID = this.compo.ID = ++ ctx._id;
 			
 			if (mode_SERVER_ALL === controller.mode) 
@@ -4334,8 +4367,6 @@
 			
 			if (mode_SERVER_CHILDREN === controller.mode) 
 				compo.mode = mode_SERVER_ALL;
-			
-				
 		
 			attr = obj_extend(compo.attr, node.attr);
 			
@@ -4417,7 +4448,8 @@
 					return compo.__cached;
 				}
 				
-				var mode = compo.mode,
+				var meta = compo_getMetaInfo(compo),
+					mode = meta.mode,
 					compoName,
 					attr,
 					nodes;
@@ -4437,9 +4469,13 @@
 						
 						compoName: compoName,
 						attr: attr,
+						expression: compo.expression,
 						mask: mode === 'client'
 							? mask.stringify(nodes, 0)
-							: null
+							: null,
+						nodes: meta.serializeNodes !== true
+							? null
+							: (compo.serializeNodes || mask.stringify)(this.node)
 					},
 					info = {
 						single: this.firstChild == null,
@@ -12518,6 +12554,10 @@
 				
 				mask.registerHandler('+if', {
 					
+					$meta: {
+						serializeNodes: true
+					},
+					
 					render: function(model, ctx, container, controller, children){
 						
 						var node = this,
@@ -12552,11 +12592,24 @@
 						compo.placeholder = document.createComment('');
 						container.appendChild(compo.placeholder);
 						
-						
-						
 						initialize(compo, this, index, els, model, ctx, container, controller);
 						
+						
 						return compo;
+					},
+					
+					serializeNodes: function(current){
+						
+						var nodes = [ current ];
+						while (true) {
+							current = current.nextSibling;
+							if (current == null || current.tagName !== 'else') 
+								break;
+							
+							nodes.push(current);
+						}
+						
+						return mask.stringify(nodes);
 					}
 					
 				});
@@ -13200,6 +13253,13 @@
 						
 					
 					mask.registerHandler('+for', {
+						$meta: {
+							serializeNodes: true
+						},
+						
+						serializeNodes: function(node){
+							return mask.stringify(node);
+						},
 						
 						render: function(model, ctx, container, controller, childs){
 							
