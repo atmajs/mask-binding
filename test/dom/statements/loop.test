@@ -97,8 +97,7 @@ UTest({
 		var template = `
 				#container { 
 					+for (username of users) > 
-						span > 
-							"~[username]";
+						span > "~[username]";
 					
 					footer > 'Footer'
 				}
@@ -117,6 +116,9 @@ UTest({
 					model = win.app.model,
 					users = win.app.model.users
 					;
+				
+				notEq_(model, null);
+				eq_(win.app.components.length, 1);
 				
 				$dom
 					.find('#container')
@@ -145,11 +147,20 @@ UTest({
 					.find('#container')
 					.eq_('text', 'Footer');
 				
+				users.splice(0, 0, 'Quux', 'Quax');
+				$dom
+					.find('#container')
+					.eq_('text', 'QuuxQuaxFooter')
+					;
 				
 				'> dispose'
-				Compo.dispose(win.app);
+				win.app.remove();
+				$dom
+					.find('#container')
+					.eq_('text', 'Footer')
+					;
+					
 				eq_(model.__observers.users.length, 0);
-				
 				done();
 			});
 		
