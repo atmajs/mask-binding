@@ -3,6 +3,10 @@
 	var $With = custom_Statements['with'];
 		
 	mask.registerHandler('+with', {
+		$meta: {
+			serializeNodes: true
+		},
+		
 		render: function(model, ctx, container, ctr, childs){
 			
 			var val = expression_eval(this.expression, model, ctx, ctr);
@@ -11,6 +15,7 @@
 		},
 		
 		renderEnd: function(els, model, ctx, container, ctr){
+			
 			var compo = new WithStatement(this);
 		
 			compo.elements = els;
@@ -46,7 +51,7 @@
 		model: null,
 		parent: null,
 		refresh: function(val){
-			
+			debugger
 			dom_removeAll(this.elements);
 			
 			if (this.components) {

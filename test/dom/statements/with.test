@@ -28,5 +28,87 @@ UTest({
 		model.user = { name: 'Bar' };
 		
 		$dom.eq_('text', 'Bar');
+	},
+	
+	// BACKEND	
+	'$config': {
+		'http.eval': function(done){
+			include
+				.instance()
+				.js(
+					'/.import/mask.node.js::Mask',
+					'/lib/binding.node.js'
+				)
+				.done(function(resp){
+					
+					Object.extend(mask, resp.Mask.mask);
+					
+					var source = mask.getHandler(),
+						target = resp.Mask.mask.getHandler()
+						;
+					
+					for (var key in source) {
+						if (target[key] == null && source[key] != null)  {
+							target[key] = source[key];
+							logger.log('>> Override'.red.bold, key);
+						}
+					}
+					
+					done();
+				})
+		}
+		
+	},
+	
+	'!+with - backend' (done) {
+		var template = `
+			#container {
+				+with (user) {
+					span > '~[username]'
+				}
+			}
+		`,
+		model = {
+			user: {
+				username: 'Baz'
+			}
+		};
+		
+		UTest
+			.server
+			.render(template, model)
+			.done(function(doc, win){
+				window.$dom = $(doc);
+				
+				notEq_(win.app, null);
+				eq_(win.app.components.length, 1);
+				eq_(win.app.model.__observers.user.length, 1);
+				eq_(win.app.model.user.username, 'Baz');
+				
+				$dom
+					.find('#container')
+					.eq_('length', 1)
+					.eq_('text', 'Baz');
+				
+				win.app.model.user = {
+					username: 'Qux'
+				};
+				
+				$dom
+					.find('#container')
+					.eq_('text', 'Qux')
+					;
+				
+				'> dispose'
+				win.app.remove();
+				$dom
+					.find('#container')
+					.eq_('text', '')
+					;
+				
+				eq_(win.app.model.__observers.user.length, 0);
+				done();
+			})
 	}
+	
 })

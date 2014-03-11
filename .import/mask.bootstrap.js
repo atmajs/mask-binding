@@ -534,7 +534,13 @@
 						_container = new mock_Container(container, elements);
 					}
 					
-					compo = compo.renderEnd(elements, model, cntx, _container);
+					compo = compo.renderEnd(
+						elements,
+						model,
+						cntx,
+						_container,
+						controller
+					);
 					
 					if (isStatic && compo != null) 
 						controller.components.push(compo);
@@ -599,9 +605,7 @@
 		
 		
 		setup(el, model, {}, el.parentNode, compo);
-	
-		//-- mask.compoIndex(++__ID);
-	
+		
 		Compo.signal.emitIn(compo, 'domInsert');
 	}
 	// end:source ../src/client/bootstrap.js

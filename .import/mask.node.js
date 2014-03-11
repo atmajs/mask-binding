@@ -3442,7 +3442,7 @@
 			
 			ModelBuilder.prototype = {
 				append: function(model){
-					if (model === null) 
+					if (model == null) 
 						return -1;
 					
 					var id = 'm' + (++this._id);
@@ -5109,15 +5109,15 @@
 				controller = new Dom.Component();
 			
 			if (ctx == null) 
-				ctx = {};
+				ctx = { _model: null, _ctx: null };
 			
+			if (ctx._model == null) 
+				ctx._model = new ModelBuilder(model, Cache.modelID);
 			
-			ctx._model = new ModelBuilder(model, Cache.modelID);
-			ctx._id = Cache.controllerID;
+			if (ctx._id == null) 
+				ctx._id = Cache.controllerID;
 			
 			var html;
-	
-			
 			builder_html(template, model, ctx, container, controller);
 			
 			
@@ -7042,7 +7042,7 @@
 						var i = -1,
 							imax = compos.length;
 						while ( ++i < imax ){
-							compo_removeDeep(compos[i]);
+							compo_removeElements(compos[i]);
 						}
 					}
 				}
@@ -12788,6 +12788,14 @@
 				
 				mask.registerHandler('+switch', {
 					
+					$meta: {
+						serializeNodes: true
+					},
+			
+					serializeNodes: function(current){
+						return mask.stringify(current);
+					},
+					
 					render: function(model, ctx, container, ctr, children){
 						
 						var value = expression_eval(this.expression, model, ctx, ctr);
@@ -12892,6 +12900,25 @@
 						this.controller = null;
 						this.model = null;
 						this.ctx = null;
+						
+						var switch_ = this.Switch,
+							key,
+							els, i, imax
+							;
+						
+						for(key in switch_) {
+							els = switch_[key];
+							
+							if (els == null)
+								continue;
+							
+							imax = els.length;
+							i = -1;
+							while ( ++i < imax ){
+								if (els[i].parentNode != null) 
+									els[i].parentNode.removeChild(els[i]);
+							}
+						}
 					}
 				};
 				
@@ -12952,6 +12979,10 @@
 				var $With = custom_Statements['with'];
 					
 				mask.registerHandler('+with', {
+					$meta: {
+						serializeNodes: true
+					},
+					
 					render: function(model, ctx, container, ctr, childs){
 						
 						var val = expression_eval(this.expression, model, ctx, ctr);
@@ -12960,6 +12991,7 @@
 					},
 					
 					renderEnd: function(els, model, ctx, container, ctr){
+						
 						var compo = new WithStatement(this);
 					
 						compo.elements = els;
@@ -12995,7 +13027,7 @@
 					model: null,
 					parent: null,
 					refresh: function(val){
-						
+						debugger
 						dom_removeAll(this.elements);
 						
 						if (this.components) {
