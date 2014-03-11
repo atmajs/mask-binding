@@ -163,32 +163,6 @@ UTest({
 				eq_(model.__observers.users.length, 0);
 				done();
 			});
-		
-		return;
-		
-		$dom = $render(template, model, null, null, controller);
-		
-		'> compo check'
-		For = Compo.find(controller, '+for');
-		notEq(For, null);
-		
-		eq_(For.components.length, 2);
-		
-		
-		'> render check'
-		$dom.has_('html', 'foo:Foo');
-		$dom.has_('html', 'bar:Bar');
-		
-		'> reassign'
-		model.user = { baz: 'Bazar' };
-		
-		$dom.hasNot_('html', 'foo:Foo');
-		$dom.hasNot_('html', 'bar:Bar');
-		$dom.has_('html', 'baz:Baz');
-		
-		'> dispose'
-		Compo.dispose(For);
-		eq_(model.__observers.user.length, 0);
 	},
 	
 	
