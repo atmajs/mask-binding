@@ -93,7 +93,7 @@ UTest({
 		
 	},
 	
-	'!+for..in - server' (done) {
+	'+for..in - server' (done) {
 		var template = `
 				#container { 
 					+for (username of users) > 

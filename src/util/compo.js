@@ -19,18 +19,20 @@ function compo_fragmentInsert(compo, index, fragment, placeholder) {
 		return dom_insertAfter(fragment, placeholder || compo.placeholder);
 	
 	var compos = compo.components,
-		anchor = null,
+		anchor = placeholder,
 		insertBefore = true,
 		length = compos.length,
 		i = index,
 		elements;
 
-	for (; i< length; i++) {
-		elements = compos[i].elements;
-
-		if (elements && elements.length) {
-			anchor = elements[0];
-			break;
+	if (anchor == null) {
+		for (; i< length; i++) {
+			elements = compos[i].elements;
+	
+			if (elements && elements.length) {
+				anchor = elements[0];
+				break;
+			}
 		}
 	}
 

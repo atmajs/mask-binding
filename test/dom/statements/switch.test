@@ -74,7 +74,7 @@ UTest({
 		
 	},
 	
-	'!+switch..in - server' (done) {
+	'+switch..in - server' (done) {
 		var template = `
 				#container { 
 					+switch (val) {

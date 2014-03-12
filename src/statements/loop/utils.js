@@ -110,13 +110,17 @@ function list_update(self, deleteIndex, deleteCount, insertIndex, rangeModel) {
 
 	if (insertIndex != null && rangeModel && rangeModel.length) {
 
-		var component = new mask.Dom.Component(),
-			fragment = self._build(node, rangeModel, ctx, component); 
+		var i = compos.length,
+			imax,
+			
+			fragment = self._build(node, rangeModel, ctx, ctr)
+			; 
 		
 		compo_fragmentInsert(node, insertIndex, fragment, self.placeholder);
-		compo_inserted(component);
-		
-		compos.splice.apply(compos, [insertIndex, 0].concat(component.components));
+		imax = compos.length;
+		for(; i < imax; i++){
+			__Compo.signal.emitIn(compos[i], 'domInsert');
+		}
 	}
 }
 

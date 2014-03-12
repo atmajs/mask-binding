@@ -60,7 +60,7 @@ UTest({
 		
 	},
 	
-	'!+with - backend' (done) {
+	'+with - backend' (done) {
 		var template = `
 			#container {
 				+with (user) {
@@ -88,7 +88,8 @@ UTest({
 				$dom
 					.find('#container')
 					.eq_('length', 1)
-					.eq_('text', 'Baz');
+					.eq_('text', 'Baz')
+					;
 				
 				win.app.model.user = {
 					username: 'Qux'

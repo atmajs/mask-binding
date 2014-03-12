@@ -32,8 +32,6 @@
 			compo.placeholder = document.createComment('');
 			container.appendChild(compo.placeholder);
 			
-			
-			
 			_compo_initAndBind(compo, this, model, ctx, container, controller);
 			
 			return compo;
