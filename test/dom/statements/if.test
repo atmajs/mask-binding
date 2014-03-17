@@ -15,7 +15,7 @@ UTest({
 			},
 			controller = {};
 		
-		$dom = $render(template, model, null, null, controller);
+		window.$dom = $render(template, model, null, null, controller);
 		
 		eq_(model.__observers.foo.length, 1);
 		
@@ -56,7 +56,7 @@ UTest({
 			`,
 			model = {message: false};
 		
-		var $dom = $render(template, model);
+		window.$dom = $render(template, model);
 		eq_(model.__observers.message.length, 1);
 		
 		$dom.hasNot_('.baz');
