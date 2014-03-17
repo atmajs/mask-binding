@@ -121,7 +121,7 @@ UTest({
 			});
 	},
 	
-	'+if server - binded' (done) {
+	'!+if server - binded' (done) {
 		UTest
 			.server
 			.render(`
@@ -159,30 +159,8 @@ UTest({
 				
 				win.app.model.foo = false;
 				
-				console.log('>> check trueContainer');
 				$visible('.trueContainer', false);
-				
-				var container = $dom
-					.find('.trueContainer')[0];
-					
-				container.style.display = 'none';
-				console.log('manual - direct', $(container).css('display'), win.getComputedStyle(container).display);
-				container.style.setProperty('display', 'none');
-				console.log('manual - fn call', $(container).css('display'), win.getComputedStyle(container).display);
-				$(container).css('display', 'none');
-				console.log('manual - jq call', $(container).css('display'), win.getComputedStyle(container).display);
-				
-				console.log(container.outerHTML, container.tagName, container.innerHTML);
-				container.setAttribute('style', 'display:none');
-				console.log('manual - attr set / get prop', win.getComputedStyle(container).display, container.style.display);
-				
-				setTimeout(function(){
-					console.log('manual timeout', $(container).css('display'));
-				})
-				
 				$has('.falseContainer', true);
-				
-				
 				$dom
 					.find('#foo')
 					.eq_('text', 'bangbigbaz')
