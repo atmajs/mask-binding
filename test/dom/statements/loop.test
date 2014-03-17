@@ -1,7 +1,7 @@
 
 UTest({
 	
-	'!+for..of' () {
+	'+for..of' () {
 		loopTest('+for', `
 			div { 
 				+for (name of names) > 
