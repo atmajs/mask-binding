@@ -38,8 +38,6 @@
 
 // end:source ../../mask/src/umd-head.js
 
-
-
 	// source ../../mask/src/scope-vars.js
 	var regexpWhitespace = /\s/g,
 		regexpEscapedChar = {
@@ -1946,7 +1944,6 @@
 				
 				if (Handler != null && typeof Handler === 'object') {
 					//> static
-					
 					Handler.__Ctor = wrapStatic(Handler);
 				}
 				
@@ -1954,8 +1951,8 @@
 			};
 			
 			
-			function wrapStatic(proto, parent) {
-				function Ctor(node) {
+			function wrapStatic(proto) {
+				function Ctor(node, parent) {
 					this.tagName = node.tagName;
 					this.attr = node.attr;
 					this.expression = node.expression;
@@ -4333,15 +4330,17 @@
 				return;
 			}
 			
-			if (is_Function(Handler))
-				compo = new Handler(model);
+			if (Handler != null) {
 			
-			if (compo == null && is_Function(Handler.__Ctor)) 
-				compo = new Handler.__Ctor(node, controller);
-			
-			if (compo == null)
-				compo = Handler;
-			
+				if (is_Function(Handler))
+					compo = new Handler(model);
+				
+				if (compo == null && is_Function(Handler.__Ctor)) 
+					compo = new Handler.__Ctor(node, controller);
+				
+				if (compo == null)
+					compo = Handler;
+			}
 			
 			if (compo == null) {
 				compo = {
@@ -5955,7 +5954,7 @@
 		}());
 		
 		// if DEBUG
-		if (document != null && domLib == null) {
+		if (global.document != null && domLib == null) {
 			
 			console.warn('jQuery-Zepto-Kimbo etc. was not loaded before MaskJS:Compo, please use Compo.config.setDOMLibrary to define dom engine');
 		}
@@ -10538,18 +10537,20 @@
 				return dom_insertAfter(fragment, placeholder || compo.placeholder);
 			
 			var compos = compo.components,
-				anchor = null,
+				anchor = placeholder,
 				insertBefore = true,
 				length = compos.length,
 				i = index,
 				elements;
 		
-			for (; i< length; i++) {
-				elements = compos[i].elements;
-		
-				if (elements && elements.length) {
-					anchor = elements[0];
-					break;
+			if (anchor == null) {
+				for (; i< length; i++) {
+					elements = compos[i].elements;
+			
+					if (elements && elements.length) {
+						anchor = elements[0];
+						break;
+					}
 				}
 			}
 		
@@ -10634,6 +10635,7 @@
 			;
 			
 		(function(){
+			
 			var Expression = mask.Utils.Expression,
 				expression_eval_origin = Expression.eval
 				;
@@ -12928,9 +12930,6 @@
 					_index = null;
 					
 					if (_nodes == null) 
-						debugger;
-					
-					if (_nodes == null) 
 						return;
 					
 					var imax = nodes.length,
@@ -13027,7 +13026,6 @@
 					model: null,
 					parent: null,
 					refresh: function(val){
-						debugger
 						dom_removeAll(this.elements);
 						
 						if (this.components) {
@@ -13190,13 +13188,20 @@
 				
 					if (insertIndex != null && rangeModel && rangeModel.length) {
 				
-						var component = new mask.Dom.Component(),
-							fragment = self._build(node, rangeModel, ctx, component); 
+						var i = compos.length,
+							imax,
+							//component = new mask.Dom.Component(),
+							fragment = self._build(node, rangeModel, ctx, ctr); 
 						
 						compo_fragmentInsert(node, insertIndex, fragment, self.placeholder);
-						compo_inserted(component);
+						//compo_inserted(component);
 						
-						compos.splice.apply(compos, [insertIndex, 0].concat(component.components));
+						imax = compos.length;
+						for(; i < imax; i++){
+							__Compo.signal.emitIn(compos[i], 'domInsert');
+						}
+						
+						//-compos.splice.apply(compos, [insertIndex, 0].concat(component.components));
 					}
 				}
 				
@@ -13680,8 +13685,6 @@
 							
 							compo.placeholder = document.createComment('');
 							container.appendChild(compo.placeholder);
-							
-							
 							
 							_compo_initAndBind(compo, this, model, ctx, container, controller);
 							

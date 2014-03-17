@@ -115,7 +115,7 @@ UTest({
 				$(document)
 					.find('#foo')
 					.eq_('length', 1)
-					.eq_('text', '!')
+					.eq_('text', 'bang')
 					;
 				done();
 			});

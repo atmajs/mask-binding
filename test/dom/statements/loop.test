@@ -1,7 +1,7 @@
 
 UTest({
 	
-	'+for..of' () {
+	'!+for..of' () {
 		loopTest('+for', `
 			div { 
 				+for (name of names) > 
@@ -195,17 +195,18 @@ function loopTest(compoName, template){
 	'> push'
 	model.names.push('qux');
 	$dom
-		.has_('text', /qux$/)
+		.has_('text', 'foobarqux')
 		.has_('span', 3)
 		;
 		
 	'> splice - remove'
 	model.names.splice(0, 1);
-	$dom.hasNot_('text', 'foo');
+	$dom.eq_('text', 'barqux');
 	
 	'> splice - prepend' 
 	model.names.splice(0, 0, 'foo');
-	$dom.has_('text', /^foo/);
+	$dom.eq_('text', 'foobarqux');
+	return;
 
 	'> sort'
 	model.names.sort();

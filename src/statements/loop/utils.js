@@ -112,14 +112,16 @@ function list_update(self, deleteIndex, deleteCount, insertIndex, rangeModel) {
 
 		var i = compos.length,
 			imax,
-			
-			fragment = self._build(node, rangeModel, ctx, ctr)
+			fragment = self._build(node, rangeModel, ctx, ctr),
+			new_ = compos.splice(i)
 			; 
-		
 		compo_fragmentInsert(node, insertIndex, fragment, self.placeholder);
-		imax = compos.length;
+		
+		compos.splice.apply(compos, [insertIndex, 0].concat(new_));
+		i = 0;
+		imax = new_.length;
 		for(; i < imax; i++){
-			__Compo.signal.emitIn(compos[i], 'domInsert');
+			__Compo.signal.emitIn(new_[i], 'domInsert');
 		}
 	}
 }

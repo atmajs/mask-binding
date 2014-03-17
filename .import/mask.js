@@ -528,7 +528,6 @@
 				
 				if (Handler != null && typeof Handler === 'object') {
 					//> static
-					
 					Handler.__Ctor = wrapStatic(Handler);
 				}
 				
@@ -536,8 +535,8 @@
 			};
 			
 			
-			function wrapStatic(proto, parent) {
-				function Ctor(node) {
+			function wrapStatic(proto) {
+				function Ctor(node, parent) {
 					this.tagName = node.tagName;
 					this.attr = node.attr;
 					this.expression = node.expression;
@@ -8738,18 +8737,20 @@
 				return dom_insertAfter(fragment, placeholder || compo.placeholder);
 			
 			var compos = compo.components,
-				anchor = null,
+				anchor = placeholder,
 				insertBefore = true,
 				length = compos.length,
 				i = index,
 				elements;
 		
-			for (; i< length; i++) {
-				elements = compos[i].elements;
-		
-				if (elements && elements.length) {
-					anchor = elements[0];
-					break;
+			if (anchor == null) {
+				for (; i< length; i++) {
+					elements = compos[i].elements;
+			
+					if (elements && elements.length) {
+						anchor = elements[0];
+						break;
+					}
 				}
 			}
 		
@@ -8834,6 +8835,7 @@
 			;
 			
 		(function(){
+			
 			var Expression = mask.Utils.Expression,
 				expression_eval_origin = Expression.eval
 				;
@@ -11046,6 +11048,14 @@
 				
 				mask.registerHandler('+switch', {
 					
+					$meta: {
+						serializeNodes: true
+					},
+			
+					serializeNodes: function(current){
+						return mask.stringify(current);
+					},
+					
 					render: function(model, ctx, container, ctr, children){
 						
 						var value = expression_eval(this.expression, model, ctx, ctr);
@@ -11150,6 +11160,25 @@
 						this.controller = null;
 						this.model = null;
 						this.ctx = null;
+						
+						var switch_ = this.Switch,
+							key,
+							els, i, imax
+							;
+						
+						for(key in switch_) {
+							els = switch_[key];
+							
+							if (els == null)
+								continue;
+							
+							imax = els.length;
+							i = -1;
+							while ( ++i < imax ){
+								if (els[i].parentNode != null) 
+									els[i].parentNode.removeChild(els[i]);
+							}
+						}
 					}
 				};
 				
@@ -11157,9 +11186,6 @@
 					
 					_nodes = $Switch.getNodes(val, nodes, model, ctx, ctr);
 					_index = null;
-					
-					if (_nodes == null) 
-						debugger;
 					
 					if (_nodes == null) 
 						return;
@@ -11210,6 +11236,10 @@
 				var $With = custom_Statements['with'];
 					
 				mask.registerHandler('+with', {
+					$meta: {
+						serializeNodes: true
+					},
+					
 					render: function(model, ctx, container, ctr, childs){
 						
 						var val = expression_eval(this.expression, model, ctx, ctr);
@@ -11218,6 +11248,7 @@
 					},
 					
 					renderEnd: function(els, model, ctx, container, ctr){
+						
 						var compo = new WithStatement(this);
 					
 						compo.elements = els;
@@ -11253,7 +11284,6 @@
 					model: null,
 					parent: null,
 					refresh: function(val){
-						
 						dom_removeAll(this.elements);
 						
 						if (this.components) {
@@ -11416,13 +11446,20 @@
 				
 					if (insertIndex != null && rangeModel && rangeModel.length) {
 				
-						var component = new mask.Dom.Component(),
-							fragment = self._build(node, rangeModel, ctx, component); 
+						var i = compos.length,
+							imax,
+							//component = new mask.Dom.Component(),
+							fragment = self._build(node, rangeModel, ctx, ctr); 
 						
 						compo_fragmentInsert(node, insertIndex, fragment, self.placeholder);
-						compo_inserted(component);
+						//compo_inserted(component);
 						
-						compos.splice.apply(compos, [insertIndex, 0].concat(component.components));
+						imax = compos.length;
+						for(; i < imax; i++){
+							__Compo.signal.emitIn(compos[i], 'domInsert');
+						}
+						
+						//-compos.splice.apply(compos, [insertIndex, 0].concat(component.components));
 					}
 				}
 				
@@ -11906,8 +11943,6 @@
 							
 							compo.placeholder = document.createComment('');
 							container.appendChild(compo.placeholder);
-							
-							
 							
 							_compo_initAndBind(compo, this, model, ctx, container, controller);
 							
