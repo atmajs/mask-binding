@@ -38,7 +38,7 @@ UTest({
 			controller = {},
 			For;
 		
-		$dom = $render(template, model, null, null, controller);
+		window.$dom = $render(template, model, null, null, controller);
 		
 		'> compo check'
 		For = Compo.find(controller, '+for');
@@ -142,6 +142,7 @@ UTest({
 				$dom
 					.find('#container')
 					.eq_('text', 'BazFooter');
+				
 				users.pop();
 				$dom
 					.find('#container')
@@ -206,8 +207,7 @@ function loopTest(compoName, template){
 	'> splice - prepend' 
 	model.names.splice(0, 0, 'foo');
 	$dom.eq_('text', 'foobarqux');
-	return;
-
+	
 	'> sort'
 	model.names.sort();
 	$dom.eq_('text', 'barfooqux');
@@ -227,6 +227,18 @@ function loopTest(compoName, template){
 	'> shift'
 	model.names.shift();
 	$dom.eq_('text', 'quxfoo');
+	
+	'> push'
+	model.names.push('baz');
+	$dom.eq_('text', 'quxfoobaz');
+	
+	'> splice - add to middle'
+	model.names.splice(2, 0, 'lorem', 'ipsum');
+	$dom.eq_('text', 'quxfooloremipsumbaz');
+	
+	'> splice - remove all'
+	model.names.splice(0);
+	$dom.eq_('text', '');
 	
 	'> reassign'
 	model.names = ['a', 'b', 'c'];

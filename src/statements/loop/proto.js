@@ -44,7 +44,7 @@ var LoopStatementProto = {
 			list_update(this, null, null, array.length - 1, array.slice(array.length - 1));
 			break;
 		case 'pop':
-			list_update(this, array.length - 1, 1);
+			list_update(this, array.length, 1);
 			break;
 		case 'unshift':
 			list_update(this, null, null, 0, array.slice(0, 1));
