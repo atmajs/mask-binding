@@ -166,15 +166,19 @@ UTest({
 					.find('.trueContainer')[0];
 					
 				container.style.display = 'none';
-				console.log('manual - direct', $(container).css('display'), getComputedStyle(container).display);
+				console.log('manual - direct', $(container).css('display'), win.getComputedStyle(container).display);
 				container.style.setProperty('display', 'none');
-				console.log('manual - fn call', $(container).css('display'), getComputedStyle(container).display);
+				console.log('manual - fn call', $(container).css('display'), win.getComputedStyle(container).display);
 				$(container).css('display', 'none');
-				console.log('manual - jq call', $(container).css('display'), getComputedStyle(container).display);
+				console.log('manual - jq call', $(container).css('display'), win.getComputedStyle(container).display);
 				
 				console.log(container.outerHTML, container.tagName, container.innerHTML);
 				container.setAttribute('style', 'display:none');
-				console.log('manual - attr set / get prop', getComputedStyle(container).display, container.style.display);
+				console.log('manual - attr set / get prop', win.getComputedStyle(container).display, container.style.display);
+				
+				setTimeout(function(){
+					console.log('manual timeout', $(container).css('display'));
+				})
 				
 				$has('.falseContainer', true);
 				
