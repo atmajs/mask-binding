@@ -166,9 +166,11 @@ UTest({
 					.find('.trueContainer')[0];
 					
 				container.style.display = 'none';
-				console.log('manual - direct', $(container).css('display'));
+				console.log('manual - direct', $(container).css('display'), getComputedStyle(container).display);
 				container.style.setProperty('display', 'none');
-				console.log('manua - fn call', $(container).css('display'));
+				console.log('manual - fn call', $(container).css('display'), getComputedStyle(container).display);
+				$(container).css('display', 'none');
+				console.log('manual - jq call', $(container).css('display'), getComputedStyle(container).display);
 				
 				$has('.falseContainer', true);
 				
