@@ -2,6 +2,17 @@
 
 [![Build Status](https://travis-ci.org/atmajs/mask-binding.png?branch=master)](https://travis-ci.org/atmajs/mask-binding)
 
+#### Property watchers
+
+_Support: **`IE9+`**_
+
+_We use other technic that new `Object.observe` does._
+- listen for specific property change only via property setter middleware
+- support nestings, like: `obj_addObserver(obj, 'foo.baz.qux.name', cb)`
+- use 'breadcrumbs' for nested objects. `foo.baz = { qux: { name: 'New name' } }` would
+rebind listener and will trigger 'name' change callback
+- after the component is removed all the listeners are also removed to prevent memory leaks.
+
 
 #### One-way binding
 
@@ -23,17 +34,15 @@
 - Custom Tag Handler
 	**`:bind ...;`**
 	```mask
-		:datepicker
+		:datepicker >
 			:bind value='date' getter='getDate' setter='setDate';
 	```
 		
 	Attributes
 	- `value` - model's property
-	- `expression` - evaluate and bind to the expression
+	- `expression` - evaluate and bind to the expression _use instead `value` attribute_
 	- `getter / setter` - binding can be applied also for components
 	- `bindingProvider` - {optional} - property name of a custom Binding Provider
-	
-
 	- `attr` - {optional} - attribute name of an element
 	- `prop` - {optional} - property name of an element
 	- `-` - {default} - binds to parents .innerHTML
@@ -53,7 +62,7 @@ input type=text >
 
 Attributes
 
-- ```value``` - property PATH in a MODEL to BIND
+- ```value``` - property in a model to bind
 - ```expression``` - parse and evaluate expression, listen to all variable changes in expression, (though it could be used instead "value" argument in single binder, but in dual binder "value" should be specified, if expression contains more then one variable reference)
 - ```property``` - {default: "element.value"} - property PATH in a PROVIDER to BIND
 - ```changeEvent``` - {default: change} - event to listen for DOM Changes
@@ -63,10 +72,9 @@ Attributes
 	
 
 
-
 #### Validations
 
-Usually you want to validate user inputs **before** setting them into model and this custom tag is used in dualbind control to keep the model valid.
+Usually you want to validate user inputs **before** setting them to the model and this custom tag is used in dualbind control to keep the model valid.
 	
 ```sass
 div > input type=text > :dualbind value='currentUser.name' {
@@ -156,3 +164,7 @@ mask.registerBinding('bindingName', {
 	}
 })
 ```
+
+
+----
+(c) 2014 Atma Project

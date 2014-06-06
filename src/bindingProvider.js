@@ -361,9 +361,10 @@ var BindingProvider = (function() {
 			
 				
 			if (!provider.objectWay.get(provider, provider.expression)) {
-				
+				// object has no value, so check the dom
 				setTimeout(function(){
 					if (provider.domWay.get(provider))
+						// and apply when exists
 						provider.domChanged();	
 				})
 				
