@@ -6,11 +6,13 @@
 
 _Support: **`IE9+`**_
 
-_We use other technic that new `Object.observe` does._
-- listen for specific property change only via property setter middleware
-- support nestings, like: `obj_addObserver(obj, 'foo.baz.qux.name', cb)`
-- use 'breadcrumbs' for nested objects. `foo.baz = { qux: { name: 'New name' } }` would
-rebind listener and will trigger 'name' change callback
+> Property observers, not object observers.
+
+- works with **any** object, array and array-alike object
+- listen only for a specific single property change or array mutation
+- support **nestings**, like: `obj_addObserver(obj, 'foo.baz.qux.name', cb)`
+- use 'breadcrumbs' for nested objects. `obj.foo = { baz: { qux: { name: 'New name' } } }` would
+rebind listener and will trigger the 'name' listener callback
 - after the component is removed all the listeners are also removed to prevent memory leaks.
 
 
