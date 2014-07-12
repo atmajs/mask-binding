@@ -32,11 +32,11 @@
         "plugins": [
             "atma-loader-traceur"
         ],
-		"settings": {
+        "settings": {
             "traceur-options": {
                 "deferredFunctions": true
             },
-			"traceur-extension": "test"
-		}
+            "traceur-extension": "test"
+        }
     }
 }
