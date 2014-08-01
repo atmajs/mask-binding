@@ -30,7 +30,7 @@ var expression_eval,
 			;
 	};
 		
-	expression_bind = function(expr, model, cntx, controller, callback) {
+	expression_bind = function(expr, model, ctx, ctr, callback) {
 		
 		if (expr === '.') {
 			
@@ -41,7 +41,7 @@ var expression_eval,
 		}
 		
 		var ast = expression_parse(expr),
-			vars = expression_varRefs(ast),
+			vars = expression_varRefs(ast, model, ctx, ctr),
 			obj, ref;
 	
 		if (vars == null) 
@@ -53,8 +53,8 @@ var expression_eval,
 				obj = model;
 			}
 			
-			if (obj == null && obj_isDefined(controller, vars)) {
-				obj = controller;
+			if (obj == null && obj_isDefined(ctr, vars)) {
+				obj = ctr;
 			}
 			
 			if (obj == null) {
@@ -80,7 +80,7 @@ var expression_eval,
 			
 			if (typeof x === 'object') {
 				
-				obj = expression_eval_origin(x.accessor, model, cntx, controller);
+				obj = expression_eval_origin(x.accessor, model, ctx, ctr);
 				
 				if (obj == null || typeof obj !== 'object') {
 					console.error('Binding failed to an object over accessor', x);
@@ -94,8 +94,8 @@ var expression_eval,
 				obj = model;
 			}
 			
-			else if (obj_isDefined(controller, x)) {
-				obj = controller;
+			else if (obj_isDefined(ctr, x)) {
+				obj = ctr;
 			}
 			
 			else {
@@ -112,9 +112,9 @@ var expression_eval,
 		return;
 	};
 	
-	expression_unbind = function(expr, model, controller, callback) {
+	expression_unbind = function(expr, model, ctr, callback) {
 		
-		if (typeof controller === 'function') 
+		if (typeof ctr === 'function') 
 			console.warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
 		
 		
@@ -123,7 +123,7 @@ var expression_eval,
 			return;
 		}
 		
-		var vars = expression_varRefs(expr),
+		var vars = expression_varRefs(expr, model, null, ctr),
 			x, ref;
 	
 		if (vars == null) 
@@ -134,8 +134,8 @@ var expression_eval,
 				obj_removeObserver(model, vars, callback);
 			
 			
-			if (obj_isDefined(controller, vars)) 
-				obj_removeObserver(controller, vars, callback);
+			if (obj_isDefined(ctr, vars)) 
+				obj_removeObserver(ctr, vars, callback);
 			
 			return;
 		}
@@ -154,7 +154,7 @@ var expression_eval,
 			
 			if (typeof x === 'object') {
 				
-				var obj = expression_eval_origin(x.accessor, model, null, controller);
+				var obj = expression_eval_origin(x.accessor, model, null, ctr);
 				if (obj) 
 					obj_removeObserver(obj, x.ref, callback);
 				
@@ -164,8 +164,8 @@ var expression_eval,
 			if (obj_isDefined(model, x)) 
 				obj_removeObserver(model, x, callback);
 			
-			if (obj_isDefined(controller, x)) 
-				obj_removeObserver(controller, x, callback);
+			if (obj_isDefined(ctr, x)) 
+				obj_removeObserver(ctr, x, callback);
 		}
 	
 	}
