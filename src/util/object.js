@@ -291,7 +291,8 @@ var obj_getProperty,
 					listeners[i](x);
 				}
 			},
-			configurable: true
+			configurable: true,
+			enumerable : true
 		});
 	
 		
@@ -330,7 +331,8 @@ var obj_getProperty,
 				value = x;
 				rebinder(path, old);
 			},
-			configurable: true
+			configurable: true,
+			enumerable : true
 		});
 	}
 	
