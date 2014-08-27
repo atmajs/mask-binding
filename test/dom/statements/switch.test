@@ -121,8 +121,9 @@ UTest({
 					.eq_('text', 'ba')
 					;
 				
-				$visible('span:nth-child(1)', false);
 				$visible('span:nth-child(2)', true);
+				$visible('span:nth-child(1)', false);
+				
 				
 				'> change to default'
 				model.val = 3;

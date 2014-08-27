@@ -12,7 +12,7 @@
 	
 	var custom_Attributes = mask.getAttrHandler(),
 		custom_Tags = mask.getHandler(),
-		custom_Utils = mask.getUtility();
+		custom_Utils = mask.getUtil();
 	
 	var __models,
 		__ID = 0;
@@ -177,8 +177,6 @@
 				}
 				
 				json.type = string[parser_Index++];
-				
-				
 				parse_ID(json);
 				
 				while (parse_property(json));
@@ -186,9 +184,10 @@
 				if (parser_Index === -1) 
 					return {};
 				
-				
 				if (string[parser_Length - 1] === '/') 
 					json.single = true;
+				if (json.scope !== void 0) 
+					json.scope = JSON.parse(json.scope);
 				
 				return json;
 			}
@@ -209,81 +208,114 @@
 	}());
 	// end:source model.js
 	// source mock.js
-	function mock_appendChild(container) {
+	var mock_appendChildDelegate,
+		mock_Container,
+		mock_ContainerByAnchor;
 		
-		return function(element){
-			
-			return container.appendChild(element);
+	(function(){
+	
+		mock_appendChildDelegate = function(container) {
+			return function(element){
+				return container.appendChild(element);
+			};
 		};
-	}
-	
-	function mock_Container(container, elements) {
-		this.container = container;
-		this.elements = elements;
-	}
-	
-	mock_Container.prototype = {
-		_after: function(){
-			return this.elements[this.elements.length - 1] || this.container;
-		},
-		_before: function(){
-			return this.elements[0] || this.container;
-		},
-		appendChild: function(child){
-			var last = this._after();
-			
-			if (last.nextSibling) {
-				last.parentNode.insertBefore(child, last.nextSibling);
-				return;
+		mock_Container = function(container, elements) {
+			this.container = container;
+			this.elements = elements;
+		};
+		mock_ContainerByAnchor = function(el) {
+			this.last = el;
+		};
+		
+		
+		// protos
+		
+		mock_ContainerByAnchor.prototype.appendChild = function(child){
+			var next = this.last.nextSibling,
+				parent = this.last.parentNode;
+				
+			if (next) 
+				parent.insertBefore(child, next);
+			else
+				parent.appendChild(child);
+				
+			this.last = child;
+		};
+		
+		
+		mock_Container.prototype = {
+			_after: function(){
+				return this.elements[this.elements.length - 1] || this.container;
+			},
+			_before: function(){
+				return this.elements[0] || this.container;
+			},
+			appendChild: function(child){
+				var last = this._after();
+				
+				if (last.nextSibling) {
+					last.parentNode.insertBefore(child, last.nextSibling);
+					return;
+				}
+				
+				last.parentNode.appendChild(child);
 			}
-			
-			last.parentNode.appendChild(child);
-		}
-	}
+		};
+	
+		
+		
+	}());
+	
 	// end:source mock.js
 	// source traverse.js
-	function trav_getElements(meta) {
-		if (meta.isDocument) 
-			return Array.prototype.slice.call(document.body.childNodes);
+	var trav_getElements,
+		trav_getElement,
+		trav_getMeta
+		;
 		
+	(function(){
 	
-		var id = 'mask-htmltemplate-' + meta.ID,
-			startNode = document.getElementById(id),
-			endNode = document.getElementsByName(id)[0];
-	
+		trav_getElements = function(meta) {
+			if (meta.isDocument) 
+				return Array.prototype.slice.call(document.body.childNodes);
+			
 		
-	
-		if (startNode == null || endNode == null) {
-			console.error('Invalid node range to initialize mask components');
-			return null;
-		}
-	
-		var array = [],
-			node = startNode.nextSibling;
-		while (node != null && node != endNode) {
-			array.push(node);
-	
-			node = node.nextSibling;
-		}
-	
-		return array;
-	}
-	
-	function trav_getElement(node){
-		var next = node.nextSibling;
-		while(next && next.nodeType !== Node.ELEMENT_NODE){
-			next = next.nextSibling;
-		}
+			var id = 'mask-htmltemplate-' + meta.ID,
+				startNode = document.getElementById(id),
+				endNode = document.getElementsByName(id)[0];
+			
+			if (startNode == null || endNode == null) {
+				console.error('Invalid node range to initialize mask components');
+				return null;
+			}
 		
-		return next;
-	}
+			var array = [],
+				node = startNode.nextSibling;
+			while (node != null && node != endNode) {
+				array.push(node);
+		
+				node = node.nextSibling;
+			}
+		
+			return array;
+		};
+		trav_getElement = function(node){
+			var next = node.nextSibling;
+			while(next && next.nodeType !== Node.ELEMENT_NODE){
+				next = next.nextSibling;
+			}
+			
+			return next;
+		};
+		trav_getMeta = function(node){
+			while(node && node.nodeType !== Node.COMMENT_NODE){
+				node = node.nextSibling;
+			}
+			return node;
+		};
+		
+	}());
 	
-	function trav_getMeta(node){
-		while(node && node.nodeType !== Node.COMMENT_NODE){
-			node = node.nextSibling;
-		}
-		return node;
-	}
 	// end:source traverse.js
 	// source setup.js
 	function setup(node, model, cntx, container, controller, childs) {
@@ -292,7 +324,19 @@
 			if (childs != null) 
 				childs.push(node);
 			
-			if (node.firstChild) 
+			if (node.tagName === 'SCRIPT' &&
+				node.type === 'text/mask' &&
+				node.getAttribute('data-run') === 'true') {
+					mask.render(node.textContent
+						, model
+						, cntx
+						, new mock_ContainerByAnchor(node)
+						, controller
+						, childs
+					);
+				}
+			
+			else if (node.firstChild) 
 				setup(node.firstChild, model, cntx, node, controller);
 			
 			if (childs == null && node.nextSibling) 
@@ -312,17 +356,17 @@
 		var metaContent = node.textContent;
 		
 		if (metaContent === '/m') {
-			return;
+			return null;
 		}
 		
 		if (metaContent === '~') {
 			setup(node.nextSibling, model, cntx, node.previousSibling, controller);
-			return;
+			return null;
 		}
 		
 		if (metaContent === '/~') {
 			setup(node.nextSibling, model, cntx, node.parentNode, controller);
-			return;
+			return null;
 		}
 		
 		var meta = Meta.parse(metaContent);
@@ -348,40 +392,66 @@
 			
 			handler(null, meta.value, model, cntx, element, controller, container);
 			// end:source setup-attr.js
+			
+			if (childs != null) 
+				return node;
 		}
 		
 		if ('u' === meta.type) {
 			
 			// source setup-util.js
-			var handler = custom_Utils[meta.utilName];
-			var element = trav_getElement(node);
-			
-			if (handler == null) {
-				console.log('Custom Utility Handler was not defined', meta.name);
-				return;
-			}
-			
-			if (typeof handler === 'function') {
-				
-				handler(meta.value, model, cntx, element, controller, meta.attrName, meta.utilType);
-				
-			}else if (handler.process) {
-				//@TODO refactor )
-				
-				if (handler.mode === 'partial') {
-					var fnStart = meta.utilType + 'RenderStart';
-						fn = meta.utilType;
+			if (meta.end !== true) {
 					
-					handler[fnStart](meta.value, model, cntx, element, controller);
-					handler.element = element;
-					handler[fn](meta.value, model, cntx, element, controller, meta.attrName);
-				} else{
+				var handler = custom_Utils[meta.utilName],
+					util,
+					el;
+				if (handler == null) {
+					console.error('Custom Utility Handler was not defined', meta.name);
+					return;
+				}
+				
+				util = handler.util;
+				el =  meta.utilType === 'attr'
+					? trav_getElement(node)
+					: node.nextSibling
+					;
+				
+				if (util === void 0 || util.mode !== 'partial') {
+					handler(
+						meta.value
+						, model
+						, cntx
+						, el
+						, controller
+						, meta.attrName
+						, meta.utilType
+					);
+				}
+				else {
 					
-					handler.process(meta.value, model, cntx, element, controller, meta.attrName, meta.utilType);
+					util.element = el;
+					util.current = meta.utilType === 'attr'
+						? meta.current
+						: el.textContent
+						;
+					util[meta.utilType](
+						meta.value
+						, model
+						, cntx
+						, el
+						, controller
+						, meta.attrName
+					);
+					
+					if (meta.utilType === 'node') {
+						node = el.nextSibling;
+					}
 				}
 			}
-			
 			// end:source setup-util.js
+			
+			if (childs != null) 
+				return node;
 		}
 		
 		if ('t' === meta.type) {
@@ -423,7 +493,8 @@
 					attr: meta.attr,
 					nodes: meta.mask ? mask.parse(meta.mask) : null,
 					controller: Handler,
-					expression: meta.expression
+					expression: meta.expression,
+					scope: meta.scope
 				};
 				
 				/* Dangerous:
@@ -443,15 +514,14 @@
 				 */
 				
 				var fragment = document.createDocumentFragment(),
-					container = node.parentNode,
-					originalAppender = container.appendChild;
+					container = node.parentNode;
 				
-				container.appendChild = mock_appendChild(fragment);
+				container.appendChild = mock_appendChildDelegate(fragment);
 				
 				mask.render(_node, model, cntx, container, controller);
 				
 				container.insertBefore(fragment, node);
-				container.appendChild = originalAppender;
+				container.appendChild = Node.prototype.appendChild;
 			} else {
 				var compo, isStatic;
 				if (typeof Handler === 'function') 
@@ -470,7 +540,9 @@
 				compo.parent = controller;
 				compo.ID = meta.ID;
 				compo.expression = meta.expression;
+				compo.scope = meta.scope;
 				compo.model = model;
+				
 				
 				if (controller.components == null) 
 					controller.components = [];
@@ -591,7 +663,7 @@
 			
 			
 		if (meta == null || meta.type !== 'm') {
-			console.error('Meta Inforamtion not defined', container);
+			console.error('Mask.Bootstrap: meta information not found', container);
 			return;
 		}
 		
@@ -608,8 +680,22 @@
 		
 		Compo.signal.emitIn(compo, 'domInsert');
 	}
+	
+	function wrapDom(el, model, ctx, Mix) {
+		var compo = Mix || {};
+		if (typeof Mix === 'function') 
+			compo = new Mix();
+		
+		setup(el.firstChild, model, ctx, el, compo);
+		
+		if (compo.renderEnd) 
+			compo.renderEnd(el.children, model, ctx, el);
+		
+		Compo.signal.emitIn(compo, 'domInsert');
+	}
 	// end:source ../src/client/bootstrap.js
 	
 	mask.Compo.bootstrap = bootstrap;
+	mask.Compo.wrapDom = wrapDom
 	
 }());

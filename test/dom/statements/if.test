@@ -36,7 +36,7 @@ UTest({
 		$has('h3', true);
 		$visible('h1', false);
 		$visible('h2', false);
-		
+		$visible('h3', true);
 		
 		model.foo = 1;
 		$visible('h1', true);
@@ -90,7 +90,6 @@ UTest({
 					for (var key in source) {
 						if (target[key] == null && source[key] != null)  {
 							target[key] = source[key];
-							logger.log('>> Override'.red.bold, key);
 						}
 					}
 					
@@ -121,7 +120,7 @@ UTest({
 			});
 	},
 	
-	'+if server - binded' (done) {
+	'!+if server - binded' (done) {
 		UTest
 			.server
 			.render(`
@@ -159,6 +158,7 @@ UTest({
 				
 				win.app.model.foo = false;
 				
+				$visible('.falseContainer', true);
 				$visible('.trueContainer', false);
 				$has('.falseContainer', true);
 				$dom
