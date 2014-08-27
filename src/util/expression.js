@@ -33,10 +33,8 @@ var expression_eval,
 	expression_bind = function(expr, model, ctx, ctr, callback) {
 		
 		if (expr === '.') {
-			
 			if (arr_isArray(model)) 
 				arr_addObserver(model, callback);
-			
 			return;
 		}
 		
@@ -48,75 +46,25 @@ var expression_eval,
 			return;
 		
 		if (typeof vars === 'string') {
-			
-			if (obj_isDefined(model, vars)) {
-				obj = model;
-			}
-			
-			if (obj == null && obj_isDefined(ctr, vars)) {
-				obj = ctr;
-			}
-			
-			if (obj == null) {
-				obj = model;
-			}
-			
-			obj_addObserver(obj, vars, callback);
+			_toggleObserver(obj_addObserver, model, ctr, vars, callback);
 			return;
 		}
 	
 		var isArray = vars.length != null && typeof vars.splice === 'function',
 			imax = isArray === true ? vars.length : 1,
 			i = 0,
-			x;
+			x, prop;
 		
 		for (; i < imax; i++) {
-			x = isArray
-				? vars[i]
-				: vars;
-			if (x == null) 
-				continue;
-			
-			
-			if (typeof x === 'object') {
-				
-				obj = expression_eval_origin(x.accessor, model, ctx, ctr);
-				
-				if (obj == null || typeof obj !== 'object') {
-					console.error('Binding failed to an object over accessor', x);
-					continue;
-				}
-				
-				x = x.ref;
-			}
-			
-			else if (obj_isDefined(model, x)) {
-				obj = model;
-			}
-			
-			else if (obj_isDefined(ctr, x)) {
-				obj = ctr;
-			}
-			
-			else {
-				obj = model;
-			}
-			
-			
-			if (x == null || x === '$c') 
-				continue;
-			
-			obj_addObserver(obj, x, callback);
+			x = isArray === true ? vars[i] : vars;
+			_toggleObserver(obj_addObserver, model, ctr, x, callback);
 		}
-	
-		return;
 	};
 	
 	expression_unbind = function(expr, model, ctr, callback) {
 		
 		if (typeof ctr === 'function') 
-			console.warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
-		
+			log_warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
 		
 		if (expr === '.') {
 			arr_removeObserver(model, callback);
@@ -130,13 +78,7 @@ var expression_eval,
 			return;
 		
 		if (typeof vars === 'string') {
-			if (obj_isDefined(model, vars)) 
-				obj_removeObserver(model, vars, callback);
-			
-			
-			if (obj_isDefined(ctr, vars)) 
-				obj_removeObserver(ctr, vars, callback);
-			
+			_toggleObserver(obj_removeObserver, model, ctr, vars, callback);
 			return;
 		}
 		
@@ -146,26 +88,8 @@ var expression_eval,
 			x;
 		
 		for (; i < imax; i++) {
-			x = isArray
-				? vars[i]
-				: vars;
-			if (x == null) 
-				continue;
-			
-			if (typeof x === 'object') {
-				
-				var obj = expression_eval_origin(x.accessor, model, null, ctr);
-				if (obj) 
-					obj_removeObserver(obj, x.ref, callback);
-				
-				continue;
-			}
-			
-			if (obj_isDefined(model, x)) 
-				obj_removeObserver(model, x, callback);
-			
-			if (obj_isDefined(ctr, x)) 
-				obj_removeObserver(ctr, x, callback);
+			x = isArray === true ? vars[i] : vars;
+			_toggleObserver(obj_removeObserver, model, ctr, x, callback);
 		}
 	
 	}
@@ -179,7 +103,7 @@ var expression_eval,
 		return function binder() {
 			if (++locks > 1) {
 				locks = 0;
-				console.warn('<mask:bind:expression> Concurent binder detected', expr);
+				log_warn('<mask:bind:expression> Concurent binder detected', expr);
 				return;
 			}
 			
@@ -204,7 +128,7 @@ var expression_eval,
 		return function(){
 			if (++locks > 1) {
 				locks = 0;
-				console.warn('<mask:listener:expression> concurent binder');
+				log_warn('<mask:listener:expression> concurent binder');
 				return;
 			}
 			
@@ -213,6 +137,49 @@ var expression_eval,
 		}
 	};
 	
+	function _toggleObserver(mutatorFn, model, ctr, accessor, callback) {
+		if (accessor == null) 
+			return;
+		
+		var accessorType = typeof accessor,
+			obj = _getObservableObject(model, ctr, accessor, accessorType);
+		if (obj == null) 
+			return;
+		
+		var property = accessorType === 'object'
+			? accessor.ref
+			: accessor;
+		mutatorFn(obj, property, callback);
+	}
+	function _getObservableObject(model, ctr, property, type){
+		if (type === 'object') {
+			var obj = expression_eval_origin(property.accessor, model, null, ctr);
+			if (obj == null || typeof obj !== 'object') {
+				log_error('Binding failed to an object over accessor', property);
+				return null;
+			}
+			return obj;
+		}
+		if (property == null || property === '$c') 
+			return null;
+		
+		if (obj_isDefined(model, property)) 
+			return model;
+		
+		if (obj_isDefined(ctr, property)) 
+			return ctr;
+		
+		var x = ctr,
+			scope;
+		while(x != null){
+			scope = x.scope;
+			if (scope != null && obj_isDefined(scope, property)) 
+				return scope;
+			
+			x = x.parent;
+		}
+		return model;
+	}
 }());
 
 

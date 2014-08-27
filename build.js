@@ -118,7 +118,7 @@ function JSHint() {
 			"onevar": false,
 			"passfail": false,
 			"white": false,
-			"predef": ["global", "define", "atma", "io", "net", "mask", "include", "ruta", "ruqq", "Class", "logger", "app", "UTest", "assert", "eq_", "notEq_", "deepEq_", "notDeepEq_", "has_", "hasNot_"]
+			"predef": ["Compo", "log_error", "log_warn", "arr_pushMany", "global", "define", "atma", "io", "net", "mask", "include", "ruta", "ruqq", "Class", "logger", "app", "UTest", "assert", "eq_", "notEq_", "deepEq_", "notDeepEq_", "has_", "hasNot_"]
 		}
 	return {
 		options: options,

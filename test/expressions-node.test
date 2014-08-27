@@ -287,6 +287,53 @@ include
 	
 				model.push(2);
 	
+			},
+			
+			'expression with scope accessor': function(){
+				var expr = "foo + quxScope.qux";
+				var model = {
+					foo: 2
+				};
+				var ref;
+				var ctr = {
+					parent: {
+						scope: ref = ({
+							quxScope: {
+								qux: 2
+							}
+						})
+					}
+				};
+				function checkExpr(expect) {
+					eq_(expression_eval(expr, model, null, ctr), expect);
+				}
+				checkExpr(4);
+				
+				var expect = null;
+				var listener = assert.await(function(val){
+					eq_(expect, val);
+				});
+				
+				expression_bind(expr, model, null, ctr, listener);
+				
+				is_(model.__observers.foo, 'Array');
+				eq_(model.__observers.foo.length, 1);
+				is_(ref.__observers['quxScope.qux'], 'Array');
+				eq_(ref.__observers['quxScope.qux'].length, 1);
+				
+				expect = 3;
+				model.foo = 3;
+				checkExpr(5);
+				
+				expect = 4;
+				ref.quxScope.qux = 4;
+				checkExpr(7);
+				
+				expression_unbind(expr, model, ctr, listener);
+				is_(model.__observers.foo, 'Array');
+				eq_(model.__observers.foo.length, 0);
+				is_(ref.__observers['quxScope.qux'], 'Array');
+				eq_(ref.__observers['quxScope.qux'].length, 0);
 			}
 	
 		})
