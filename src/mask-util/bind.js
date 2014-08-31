@@ -40,7 +40,7 @@
 					currentValue = element[attrName] = attr_strReplace(element[attrName], currentValue, value);
 					return;
 				default:
-					console.warn('Unsupported elements property type', attrName);
+					log_warn('Unsupported elements property type', attrName);
 					return;
 			}
 		};

@@ -61,7 +61,7 @@ function list_sort(self, array) {
 			}
 		}
 
-		console.warn('No Model Found for', array[j]);
+		log_warn('No Model Found for', array[j]);
 	}
 
 

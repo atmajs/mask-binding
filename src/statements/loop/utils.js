@@ -51,7 +51,7 @@ function list_sort(self, array) {
 			}
 		}
 
-		console.warn('No Model Found for', array[j]);
+		log_warn('No Model Found for', array[j]);
 	}
 
 
@@ -90,7 +90,7 @@ function list_update(self, deleteIndex, deleteCount, insertIndex, rangeModel) {
 		type = self.type,
 		
 		ctx = self.ctx,
-		ctr = self.node;
+		ctr = self.node
 		;
 	
 	if (deleteIndex != null && deleteCount != null) {

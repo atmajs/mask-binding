@@ -235,8 +235,7 @@ var obj_getProperty,
 			obj = obj[key];
 		}
 		return obj;
-	};
-	
+	}
 	
 	function obj_attachProxy(obj, property, listeners, chain) {
 		var length = chain.length,

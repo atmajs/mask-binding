@@ -76,7 +76,7 @@ var BindingProvider = (function() {
 					this['signal_' + signalType + 'Changed'] = signal.signal;
 					break;
 				default:
-					console.error('Signal typs is not supported', signal);
+					log_error('Signal typs is not supported', signal);
 					break;
 			}
 			
@@ -93,7 +93,7 @@ var BindingProvider = (function() {
 					this['pipe_' + signalType + 'Changed'] = signal;
 					break;
 				default:
-					console.error('Pipe type is not supported');
+					log_error('Pipe type is not supported');
 					break;
 			}
 		}
@@ -141,7 +141,7 @@ var BindingProvider = (function() {
 				if (typeof refs === 'string') {
 					this.value = refs;
 				} else {
-					console.warn('Please set value attribute in DualBind Control.');
+					log_warn('Please set value attribute in DualBind Control.');
 				}
 			}
 			return;
@@ -187,7 +187,7 @@ var BindingProvider = (function() {
 				return;
 			}
 			if (this.locked === true) {
-				console.warn('Concurance change detected', this);
+				log_warn('Concurance change detected', this);
 				return;
 			}
 			this.locked = true;
@@ -215,7 +215,7 @@ var BindingProvider = (function() {
 		domChanged: function(event, value) {
 
 			if (this.locked === true) {
-				console.warn('Concurance change detected', this);
+				log_warn('Concurance change detected', this);
 				return;
 			}
 			this.locked = true;
@@ -276,7 +276,7 @@ var BindingProvider = (function() {
 
 					// if DEBUG
 					if (controller == null || typeof controller[provider.getter] !== 'function') {
-						console.error('Mask.bindings: Getter should be a function', provider.getter, provider);
+						log_error('Mask.bindings: Getter should be a function', provider.getter, provider);
 						return null;
 					}
 					// endif
@@ -291,7 +291,7 @@ var BindingProvider = (function() {
 
 					// if DEBUG
 					if (controller == null || typeof controller[provider.setter] !== 'function') {
-						console.error('Mask.bindings: Setter should be a function', provider.setter, provider);
+						log_error('Mask.bindings: Setter should be a function', provider.setter, provider);
 						return;
 					}
 					// endif

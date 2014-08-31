@@ -19,13 +19,13 @@ var signal_parse,
 			x = signals[i].split(':');
 			
 			if (x.length !== 1 && x.length !== 2) {
-				console.error('Too much ":" in a signal def.', signals[i]);
+				log_error('Too much ":" in a signal def.', signals[i]);
 				continue;
 			}
 			
 			
-			type = x.length == 2 ? x[0] : defaultType;
-			signalName = x[x.length == 2 ? 1 : 0];
+			type = x.length === 2 ? x[0] : defaultType;
+			signalName = x[x.length === 2 ? 1 : 0];
 			
 			signal = signal_create(signalName.trim(), type, isPiped);
 			
@@ -48,7 +48,7 @@ var signal_parse,
 		
 		var index = signal.indexOf('.');
 		if (index === -1) {
-			console.error('No pipe name in a signal', signal);
+			log_error('No pipe name in a signal', signal);
 			return null;
 		}
 		

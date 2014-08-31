@@ -79,7 +79,7 @@ function compo_dispose(compo, parent) {
 
 	var components = (parent && parent.components) || (compo.parent && compo.parent.components);
 	if (components == null) {
-		console.error('Parent Components Collection is undefined');
+		log_error('Parent Components Collection is undefined');
 		return false;
 	}
 

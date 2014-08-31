@@ -91,7 +91,7 @@
 				}
 				
 				if (key in Validators === false) {
-					console.error('Unknown Validator:', key, this);
+					log_error('Unknown Validator:', key, this);
 					continue;
 				}
 				
@@ -132,7 +132,7 @@
 	
 
 	function notifyInvalid(element, message, oncancel) {
-		console.warn('Validate Notification:', element, message);
+		log_warn('Validate Notification:', element, message);
 
 		var next = domLib(element).next('.' + class_INVALID);
 		if (next.length === 0) {

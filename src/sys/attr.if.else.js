@@ -35,7 +35,7 @@ var attr_else = (function() {
 
 		// if DEBUG
 		if (prev == null || prev.compoName !== '%%' || prev.attr['if'] == null) {
-			console.error('Mask.Binding: Binded ELSE should be after binded IF - %% if="expression" { ...');
+			log_error('Mask.Binding: Binded ELSE should be after binded IF - %% if="expression" { ...');
 			return;
 		}
 		// endif
