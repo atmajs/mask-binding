@@ -24,13 +24,15 @@ __mask_registerHandler(':dualbind', DualbindHandler);
 DualbindHandler.prototype = {
 	constructor: DualbindHandler,
 	
-	renderStart: function(elements, model, cntx, container) {
+	renderStart: function(model, ctx, container) {
 		this.provider = BindingProvider.create(model, container, this);
 		this.provider.objectChanged();
 	},
 	dispose: function(){
-		if (this.provider && typeof this.provider.dispose === 'function') {
-			this.provider.dispose();
+		var provider = this.provider,
+			dispose = provider && provider.dispose;
+		if (typeof dispose === 'function') {
+			dispose.call(provider);
 		}
 	},
 	
