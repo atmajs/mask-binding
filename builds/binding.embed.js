@@ -1,8 +1,5 @@
-
 (function(mask, Compo){
-	'use strict'
-
-
+	
 	// import ../src/vars.js
 
 	// import ../src/util/function.js
