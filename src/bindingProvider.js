@@ -322,8 +322,9 @@ var BindingProvider = (function() {
 				for (var i = 0, x, imax = element.options.length; i < imax; i++){
 					x = element.options[i];
 					
-                    // eqeq (not strict compare)
+                    /* jshint -W116 */
 					if (x.getAttribute('name') == value) {
+						/* jshint +W116 */
 						element.selectedIndex = i;
 						return;
 					}
