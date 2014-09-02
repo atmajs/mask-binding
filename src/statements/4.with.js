@@ -6,11 +6,11 @@
 		$meta: {
 			serializeNodes: true
 		},
-		
+		modelRef: null,
 		render: function(model, ctx, container, ctr, childs){
+			this.modelRef = this.expression;
 			
 			var val = expression_eval(this.expression, model, ctx, ctr);
-			
 			return build(this.nodes, val, ctx, container, ctr);
 		},
 		
