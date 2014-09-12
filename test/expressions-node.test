@@ -376,9 +376,64 @@ include
 					date.setHours(14);
 					setTimeout(done, 50);
 					return;
+				},
+				
+				'deep property': function(done){
+					var obj = {
+						foo: {
+							date: new Date
+						}
+					};
+					var cb;
+					obj_addObserver(obj, 'foo.date', cb = assert.await(1, function(value, method, args) {
+						eq_(value, date);
+						eq_(method, 'setFullYear');
+						
+						eq_(obj.foo.date.getMinutes(), 20)
+						eq_(obj.foo.date.getHours(), 14)
+						eq_(obj.foo.date.getFullYear(), 2015)
+					}));
+					
+					obj.foo.date.setFullYear(2015);
+					
+					var date = obj.foo.date;
+					date.setMinutes(20);
+					date.setHours(14);
+					setTimeout(function(){
+						obj_removeObserver(obj, 'foo.date', cb);
+						obj_addObserver(obj, 'foo.date', cb = assert.await(1, function(value, method, args) {
+							eq_(obj.foo.date.getMonth(), 1)
+							eq_(obj.foo.date.getDate(), 1)
+							eq_(obj.foo.date.getFullYear(), 2014)
+						}));
+						
+						obj.foo.date = new Date(2014, 1, 1);
+						
+						setTimeout(done, 50);
+					}, 50);
+				},
+				'expression': function(done){
+					var expr = "foo + baz.qux.getFullYear()";
+					var model = {
+						foo: 2,
+						baz: {
+							qux: new Date(2014, 1, 1)
+						}
+					};
+					
+					function check(expect) {
+						eq_(expression_eval(expr, model, null, null), expect);
+					}
+					check('2016');
+					expression_bind(expr, model, null, null, assert.await(function(val){
+						is_(val, 'Date');
+						check('2017');
+					}));
+					
+					model.baz.qux.setFullYear(2015);
+					setTimeout(done, 50);
 				}
 			}
-	
 		})
 	
 	})
