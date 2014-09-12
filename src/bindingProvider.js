@@ -42,6 +42,9 @@ var BindingProvider = (function() {
 						this.property = 'element.checked';
 						break;
 					}
+					if ('date' === type) 
+						this.domWay = DomWaysProto.DATE;
+					
 					this.property = 'element.value';
 					break;
 				case 'TEXTAREA':
@@ -308,28 +311,68 @@ var BindingProvider = (function() {
 	var DomWaysProto = {
 		SELECT: {
 			get: function(provider) {
-				var element = provider.element;
-				
-				if (element.selectedIndex === -1) {
-					return '';
-				}
-				
-				return element.options[element.selectedIndex].getAttribute('name');
+				var el = provider.element,
+					i = el.selectedIndex;
+				return  i === -1
+					? ''
+					: el.options[i].getAttribute('name')
+					;
 			},
-			set: function(provider, value) {
-				var element = provider.element;
-				
-				for (var i = 0, x, imax = element.options.length; i < imax; i++){
-					x = element.options[i];
-					
-                    /* jshint -W116 */
-					if (x.getAttribute('name') == value) {
-						/* jshint +W116 */
-						element.selectedIndex = i;
+			set: function(provider, val) {
+				var el = provider.element,
+					options = el.options,
+					imax = options.length,
+					i = -1;
+				while( ++i < imax ){
+					/* jshint eqeqeq: false */
+					if (options[i].getAttribute('name') == val) {
+						/* jshint eqeqeq: true */
+						el.selectedIndex = i;
 						return;
 					}
 				}
-
+				log_warn('Value is not an option', val);
+			}
+		},
+		DATE: {
+			domWay:{
+				get: function(provider){
+					var val = provider.element.value;
+					return val === '' ? null : new Date(val);
+				},
+				set: function(provider, val){
+					if (val == null) 
+						return;
+					if (typeof val !== 'object') 
+						val = new Date(val);
+					
+					if (isNaN(val)) 
+						return;
+					
+					var YYYY = val.getFullYear(),
+						MM = val.getMonth() + 1,
+						DD = val.getDate();
+					if (MM < 10) 
+						MM = '0' + MM;
+					if (DD < 10) 
+						DD = '0' + DD;
+					provider.element.value = YYYY + '-' + MM + '-' + DD;
+				}
+			},
+			objectWay: {
+				get: function(provider, expression) {
+					var date = expression_eval(
+						expression
+						, provider.model
+						, provider.cntx
+						, provider.controller
+					);
+					if (date == null) 
+						return '';
+				},
+				set: function(obj, property, value) {
+					obj_setProperty(obj, property, value);
+				}	
 			}
 		}
 	};

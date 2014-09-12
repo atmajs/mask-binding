@@ -6,7 +6,7 @@ include
 	})
 	.inject({
 		_: '/src/vars.js',
-		util: ['array', 'object', 'expression']
+		util: ['array', 'object', 'object.observe', 'expression']
 	})
 	.done(function() {
 	
@@ -26,12 +26,12 @@ include
 	
 					};
 	
-				arr_addObserver(array, callback = function() {
+				obj_addMutatorObserver(array, callback = function() {
 					check.apply(this, arguments);
 				});
 	
-				eq(array.__observers.__array.length, 1);
-				eq(array.__observers.__array[0], callback);
+				eq(array.__observers.__mutators.length, 1);
+				eq(array.__observers.__mutators[0], callback);
 	
 				check = createAssertion([1], 'push', [1]);
 				array.push(1);
@@ -54,24 +54,21 @@ include
 				check = createAssertion([1, 2, 3], 'sort', []);
 				array.sort();
 	
-	
-	
 				// locking >>
-				arr_lockObservers(array);
+				obj_lockObservers(array);
 	
-				eq(array.__observers.__dirty, false);
-				check = function() {
-					eq('Should not be called');
-				}
+				deepEq_(array.__observers.__dirty, {});
+				check = assert.avoid('locked observer');
 				array.push('4');
 	
 				check = createAssertion([1, 2, 3, 4]);
-				arr_unlockObservers(array);
+				obj_unlockObservers(array);
+				eq_(array.__observers.__dirty, null);
 				// <<
 	
-	
-				arr_removeObserver(array, callback);
-				eq(array.__observers.__array.length, 0);
+				
+				obj_removeMutatorObserver(array, callback);
+				eq(array.__observers.__mutators.length, 0);
 			},
 	
 			'object - observer': function() {
@@ -334,6 +331,52 @@ include
 				eq_(model.__observers.foo.length, 0);
 				is_(ref.__observers['quxScope.qux'], 'Array');
 				eq_(ref.__observers['quxScope.qux'].length, 0);
+			},
+			
+			'date observers': {
+				'single': function(done){
+					var date = new Date,
+						callback;
+		
+					obj_addMutatorObserver(date, callback = assert.await(function(value, method, args) {
+						eq_(value, date);
+						eq_(method, 'setFullYear');
+						eq_(value.getFullYear(), 2017)
+					}));
+		
+					eq(date.__observers.__mutators.length, 1);
+					eq(date.__observers.__mutators[0], callback);
+		
+					date.setFullYear(2017);
+					setTimeout(function(){
+						obj_removeMutatorObserver(date, callback);
+						eq_(date.__observers.__mutators.length, 0);
+						done();
+					}, 50);
+					return;
+				},
+				'debounce': function(done){
+					var date = new Date,
+						callback;
+		
+					obj_addMutatorObserver(date, callback = assert.await(1, function(value, method, args) {
+						eq_(value, date);
+						eq_(method, 'setFullYear');
+						
+						eq_(date.getMinutes(), 20)
+						eq_(date.getHours(), 14)
+						eq_(date.getFullYear(), 2015)
+					}));
+		
+					eq(date.__observers.__mutators.length, 1);
+					eq(date.__observers.__mutators[0], callback);
+		
+					date.setFullYear(2015);
+					date.setMinutes(20);
+					date.setHours(14);
+					setTimeout(done, 50);
+					return;
+				}
 			}
 	
 		})

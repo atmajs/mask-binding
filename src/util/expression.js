@@ -33,8 +33,7 @@ var expression_eval,
 	expression_bind = function(expr, model, ctx, ctr, callback) {
 		
 		if (expr === '.') {
-			if (arr_isArray(model)) 
-				arr_addObserver(model, callback);
+			obj_addMutatorObserver(model, callback);
 			return;
 		}
 		
@@ -67,7 +66,7 @@ var expression_eval,
 			log_warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
 		
 		if (expr === '.') {
-			arr_removeObserver(model, callback);
+			obj_removeMutatorObserver(model, callback);
 			return;
 		}
 		
