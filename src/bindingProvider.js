@@ -42,9 +42,10 @@ var BindingProvider = (function() {
 						this.property = 'element.checked';
 						break;
 					}
-					if ('date' === type) 
-						this.domWay = DomWaysProto.DATE;
-					
+					if ('date' === type) {
+						this.domWay = DomWaysProto.DATE.domWay;
+						this.objectWay = DomWaysProto.DATE.objectWay;
+					}
 					this.property = 'element.value';
 					break;
 				case 'TEXTAREA':
@@ -334,47 +335,48 @@ var BindingProvider = (function() {
 				log_warn('Value is not an option', val);
 			}
 		},
-		DATE: {
-			domWay:{
-				get: function(provider){
-					var val = provider.element.value;
-					return val === '' ? null : new Date(val);
-				},
-				set: function(provider, val){
-					if (val == null) 
-						return;
-					if (typeof val !== 'object') 
-						val = new Date(val);
-					
-					if (isNaN(val)) 
-						return;
-					
-					var YYYY = val.getFullYear(),
-						MM = val.getMonth() + 1,
-						DD = val.getDate();
-					if (MM < 10) 
-						MM = '0' + MM;
-					if (DD < 10) 
-						DD = '0' + DD;
-					provider.element.value = YYYY + '-' + MM + '-' + DD;
-				}
-			},
-			objectWay: {
-				get: function(provider, expression) {
-					var date = expression_eval(
-						expression
-						, provider.model
-						, provider.cntx
-						, provider.controller
-					);
-					if (date == null) 
-						return '';
-				},
-				set: function(obj, property, value) {
-					obj_setProperty(obj, property, value);
-				}	
+		DATE: (function(){
+			function formatDate(date) {
+				var YYYY = date.getFullYear(),
+					MM = date.getMonth() + 1,
+					DD = date.getDate();
+				return YYYY
+					+ '-'
+					+ (MM < 10 ? '0' : '')
+					+ (MM)
+					+ '-'
+					+ (DD < 10 ? '0' : '')
+					+ (DD)
+					;
 			}
-		}
+			return {
+				domWay: {
+					get: BindingProvider.prototype.domWay.get,
+					set: function(prov, val){
+						var date = date_ensure(val);
+						prov.element.value = date == null ? '' : formatDate(date);
+					}
+				},
+				objectWay: {
+					get: BindingProvider.prototype.objectWay.get,
+					set: function(obj, prop, val){
+						var date = date_ensure(val);
+						if (date == null) 
+							return;
+						
+						var target = date_ensure(obj_getProperty(obj, prop));
+						if (target == null) {
+							obj_setProperty(obj, prop, date);
+							return;
+						}
+						
+						target.setFullYear(date.getFullYear());
+						target.setMonth(date.getMonth());
+						target.setDate(date.getDate());
+					}
+				}
+			};
+		}())
 	};
 
 

@@ -6,6 +6,7 @@
 	// import ../src/util/object.js
 	// import ../src/util/object.observe.js
 	// import ../src/util/array.js
+	// import ../src/util/date.js
 	// import ../src/util/dom.js
 	// import ../src/util/compo.js
 	// import ../src/util/expression.js
