@@ -1,4 +1,4 @@
-### MaskJS Bindings System For Node.JS and Browsers
+### MaskJS bindings system (_Node.JS and Browsers_)
 
 [![Build Status](https://travis-ci.org/atmajs/mask-binding.png?branch=master)](https://travis-ci.org/atmajs/mask-binding)
 
@@ -8,11 +8,11 @@ _Support: **`IE9+`**_
 
 > Property observers, not object observers.
 
-- works with **any** object, array and array-alike object
-- listen only for a specific single property change or array mutation
-- support **nestings**, like: `obj_addObserver(obj, 'foo.baz.qux.name', cb)`
-- use 'breadcrumbs' for nested objects. `obj.foo = { baz: { qux: { name: 'New name' } } }` would
-rebind listener and will trigger the 'name' listener callback
+- works with **any** object, array, array-alike object, date.
+- listen only for a specific single property change, array or date mutation.
+- support **deep nestings**, like: `obj_addObserver(obj, 'foo.baz.qux.name', cb)`.
+- use *breadcrumbs* for nested objects. `obj.foo = { baz: { qux: { name: 'New name' } } }` would
+rebind listener and will trigger the 'name' listener callback.
 - after the component is removed all the listeners are also removed to prevent memory leaks.
 
 
@@ -29,11 +29,14 @@ rebind listener and will trigger the 'name' listener callback
 
 - Binded Statements
 	- ``` +if (expression) {} ```
-	- ``` +for (key of ARRAY) {} ```
+	- ``` +for (value of ARRAY) {} ```
+	- ``` +for ((value, index) of ARRAY) {} ```
+	- ``` +for (key in object) {} ```
+	- ``` +for ((key, value) in object) {} ```
 	- ``` +each (expression) {} ```
 	- ``` +with (expression) {} ```
 
-- Custom Tag Handler
+- Custom Tag: fox complex binders, e.g. with setters/getters support for the component.
 	**`:bind ...;`**
 	```mask
 		:datepicker >
@@ -49,13 +52,13 @@ rebind listener and will trigger the 'name' listener callback
 	- `prop` - {optional} - property name of an element
 	- `-` - {default} - binds to parents .innerHTML
 
+	Component should trigger the `change` event to notify the binder.
 
 #### Two way data binding
 
-
 - Custom Tag Handler: **``` :dualbind ...; ```**
 
-Binds Model to parents node, and update model on parent node change
+Binds Model to the parent node.
 
 ```sass
 input type=text >
@@ -72,7 +75,10 @@ Attributes
 - ```setter``` - {optional} - if parent is custom tag(controller) with setter you define some function to apply value
 - ```bindingProvider``` - {optional} - you can register custom binding provider with: mask.registerBinding(name, handler)
 	
-
+Support HTML elements:
+- `textarea`
+- `input` with `text`, *`date`*, *`time`*, `number`, `email` etc.
+- `select`
 
 #### Validations
 
@@ -99,10 +105,11 @@ Attributes
 
 
 ```javascript
+// custom validation
 mask.registerValidator('mycustom', {
 	validate: function(node, string){
 		return doSomeChecks(string);
-		// or if some check settings specified ->
+		// or if some check option specified ->
 		return doSomeChecks(node.attr.mycustom, string);
 	}
 })
@@ -111,10 +118,18 @@ mask.registerValidator('mycustom', {
 ```sass
 input type=text >
 	:dualbind value='user.username' {
-		:validate minLength=3 message="Too Short";
+	
+		// predefined validator
+		:validate minLength=3 message='Too Short';
+		
+		// regexp validator
 		:validate match='^\w+$' message='Only chars and numbers';
-		:validate mycustom message="Foo Message";
-		:validate mycustom="some setting" message="Baz Message";
+		
+		// custom validator
+		:validate mycustom message='Foo Message';
+		
+		// with check option `some_option`
+		:validate mycustom='some_option' message='Baz Message';
 	}
 ```
 
@@ -136,27 +151,27 @@ input type=text >
 mask.registerBinding('bindingName', {
 	/**
 	 * (Optional) override default Setter/Getter to/from a DOM
-	 */
+	\*/
 	domWay: {
 		get: function(provider){
-			// retrieve value from dom
+			// get value from dom or the parent component
 			return value;
 		},
 		/**
 		 * - provider(BindingProvider)
 		 * - value (Object): new value, that should be set to the DOM
-		 */
+		\*/
 		set: function(provider, value){
-			// set value to dom
+			// set value to dom or the parent component
 		}
 	},
 	/**
 	 * (Optional) override default Setter/Getter to/from an Object.
-	 */
+	\*/
 	objectWay: {
 		/**
 		 * - property (String): Dot chained, example: "user.name"
-		 **/
+		\*/
 		get: function(obj, property){
 			// get and return value
 		},
@@ -169,4 +184,4 @@ mask.registerBinding('bindingName', {
 
 
 ----
-(c) 2014 Atma Project
+:copyright: MIT — 2014 — Atma Project
