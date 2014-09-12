@@ -1,23 +1,20 @@
-var BindingProvider = (function() {
-	var Providers = {};
+// import ./DomObjectTransport.js
+// import ./CustomProviders.js
+
+var BindingProvider;
+(function() {
 	
-	mask.registerBinding = function(type, binding) {
-		Providers[type] = binding;
-	};
-
-	mask.BindingProvider = BindingProvider;
-	
-	function BindingProvider(model, element, controller, bindingType) {
-
-		if (bindingType == null) {
-			bindingType = controller.compoName === ':bind' ? 'single' : 'dual';
-		}
-
-		var attr = controller.attr,
+	mask.BindingProvider =
+	BindingProvider =
+	function BindingProvider(model, element, ctr, bindingType) {
+		if (bindingType == null) 
+			bindingType = ctr.compoName === ':bind' ? 'single' : 'dual';
+		
+		var attr = ctr.attr,
 			type;
 
-		this.node = controller; // backwards compat.
-		this.controller = controller;
+		this.node = ctr; // backwards compat.
+		this.controller = ctr;
 
 		this.model = model;
 		this.element = element;
@@ -43,8 +40,9 @@ var BindingProvider = (function() {
 						break;
 					}
 					if ('date' === type) {
-						this.domWay = DomWaysProto.DATE.domWay;
-						this.objectWay = DomWaysProto.DATE.objectWay;
+						var x = DomObjectTransport.DATE;
+						this.domWay = x.domWay;
+						this.objectWay = x.objectWay;
 					}
 					this.property = 'element.value';
 					break;
@@ -52,7 +50,7 @@ var BindingProvider = (function() {
 					this.property = 'element.value';
 					break;
 				case 'SELECT':
-					this.domWay = DomWaysProto.SELECT;
+					this.domWay = DomObjectTransport.DATE.SELECT;
 					break;
 				default:
 					this.property = 'element.innerHTML';
@@ -107,7 +105,7 @@ var BindingProvider = (function() {
 			this.slots = {};
 			// @hack - place dualb. provider on the way of a signal
 			// 
-			var parent = controller.parent,
+			var parent = ctr.parent,
 				newparent = parent.parent;
 				
 			parent.parent = this;
@@ -152,13 +150,13 @@ var BindingProvider = (function() {
 		}
 		
 		this.expression = this.value;
-	}
+	};
 	
 	BindingProvider.create = function(model, element, controller, bindingType) {
 
 		/* Initialize custom provider */
 		var type = controller.attr.bindingProvider,
-			CustomProvider = type == null ? null : Providers[type],
+			CustomProvider = type == null ? null : CustomProviders[type],
 			provider;
 
 		if (typeof CustomProvider === 'function') {
@@ -177,8 +175,7 @@ var BindingProvider = (function() {
 	
 	BindingProvider.bind = function(provider){
 		return apply_bind(provider);
-	}
-
+	};
 
 	BindingProvider.prototype = {
 		constructor: BindingProvider,
@@ -217,170 +214,51 @@ var BindingProvider = (function() {
 			this.locked = false;
 		},
 		domChanged: function(event, value) {
-
 			if (this.locked === true) {
 				log_warn('Concurance change detected', this);
 				return;
 			}
 			this.locked = true;
 
-			var x = value || this.domWay.get(this),
-				valid = true;
-
-			if (this.node.validations) {
-
-				for (var i = 0, validation, length = this.node.validations.length; i < length; i++) {
-					validation = this.node.validations[i];
-					if (validation.validate(x, this.element, this.objectChanged.bind(this)) === false) {
-						valid = false;
+			if (value == null) 
+				value = this.domWay.get(this);
+			
+			var isValid = true,
+				validations = this.node.validations;
+			if (validations) {
+				var imax = validations.length,
+					i = -1, x;
+				while( ++i < imax ) {
+					x = validations[i];
+					if (x.validate(value, this.element, this.objectChanged.bind(this)) === false) {
+						isValid = false;
 						break;
 					}
 				}
 			}
-
-			if (valid) {
+			if (isValid) {
 				this.dismiss = 1;
-				this.objectWay.set(this.model, this.value, x);
+				this.objectWay.set(this.model, this.value, value);
 				this.dismiss = 0;
 
 				if (this.log) {
-					console.log('[BindingProvider] domChanged -', x);
+					console.log('[BindingProvider] domChanged -', value);
 				}
-
 				if (this.signal_domChanged) {
-					signal_emitOut(this.node, this.signal_domChanged, [x]);
+					signal_emitOut(this.node, this.signal_domChanged, [value]);
 				}
-				
 				if (this.pipe_domChanged) {
 					var pipe = this.pipe_domChanged;
 					__Compo.pipe(pipe.pipe).emit(pipe.signal);
 				}	
 			}
-
 			this.locked = false;
 		},
-		objectWay: {
-			get: function(provider, expression) {
-				return expression_eval(expression, provider.model, provider.cntx, provider.controller);
-			},
-			set: function(obj, property, value) {
-				obj_setProperty(obj, property, value);
-			}
-		},
-		/**
-		 * usually you have to override this object, while getting/setting to element,
-		 * can be very element(widget)-specific thing
-		 *
-		 * Note: The Functions are static
-		 */
-		domWay: {
-			get: function(provider) {
-				if (provider.getter) {
-					var controller = provider.node.parent;
-
-					// if DEBUG
-					if (controller == null || typeof controller[provider.getter] !== 'function') {
-						log_error('Mask.bindings: Getter should be a function', provider.getter, provider);
-						return null;
-					}
-					// endif
-
-					return controller[provider.getter]();
-				}
-				return obj_getProperty(provider, provider.property);
-			},
-			set: function(provider, value) {
-				if (provider.setter) {
-					var controller = provider.node.parent;
-
-					// if DEBUG
-					if (controller == null || typeof controller[provider.setter] !== 'function') {
-						log_error('Mask.bindings: Setter should be a function', provider.setter, provider);
-						return;
-					}
-					// endif
-
-					controller[provider.setter](value);
-				} else {
-					obj_setProperty(provider, provider.property, value);
-				}
-
-			}
-		}
+		
+		objectWay: DomObjectTransport.objectWay,
+		domWay: DomObjectTransport.domWay
 	};
 	
-	var DomWaysProto = {
-		SELECT: {
-			get: function(provider) {
-				var el = provider.element,
-					i = el.selectedIndex;
-				return  i === -1
-					? ''
-					: el.options[i].getAttribute('name')
-					;
-			},
-			set: function(provider, val) {
-				var el = provider.element,
-					options = el.options,
-					imax = options.length,
-					i = -1;
-				while( ++i < imax ){
-					/* jshint eqeqeq: false */
-					if (options[i].getAttribute('name') == val) {
-						/* jshint eqeqeq: true */
-						el.selectedIndex = i;
-						return;
-					}
-				}
-				log_warn('Value is not an option', val);
-			}
-		},
-		DATE: (function(){
-			function formatDate(date) {
-				var YYYY = date.getFullYear(),
-					MM = date.getMonth() + 1,
-					DD = date.getDate();
-				return YYYY
-					+ '-'
-					+ (MM < 10 ? '0' : '')
-					+ (MM)
-					+ '-'
-					+ (DD < 10 ? '0' : '')
-					+ (DD)
-					;
-			}
-			return {
-				domWay: {
-					get: BindingProvider.prototype.domWay.get,
-					set: function(prov, val){
-						var date = date_ensure(val);
-						prov.element.value = date == null ? '' : formatDate(date);
-					}
-				},
-				objectWay: {
-					get: BindingProvider.prototype.objectWay.get,
-					set: function(obj, prop, val){
-						var date = date_ensure(val);
-						if (date == null) 
-							return;
-						
-						var target = date_ensure(obj_getProperty(obj, prop));
-						if (target == null) {
-							obj_setProperty(obj, prop, date);
-							return;
-						}
-						
-						target.setFullYear(date.getFullYear());
-						target.setMonth(date.getMonth());
-						target.setDate(date.getDate());
-					}
-				}
-			};
-		}())
-	};
-
-
-
 	function apply_bind(provider) {
 
 		var expr = provider.expression,
@@ -412,8 +290,7 @@ var BindingProvider = (function() {
 					if (provider.domWay.get(provider))
 						// and apply when exists
 						provider.domChanged();	
-				})
-				
+				});
 				return provider;
 			}
 		}
@@ -423,25 +300,21 @@ var BindingProvider = (function() {
 		return provider;
 	}
 
-	function signal_emitOut(controller, signal, args) {
-		var slots = controller.slots;
+	function signal_emitOut(ctr, signal, args) {
+		if (ctr == null) 
+			return;
+		
+		var slots = ctr.slots;
 		if (slots != null && typeof slots[signal] === 'function') {
-			if (slots[signal].apply(controller, args) === false) {
+			if (slots[signal].apply(ctr, args) === false) 
 				return;
-			}
 		}
-
-		if (controller.parent != null) {
-			signal_emitOut(controller.parent, signal, args);
-		}
+		
+		signal_emitOut(ctr.parent, signal, args);
 	}
-
 
 	obj_extend(BindingProvider, {
 		addObserver: obj_addObserver,
 		removeObserver: obj_removeObserver
 	});
-
-	return BindingProvider;
-
 }());
