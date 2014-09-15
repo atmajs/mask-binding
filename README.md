@@ -11,7 +11,7 @@ _Support: **`IE9+`**_
 - works with **any** object, array, array-alike object, date.
 - listen only for a specific single property change, array or date mutation.
 - support **deep nestings**, like: `obj_addObserver(obj, 'foo.baz.qux.name', cb)`.
-- use *breadcrumbs* for nested objects. `obj.foo = { baz: { qux: { name: 'New name' } } }` would
+- support **breadcrumbs** for nested objects. `obj.foo = { baz: { qux: { name: 'New name' } } }` would
 rebind listener and will trigger the 'name' listener callback.
 - after the component is removed all the listeners are also removed to prevent memory leaks.
 
