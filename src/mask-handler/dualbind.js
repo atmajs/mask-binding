@@ -61,7 +61,6 @@ DualbindHandler.prototype = {
 					.getHandler(':validate')
 					.createCustom(container, validator);
 
-
 				(this.validations || (this.validations = []))
 					.push(validator);
 

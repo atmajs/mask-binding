@@ -14,14 +14,18 @@ var BindingProvider;
 			type;
 
 		this.node = ctr; // backwards compat.
-		this.controller = ctr;
+		this.ctr = ctr;
+		this.ctx = null;
 
 		this.model = model;
 		this.element = element;
 		this.value = attr.value;
 		this.property = attr.property;
-		this.setter = attr.setter;
-		this.getter = attr.getter;
+		this.domSetter = attr.setter || attr['dom-setter'];
+		this.domGetter = attr.getter || attr['dom-getter'];
+		this.objSetter = attr['obj-setter'];
+		this.objGetter = attr['obj-getter'];
+		
 		this.dismiss = 0;
 		this.bindingType = bindingType;
 		this.log = false;
@@ -30,7 +34,7 @@ var BindingProvider;
 		this.locked = false;
 		
 		
-		if (this.property == null && this.getter == null) {
+		if (this.property == null && this.domGetter == null) {
 
 			switch (element.tagName) {
 				case 'INPUT':
@@ -152,24 +156,22 @@ var BindingProvider;
 		this.expression = this.value;
 	};
 	
-	BindingProvider.create = function(model, element, controller, bindingType) {
+	BindingProvider.create = function(model, el, ctr, bindingType) {
 
 		/* Initialize custom provider */
-		var type = controller.attr.bindingProvider,
+		var type = ctr.attr.bindingProvider,
 			CustomProvider = type == null ? null : CustomProviders[type],
 			provider;
 
 		if (typeof CustomProvider === 'function') {
-			return new CustomProvider(model, element, controller, bindingType);
+			return new CustomProvider(model, el, ctr, bindingType);
 		}
 
-		provider = new BindingProvider(model, element, controller, bindingType);
+		provider = new BindingProvider(model, el, ctr, bindingType);
 
 		if (CustomProvider != null) {
 			obj_extend(provider, CustomProvider);
 		}
-
-
 		return provider;
 	};
 	
@@ -181,7 +183,7 @@ var BindingProvider;
 		constructor: BindingProvider,
 		
 		dispose: function() {
-			expression_unbind(this.expression, this.model, this.controller, this.binder);
+			expression_unbind(this.expression, this.model, this.ctr, this.binder);
 		},
 		objectChanged: function(x) {
 			if (this.dismiss-- > 0) {
@@ -203,7 +205,7 @@ var BindingProvider;
 				console.log('[BindingProvider] objectChanged -', x);
 			}
 			if (this.signal_objectChanged) {
-				signal_emitOut(this.node, this.signal_objectChanged, [x]);
+				signal_emitOut(this.ctr, this.signal_objectChanged, [x]);
 			}
 			
 			if (this.pipe_objectChanged) {
@@ -224,7 +226,7 @@ var BindingProvider;
 				value = this.domWay.get(this);
 			
 			var isValid = true,
-				validations = this.node.validations;
+				validations = this.ctr.validations;
 			if (validations) {
 				var imax = validations.length,
 					i = -1, x;
@@ -238,14 +240,14 @@ var BindingProvider;
 			}
 			if (isValid) {
 				this.dismiss = 1;
-				this.objectWay.set(this.model, this.value, value);
+				this.objectWay.set(this.model, this.value, value, this);
 				this.dismiss = 0;
 
 				if (this.log) {
 					console.log('[BindingProvider] domChanged -', value);
 				}
 				if (this.signal_domChanged) {
-					signal_emitOut(this.node, this.signal_domChanged, [value]);
+					signal_emitOut(this.ctr, this.signal_domChanged, [value]);
 				}
 				if (this.pipe_domChanged) {
 					var pipe = this.pipe_domChanged;
@@ -265,12 +267,12 @@ var BindingProvider;
 			model = provider.model,
 			onObjChanged = provider.objectChanged = provider.objectChanged.bind(provider);
 
-		provider.binder = expression_createBinder(expr, model, provider.cntx, provider.node, onObjChanged);
+		provider.binder = expression_createBinder(expr, model, provider.ctx, provider.ctr, onObjChanged);
 
-		expression_bind(expr, model, provider.cntx, provider.node, provider.binder);
+		expression_bind(expr, model, provider.ctx, provider.ctr, provider.binder);
 
 		if (provider.bindingType === 'dual') {
-			var attr = provider.node.attr;
+			var attr = provider.ctr.attr;
 			
 			if (!attr['change-slot'] && !attr['change-pipe-event']) {
 				var element = provider.element,

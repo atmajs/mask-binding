@@ -3,35 +3,63 @@ var DomObjectTransport;
 	
 	var objectWay = {
 		get: function(provider, expression) {
-			return expression_eval(expression, provider.model, provider.cntx, provider.controller);
+			var getter = provider.objGetter;
+			if (getter == null) {
+				return expression_eval(
+					expression
+					, provider.model
+					, provider.ctx
+					, provider.ctr
+				);
+			}
+			
+			var obj = getAccessorObject_(provider, getter);
+			if (obj == null) 
+				return null;
+			
+			return obj[getter](expression, provider.model, provider.ctr.parent);
 		},
-		set: function(obj, property, value) {
-			obj_setProperty(obj, property, value);
+		set: function(obj, property, value, provider) {
+			var setter = provider.objSetter;
+			if (setter == null) {
+				obj_setProperty(obj, property, value);
+				return;
+			}
+			var ctx = getAccessorObject_(provider, setter);
+			if (ctx == null) 
+				return;
+			
+			ctx[setter](
+				property
+				, value
+				, provider.model
+				, provider.ctr.parent
+			);
 		}
 	};
 	var domWay  = {
 		get: function(provider) {
-			var getter = provider.getter;
+			var getter = provider.domGetter;
 			if (getter == null) {
 				return obj_getProperty(provider, provider.property);
 			}
-			var ctr = provider.node.parent;
+			var ctr = provider.ctr.parent;
 			if (isValidFn_(ctr, getter, 'Getter') === false) {
 				return null;
 			}
-			return ctr[getter]();
+			return ctr[getter](provider.element);
 		},
 		set: function(provider, value) {
-			var setter = provider.setter;
+			var setter = provider.domSetter;
 			if (setter == null) {
 				obj_setProperty(provider, provider.property, value);
 				return;
 			}
-			var ctr = provider.node.parent;
+			var ctr = provider.ctr.parent;
 			if (isValidFn_(ctr, setter, 'Setter') === false) {
 				return;
 			}
-			ctr[setter](value);
+			ctr[setter](value, provider.element);
 		}
 	};
 	var DateTimeDelegate = {
@@ -128,6 +156,17 @@ var DomObjectTransport;
 			return false;
 		}
 		return true;
+	}
+	function getAccessorObject_(provider, accessor) {
+		var ctr = provider.ctr.parent;
+		if (ctr[accessor] != null) 
+			return ctr;
+		var model = provider.model;
+		if (model[accessor] != null) 
+			return model;
+		
+		log_error('BindingProvider. Accessor `', accessor, '`should be a function');
+		return null;
 	}
 	function formatDate(date) {
 		var YYYY = date.getFullYear(),

@@ -64,5 +64,78 @@ UTest({
 			eq_(date.getDate(), model.foo.getDate());
 			return date;
 		}
+	},
+	'Object Getter/Setter' () {
+		var model = {
+			foo: 'bob',
+			getFoo: assert.await(function (expression, model_, compo_) {
+				eq_(model_, model);
+				notEq_(compo_, null);
+				
+				eq_(expression, 'foo');
+				
+				return model.foo.toUpperCase();
+			}),
+			setFoo: assert.await(function(expression, value, model_, compo_){
+				eq_(model_, model);
+				eq_(compo_, compo);
+				eq_(expression, 'foo');
+				
+				model.foo = value.toLowerCase();
+			})
+		};
+		var Ctor = Compo({
+			template: "input > :dualbind value=foo obj-getter=getFoo obj-setter=setFoo",
+			model: model,
+		});
+		var compo = mask.Compo.initialize(Ctor);
+		var input = compo.$[0];
+		
+		// initial value
+		eq_(input.value, 'BOB');
+		
+		input.value = 'ALICE';
+		$(input).trigger('change');
+		
+		// changed value
+		eq_(model.foo, 'alice');
+	},
+	'Dom(Component) Getter/Setter' () {
+		var model = {
+			foo: 'bob'
+		};
+		mask.registerHandler(':transformer', Compo({
+			getValue: assert.await(function (el) {
+				return el.value.toLowerCase();
+			}),
+			setValue: assert.await(function (val, el) {
+				el.value = val.toUpperCase();
+			})
+		}));
+
+		var Ctor = Compo({
+			template: `
+				:transformer >
+					input >
+						:dualbind value=foo dom-getter=getValue dom-setter=setValue;
+			`,
+			model: model,
+		});
+		
+		var compo = mask.Compo.initialize(Ctor);
+		
+		var input = compo.$[0];
+		
+		// initial value
+		eq_(input.value, 'BOB');
+		
+		model.foo = 'alice';
+		eq_(input.value, 'ALICE');
+		
+		input.value = 'JOHN';
+		$(input).trigger('change');
+		
+		// changed value
+		eq_(model.foo, 'john');
 	}
 })
