@@ -143,14 +143,14 @@ UTest({
 					;
 					
 				has_(doc.body.innerHTML, 'expression');
-				
 				has_(doc.body.innerHTML, '.falseContainer');
 				has_(doc.body.innerHTML, 'nodes:');
-				
+				has_(doc.body.innerHTML, '"foo":true');
 				
 				
 				notEq_(win.app, null);
 				notEq_(win.app.model, null);
+				
 				eq_(win.app.model.foo, true);
 				
 				notEq_(win.app.model.__observers, null);

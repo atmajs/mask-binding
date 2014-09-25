@@ -33,7 +33,7 @@
 			if (value == null) 
 				return;
 			
-			if (arr_isArray(value)) 
+			if (is_Array(value)) 
 				arr_createRefs(value);
 			
 			For.build(

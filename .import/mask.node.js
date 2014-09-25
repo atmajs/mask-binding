@@ -64,7 +64,8 @@
 			allowCache: true
 		};
 		
-	var _Array_slice = Array.prototype.slice;
+	var _Array_slice = Array.prototype.slice,
+		_Object_create = Object.create;
 	
 	// end:source /ref-mask/src/scope-vars.js
 	// source /ref-mask/src/util/util.js
@@ -606,7 +607,7 @@
 			
 			return stack
 				.split('\n')
-				.slice(6)
+				.slice(6, 8)
 				.join('\n');
 		}
 		function inherit(Ctor, Base){
@@ -775,13 +776,15 @@
 	}
 	// end:source /src/util/function.js
 	// source /src/util/compo.js
-	var compo_renderMode_SERVER = 1,
-		compo_renderMode_CLIENT = 2,
-		compo_renderMode_BOTH = 3,
-		
+	var compo_renderMode_SERVER = 'server',
+		compo_renderMode_SERVER_ALL = 'server:all',
+		compo_renderMode_SERVER_CHILDREN = 'server:children',
+		compo_renderMode_CLIENT = 'client',
+		compo_renderMode_BOTH = 'both',
 		compo_getMetaInfo,	
 		compo_getRenderMode,
-		compo_isServerMode
+		compo_isServerMode,
+		compo_setMode
 		;
 		
 	(function(){
@@ -789,23 +792,21 @@
 		compo_isServerMode = function(compo){
 			return compo_getRenderMode(compo) === compo_renderMode_SERVER;
 		};
-		
+		compo_setMode = function(ctr, mode){
+			if (ctr.meta == null) 
+				ctr.meta = new CompoMeta;
+			ctr.meta.mode = mode;
+		};
 		compo_getMetaInfo = function(compo){
 			if (compo == null) 
-				return {};
+				return new CompoMeta;
 			
-			var $meta,
-				proto = typeof compo === 'function'
+			var proto = typeof compo === 'function'
 					? compo.prototype
 					: compo
 					;
-				
-			$meta = proto.$meta || {};
-			$meta.mode = compo_getRenderMode(compo);
-			
-			return $meta;
+			return new CompoMeta(proto);
 		};
-		
 		compo_getRenderMode = function(compo){
 			if (compo == null) 
 				return compo_renderMode_BOTH;
@@ -814,28 +815,41 @@
 				? compo.prototype
 				: compo
 				;
-			
-			var mode = (proto.$meta && proto.$meta.mode) || proto.mode;
-			
+			var mode = proto.meta && proto.meta.mode;
 			if (mode == null || mode === 'both') 
 				return compo_renderMode_BOTH;
 			
 			if (typeof mode === 'number') 
 				return mode;
 			
-			var isServer = mode.indexOf('server') !== -1,
-				isClient = mode.indexOf('client') !== -1
-				;
+			if (mode === 'server' || mode === 'server:all') 
+				return compo_renderMode_SERVER;
 			
-			if (isServer && isClient) 
-				return compo_renderMode_BOTH;
+			if (mode === 'client') 
+				return compo_renderMode_CLIENT;
 			
-			return isServer
-				? compo_renderMode_SERVER
-				: compo_renderMode_CLIENT
-				;
+			return compo_renderMode_BOTH;
 		};
 		
+		// Private
+		
+		function CompoMeta(ctr){
+			if (ctr == null) 
+				return;
+			
+			var meta = ctr.meta || ctr.$meta;
+			if (meta != null) 
+				return meta;
+			
+			if (ctr.mode /* obsolete */) 
+				this.mode = ctr.mode;
+		}
+		CompoMeta.prototype = {
+			mode: compo_renderMode_BOTH,
+			modeModel: null,
+			attributes: null,
+			cache: false
+		};
 	}());
 	// end:source /src/util/compo.js
 	// source /src/util/json.js
@@ -2024,13 +2038,17 @@
 						result %= value;
 						break;
 					case op_LogicalNotEqual:
+						/* jshint eqeqeq: false */
 						result = result != value;
+						/* jshint eqeqeq: true */
 						break;
 					case op_LogicalNotEqual_Strict:
 						result = result !== value;
 						break;
 					case op_LogicalEqual:
+						/* jshint eqeqeq: false */
 						result = result == value;
+						/* jshint eqeqeq: true */
 						break;
 					case op_LogicalEqual_Strict:
 						result = result === value;
@@ -2508,7 +2526,7 @@
 		// end:source util.js
 		
 		function initialize() {
-				
+			
 			custom_Utils = {
 				expression: function(value, model, ctx, element, controller){
 					return ExpressionUtil.eval(value, model, ctx, controller);
@@ -2554,9 +2572,14 @@
 				li: null,
 				ol: null,
 				i: null,
+				em: null,
 				b: null,
 				strong: null,
-				form: null
+				form: null,
+				audio: null,
+				video: null,
+				canvas: null,
+				svg: null
 			};
 			
 			// use on server to define reserved tags and its meta info
@@ -2582,14 +2605,14 @@
 		
 		// source 1.utils.js
 		function _appendChild(el){
-			
-			if (this.nodes == null) {
+			var nodes = this.nodes;
+			if (nodes == null) {
 				this.nodes = [el];
 				return;
 			}
 			
-			this.nodes.push(el);
-			var prev = this.nodes[this.nodes.length - 2];
+			nodes.push(el);
+			var prev = nodes[nodes.length - 2];
 			
 			prev.nextSibling = el;
 		}
@@ -2652,11 +2675,7 @@
 		
 		// end:source 4.Component.js
 		// source 5.Fragment.js
-		
-		
-		function Fragment(){
-			
-		}
+		function Fragment(){}
 		
 		Fragment.prototype = {
 			constructor: Fragment,
@@ -2713,7 +2732,7 @@
 		// source ./cursor.js
 		var cursor_groupEnd,
 			cursor_quoteEnd,
-			cursor_refEnd;
+			cursor_refEnd
 			;
 		
 		(function(){
@@ -2791,8 +2810,8 @@
 		var parser_var;
 		(function(){
 			parser_var = function(template, index, length, parent){
-				var node = new Node('var', parent);
-				var start,
+				var node = new Node('var', parent),
+					start,
 					c;
 				
 				node.stringify = stingify;
@@ -2886,7 +2905,7 @@
 						str += ',';
 					
 					str += key + '=' + attr[key];
-				};
+				}
 				return str + ';';
 			}
 		}());
@@ -3230,8 +3249,10 @@
 						if (isEscaped === true) {
 							token = token.replace(regexpEscapedChar[_char], _char);
 						}
-	
-						token = ensureTemplateFunction(token);
+						
+						if (state !== state_attr || key !== 'class') 
+							token = ensureTemplateFunction(token);
+							
 						index += isUnescapedBlock ? 3 : 1;
 						continue;
 					}
@@ -3375,10 +3396,8 @@
 							if (key === 'id' || last === go_attrVal) {
 								token = ensureTemplateFunction(token);
 							}
-							else if (key === 'class') {
-								// interpolate later
-							}
-							else {
+							else if (key !== 'class') {
+								// interpolate class later
 								parser_warn('Invalid interpolation (in attr name)'
 									, template
 									, index
@@ -3388,7 +3407,6 @@
 							}
 						}
 					}
-					
 				}
 	
 				if (c !== c) {
@@ -3938,8 +3956,9 @@
 					continue;
 				}
 				
+				/* jshint eqeqeq: false */
 				if (eval_(expr, model, ctx, controller) == value) {
-					//! `==` comparison
+					/* jshint eqeqeq: true */
 					case_ = child;
 					break;
 				}
@@ -4861,7 +4880,7 @@
 					return map[chr];
 				}
 				function str_htmlEncode(html) {
-					return html.replace(/[&"'\<\>\/]/g, replaceEntity);
+					return html.replace(/[&"'<>\/]/g, replaceEntity);
 				}
 				
 				return str_htmlEncode;
@@ -4872,7 +4891,7 @@
 		// source ./Component.js
 		(function(){
 			
-			HtmlDom.Component = function (node, model, ctx, container, controller) {
+			HtmlDom.Component = function (node, model, ctx, container, ctr) {
 				
 				var compo,
 					attr,
@@ -4883,12 +4902,11 @@
 					Handler = node.controller || custom_Tags[compoName];
 				
 				if (Handler != null) 
-					cacheInfo = is_Function(Handler)
-						? Handler.prototype.cache
-						: Handler.cache;
+					cacheInfo = compo_getMetaInfo(Handler).cache;
 				
 				if (cacheInfo != null) 
 					compo = Cache.getCompo(model, ctx, compoName, Handler);
+				
 				
 				if (compo != null) {
 					this.compo = compo;
@@ -4896,7 +4914,7 @@
 					if (compo.__cached) {
 						compo.render = fn_empty;
 					}
-					controller_addCompo(controller, compo);
+					controller_addCompo(ctr, compo);
 					return;
 				}
 				
@@ -4906,7 +4924,7 @@
 						compo = new Handler(model);
 					
 					if (compo == null && is_Function(Handler.__Ctor)) 
-						compo = new Handler.__Ctor(node, controller);
+						compo = new Handler.__Ctor(node, ctr);
 					
 					if (compo == null)
 						compo = Handler;
@@ -4918,28 +4936,27 @@
 						expression: node.expression,
 						modelRef: node.modelRef,
 						container: node.container,
-						mode: controller.mode,
-						modeModel: controller.modeModel
+						meta: compo_getMetaInfo(ctr)
 					};
 				}
 				
-				if (compo.cache) 
-					Cache.cacheCompo(model, ctx, compoName, compo);
+				var cache = compo_getMetaInfo(compo).cache;
+				if (cache != null) {
+					Cache.cacheCompo(model, ctx, compoName, compo, cache);
+				}
 				
 				
 				this.compo = compo;
 				this.node = node;
 				
-				if (mode_SERVER_ALL === controller.mode) 
-					compo.mode = mode_SERVER_ALL;
+				var mode = compo_getRenderMode(ctr);
+				if (mode_SERVER_ALL === mode || mode_SERVER_CHILDREN === mode) 
+					compo_setMode(compo, mode_SERVER_ALL);
 				
-				if (mode_SERVER_CHILDREN === controller.mode) 
-					compo.mode = mode_SERVER_ALL;
-			
 				attr = obj_extend(compo.attr, node.attr);
 				
 				if (attr['x-mode'] !== void 0) 
-					compo.mode = attr['x-mode'] ;
+					compo_setMode(compo, attr['x-mode']) ;
 				
 				if (attr['x-mode-model']  !== void 0) 
 					compo.modeModel = attr['x-mode-model'];
@@ -4951,38 +4968,30 @@
 				
 				this.compoName = compo.compoName = compoName;
 				compo.attr = attr;
-				compo.parent = controller;
-				
-				
+				compo.parent = ctr;
 				
 				if (ctx.debug && ctx.debug.breakOn === compo.compoName) {
 					debugger;
 				}
 			
-				
 				if (compo.nodes == null) 
 					compo.nodes = node.nodes;
 				
-			
 				for (key in attr) {
 					if (typeof attr[key] === 'function') {
-						attr[key] = attr[key]('attr', model, ctx, container, controller, key);
+						attr[key] = attr[key]('attr', model, ctx, container, ctr, key);
 					}
 				}
-			
 			
 				if (typeof compo.renderStart === 'function') {
 					compo.renderStart(model, ctx, container);
 				}
 				
-				controller_addCompo(controller, compo);
-				
-				
+				controller_addCompo(ctr, compo);
 				if (compo.async === true) {
 					compo.await(build_resumeDelegate(compo, model, ctx, this));
 					return;
 				}
-			
 				
 				if (compo.tagName != null && compo.tagName !== node.tagName) {
 					compo.nodes = {
@@ -5005,31 +5014,19 @@
 				instance: null,
 				components: null,
 				ID: null,
-				toString: function() {
-					
+				toString: function() {			
 					var element = this.firstChild,
 						compo = this.compo;
 						
-					if (compo.__cached !== void 0) {
+					if (compo.__cached !== void 0) 
 						return compo.__cached;
-					}
 					
 					var meta = compo_getMetaInfo(compo),
 						mode = meta.mode,
-						compoName,
-						attr,
-						nodes,
-						scope;
-					
-					if (compo != null) {
-						compoName = compo.compoName;
-						attr = compo.attr;
-						mode = compo.mode;
-						
-						nodes = compo.nodes;
+						compoName = compo.compoName,
+						attr = compo.attr,
+						nodes = compo.nodes,
 						scope = compo.scope;
-					}
-				
 					
 					var	json = {
 							ID: this.ID,
@@ -5072,7 +5069,7 @@
 						string += Meta.close(json, info);
 					
 					
-					if (compo.cache) {
+					if (compo_getMetaInfo(compo).cache) {
 						compo.__cached = string;
 					}
 					
@@ -5326,29 +5323,21 @@
 					return id;
 				},
 				
-				tryAppend: function(controller){
+				tryAppend: function(ctr){
 					
-					if (mode_SERVER_ALL === controller.mode)
+					if (mode_SERVER_ALL === ctr.mode)
 						return -1;
 					
-					if (mode_model_NONE === controller.modeModel)
+					if (mode_model_NONE === ctr.modeModel)
 						return -1;
 					
-					
-					var model;
-					
-					if (controller.modelRef !== void 0) 
-						model = { __ref: controller.modelRef };
-					
-						
-					if (model == null) {
-						model = controller.model;
-					}
+					var model = ctr.modelRef !== void 0
+						? '$ref:' + ctr.modelRef
+						: ctr.model
+						;
 					
 					var id = 'm' + (++this._id);
-					
 					this._models[id] = model;
-					
 					return id;
 				},
 				
@@ -5590,7 +5579,7 @@
 		// end:source /ref-mask/src/build/type.textNode.js
 		
 	
-		function builder_html(node, model, ctx, container, controller, childs) {
+		function builder_html(node, model, ctx, container, ctr, childs) {
 	
 			if (node == null) 
 				return container;
@@ -5617,7 +5606,7 @@
 				}
 			}
 			
-			if (type == 1 && custom_Tags[node.tagName] != null) {
+			if (type === 1 && custom_Tags[node.tagName] != null) {
 				// check if the tag name was overriden
 				type = 4;
 			}
@@ -5625,7 +5614,7 @@
 			// Dom.SET
 			if (type === 10) {
 				for (j = 0, jmax = node.length; j < jmax; j++) {
-					builder_html(node[j], model, ctx, container, controller);
+					builder_html(node[j], model, ctx, container, ctr);
 				}
 				return container;
 			}
@@ -5651,7 +5640,7 @@
 				
 				if (type === 15) {
 					
-					Handler.render(node, model, ctx, container, controller, childs);
+					Handler.render(node, model, ctx, container, ctr, childs);
 					return container;
 				}
 			}
@@ -5667,7 +5656,7 @@
 					
 				} else {
 				
-					container = build_node(node, model, ctx, container, controller, childs);
+					container = build_node(node, model, ctx, container, ctr, childs);
 					childs = null;
 				}
 			}
@@ -5675,7 +5664,7 @@
 			// Dom.TEXTNODE
 			if (type === 2) {
 				
-				build_textNode(node, model, ctx, container, controller);
+				build_textNode(node, model, ctx, container, ctr);
 				
 				return container;
 			}
@@ -5683,31 +5672,30 @@
 			// Dom.COMPONENT
 			if (type === 4) {
 				
-				element = document.createComponent(node, model, ctx, container, controller);
+				element = document.createComponent(node, model, ctx, container, ctr);
 				container.appendChild(element);
 				container = element;
 				
 				var compo = element.compo;
-				
 				if (compo != null) {
-					
-					if (compo.model && controller.model !== compo.model) {
+					var modelID = -1;
+					if (compo.model && ctr.model !== compo.model) {
 						model = compo.model;
-						
-						var modelID = ctx._model.tryAppend(compo);
-						if (modelID !== -1)
-							element.modelID = modelID;
-						
+						modelID = ctx._model.tryAppend(compo);
 					}
+					if (compo.modelRef !== void 0) 
+						modelID = ctx._model.tryAppend(compo);
+					
+					if (modelID !== -1)
+						element.modelID = modelID;
 					
 					if (compo.async) 
 						return element;
 					
-					
 					if (compo.render) 
 						return element;
 					
-					controller = compo;
+					ctr = compo;
 					node = compo;
 					elements = [];
 				}
@@ -5729,25 +5717,27 @@
 	
 					if (type === 4 /* Dom.COMPONENT */ && childNode.type === 1 /* Dom.NODE */){
 						
-						if (controller.mode !== 'server:all') 
+						if (compo_isServerMode(ctr)) 
 							childNode.attr['x-compo-id'] = element.ID;
 					}
 	
-					builder_html(childNode, model, ctx, container, controller, elements);
+					builder_html(childNode, model, ctx, container, ctr, elements);
 				}
 	
 			}
 			
 			if (container.nodeType === Dom.COMPONENT) {
-				
-				if (controller.onRenderEndServer && controller.async !== true) {
-					controller.onRenderEndServer(elements, model, ctx, container, controller);
+				var fn = ctr.onRenderEndServer;
+				if (fn != null && ctr.async !== true) {
+					fn.call(ctr, elements, model, ctx, container, ctr);
 				}
 				
 			}
 			
-			if (childs != null && elements && childs !== elements) {
-				for (var i = 0, imax = elements.length; i < imax; i++){
+			if (childs != null && elements != null && childs !== elements) {
+				var imax = elements.length,
+					i = -1;
+				while( ++i < imax ) {
 					childs.push(elements[i]);
 				}
 			}
@@ -5795,7 +5785,7 @@
 				
 			var controller = is_Function(Ctr)
 				? new Ctr
-				: new Dom.Component
+				: new Compo
 				;
 			controller.ID = ++builder_componentID;
 			
@@ -5833,43 +5823,47 @@
 	var mask_merge;
 	(function(){
 		
-		mask_merge = function(a, b){
+		mask_merge = function(a, b, owner){
 			if (typeof a === 'string') 
 				a = parser_parse(a);
 			if (typeof b === 'string') 
 				b = parser_parse(b);
 			
-			var contents = _getContents(b, b, {});
-			
-			return _merge(a, contents);
+			var contents = _getContents(b, b, new Contents);
+			return _merge(a, contents, owner);
 		};
 		
-		var tag_PLACEHOLDER_ELSE = '@else',
+		var tag_ELSE = '@else',
+			tag_IF = '@if',
+			tag_EACH = '@each',
+			tag_PLACEHOLDER = '@placeholder',
+			
 			dom_NODE = Dom.NODE,
 			dom_TEXTNODE = Dom.TEXTNODE,
-			dom_FRAGMENT = Dom.FRAGMENT
+			dom_FRAGMENT = Dom.FRAGMENT,
+			dom_STATEMENT = Dom.STATEMENT
 			;
 		
-		function _merge(node, contents, _defaultContent, clonedParent){
-			if (is_Array(node)) {
-				return _mergeArray(node, contents, _defaultContent, clonedParent);
-			}
+		function _merge(node, contents, tmplNode, clonedParent){
+			if (node == null) 
+				return null;
+			
+			if (is_Array(node)) 
+				return _mergeArray(node, contents, tmplNode, clonedParent);
+			
 			switch(node.type){
 				case dom_TEXTNODE:
-					return node;
+					return _cloneTextNode(node, contents, tmplNode);
 				case dom_NODE:
-					return _mergeNode(node, contents, _defaultContent, clonedParent);
+				case dom_STATEMENT:
+					return _mergeNode(node, contents, tmplNode, clonedParent);
 				case dom_FRAGMENT:
-					return {
-						type: node.type,
-						nodes: _mergeArray(node.nodes, contents, _defaultContent, clonedParent)
-					};
+					return _mergeArray(node.nodes, contents, tmplNode, clonedParent);
 			}
-			
 			log_warn('Uknown type', node.type);
 			return null;
 		}
-		function _mergeArray(nodes, contents, _defaultContent, clonedParent){
+		function _mergeArray(nodes, contents, tmplNode, clonedParent){
 			var arr = [],
 				imax = nodes.length,
 				i = -1,
@@ -5877,68 +5871,280 @@
 			while( ++i < imax ) {
 				node = nodes[i];
 				
-				if (node.type === dom_NODE && node.tagName === tag_PLACEHOLDER_ELSE) {
+				if (node.tagName === tag_ELSE) {
+					// check previous 
+					if (x != null)
+						continue;
 					
-					if (x == null) {
-						// previous is null
-						x = _merge(nodes[i].nodes, contents, _defaultContent, clonedParent)
-					}
+					if (node.expression && !eval_(node.expression, contents, tmplNode)) 
+						continue;
+					
+					x = _merge(nodes[i].nodes, contents, tmplNode, clonedParent)
 				}
 				else {
-					x = _merge(node, contents, _defaultContent, clonedParent);
+					x = _merge(node, contents, tmplNode, clonedParent);
 				}
 				
-				if (x == null) 
-					continue;
-				
-				if (is_Array(x)) {
-					arr = arr.concat(x);
-					continue;
-				}
-				arr.push(x);
+				arr = append_Array(arr, x);
 			}
 			return arr;
 		}
-		function _mergeNode(node, contents, _defaultContent, clonedParent){
+		function _mergeNode(node, contents, tmplNode, clonedParent){
 			var tagName = node.tagName;
 			if (tagName.charCodeAt(0) !== 64) {
 				// @
-				return _cloneNode(node, contents, _defaultContent, clonedParent);
+				return _cloneNode(node, contents, tmplNode, clonedParent);
 			}
 			
 			var id = node.attr.id;
-			if (tagName === '@placeholder' && id == null) 
-				return _defaultContent;
+			if (tagName === tag_PLACEHOLDER && id == null) 
+				return tmplNode.nodes;
+			
+			if (tag_EACH === tagName) {
+				var arr = contents[node.expression],
+					x;
+				if (arr == null) {
+					log_error('No template node: @' + node.expression);
+					return null;
+				}
+				if (is_Array(arr) === false) {
+					x = arr;
+					return _merge(
+						node.nodes
+						, _getContents(x.nodes, x.nodes, new Contents(contents))
+						, x
+						, clonedParent
+					);
+				}
+				var fragment = new Dom.Fragment,
+					imax = arr.length,
+					i = -1;
+				while ( ++i < imax ){
+					x = arr[i];
+					append_Node(fragment, _merge(
+						node.nodes
+						, _getContents(x.nodes, x.nodes, new Contents(contents))
+						, x
+						, clonedParent
+					));
+				}
+				return fragment;
+			}
+			if (tag_IF === tagName) {
+				var val = eval_(node.expression, contents, tmplNode);
+				return val
+					? _merge(node.nodes, contents, tmplNode, clonedParent)
+					: null
+					;
+			}
 			
 			if (id == null) 
 				id = tagName.substring(1);
 			
-			var content = contents[id];
+			var content = contents.$getNode(id);
 			if (content == null) 
 				return null;
 			
 			if (content.parent) 
 				_modifyParents(clonedParent, content.parent);
 			
-			if (node.nodes == null) 
-				return content.nodes;
 			
-			return _merge(node.nodes, contents.nodes, content, clonedParent);
+			var contentNodes = content.nodes,
+				wrapperNode;
+			if (node.attr.as !== void 0) {
+				var tagName_ = node.attr.as;
+				wrapperNode = {
+					type: dom_NODE,
+					tagName: tagName_,
+					attr: _mergeAttr(node.attr, content.attr, contents, tmplNode),
+					parent: clonedParent,
+					nodes: contentNodes
+				};
+				wrapperNode.attr.as = null;
+			}
+			
+			if (node.nodes == null) 
+				return wrapperNode || contentNodes;
+			
+			var nodes =  _merge(
+				node.nodes
+				, _getContents(contentNodes, contentNodes, new Contents(contents))
+				, content
+				, wrapperNode || clonedParent
+			);
+			if (wrapperNode != null) {
+				wrapperNode.nodes = nodes;
+				return wrapperNode;
+			}
+			return nodes;
 		}
-		function _cloneNode(node, contents, _defaultContent, clonedParent){
+		function _mergeAttr(a, b, contents, tmplNode){
+			if (a == null || b == null) 
+				return a || b;
+			
+			var out = interpolate_obj_(a, contents, tmplNode);
+			for (var key in b){
+				out[key] = interpolate_str_(b[key], contents, tmplNode);
+			}
+			return out;
+		}
+		
+		function _cloneNode(node, contents, tmplNode, clonedParent){
+			var tagName = node.tagName || node.compoName;
+			if (':template' === tagName) {
+				var id = interpolate_str_(node.attr.id, contents, tmplNode);
+				Mask.templates.register(id, node.nodes);
+				return null;
+			}
+			if (':import' === tagName) {
+				var id = interpolate_str_(node.attr.id, contents, tmplNode),
+					nodes = Mask.templates.resolve(node, id);
+				return _merge(nodes, contents, tmplNode, clonedParent);
+			}
 			var outnode = {
-				tagName: node.tagName || node.compoName,
-				attr: node.attr,
 				type: node.type,
+				tagName: tagName,
+				attr: interpolate_obj_(node.attr, contents, tmplNode),
+				expression: interpolate_str_(node.expression, contents, tmplNode),
 				controller: node.controller,
 				parent: clonedParent
 			};
 			if (node.nodes) 
-				outnode.nodes = _merge(node.nodes, contents, _defaultContent, outnode);
+				outnode.nodes = _merge(node.nodes, contents, tmplNode, outnode);
 			
 			return outnode;
 		}
+		function _cloneTextNode(node, contents, tmplNode, clonedParent){
+			return {
+				type: node.type,
+				content: interpolate_str_(node.content, contents, tmplNode),
+				parent: clonedParent
+			};
+		}
+		function interpolate_obj_(obj, contents, node){
+			var clone = _Object_create(obj),
+				x;
+			for(var key in clone){
+				x = clone[key];
+				if (x == null) 
+					continue;
+				
+				clone[key] = interpolate_str_(x, contents, node);
+			}
+			return clone;
+		}
+		function interpolate_str_(mix, contents, node){
+			var index = -1,
+				isFn = false,
+				str = mix;
+				
+			if (typeof mix === 'function') {
+				isFn = true;
+				str = mix();
+			}
+			if (typeof str !== 'string' || (index = str.indexOf('@')) === -1) 
+				return mix;
+			
+			var result = str.substring(0, index),
+				length = str.length,
+				isBlockEntry = str.charCodeAt(index + 1) === 91, // [ 
+				last = -1,
+				c;
+			
+			while (index < length) {
+				// interpolation
+				last = index;
+				if (isBlockEntry === true) {
+					index = str.indexOf(']', last);
+					if (index === -1) 
+						index = length;
+					last += 2;
+				}
+				else {
+					while (index < length) {
+						c = str.charCodeAt(++index);
+						if (c === 36 || c === 95 || c === 46) {
+							// $ _ .
+							continue;
+						}
+						if ((48 <= c && c <= 57) ||		// 0-9
+							(65 <= c && c <= 90) ||		// A-Z
+							(97 <= c && c <= 122)) {	// a-z
+							continue;
+						}
+						break;
+					}
+				}
+				
+				var expr = str.substring(last, index),
+					fn = isBlockEntry ? eval_ : interpolate_,
+					x = fn(expr, contents, node);
+						
+				if (x != null) 
+					result += x;
+				
+				// tail
+				last = isBlockEntry ? (index + 1): index;
+				index = str.indexOf('@', index);
+				if (index === -1) 
+					index = length;
+				
+				result += str.substring(last, index);
+			}
+			
+			return isFn
+				? parser_ensureTemplateFunction(result)
+				: result
+				;
+		}
+		function interpolate_(path, contents, node) {
+			var index = path.indexOf('.');
+			if (index === -1) {
+				log_warn('Merge templates. Accessing node', path);
+				return '';
+			}
+			var tagName = path.substring(0, index),
+				id = tagName.substring(1),
+				property = path.substring(index + 1),
+				obj = null;
+			
+			if (node != null) {
+				if (tagName === '@attr')
+					obj = node.attr;
+				else if (tagName === node.tagName) 
+					obj = node;
+			}
+			
+			if (obj == null) 
+				obj = contents.$getNode(id);
+			
+			if (obj == null) {
+				log_error('Merge templates. Node not found', tagName);
+				return '';
+			}
+			return obj_getProperty(obj, property);
+		}
+		function append_Node(node, x) {
+			var nodes = node.nodes;
+			if (nodes == null) 
+				nodes = node.nodes = [];
+				
+			node.nodes = append_Array(nodes, x);
+			return node;
+		}
+		function append_Array(arr, x){
+			if (x == null) 
+				return arr;
+			if (is_Array(x)) 
+				return arr.concat(x);
+			if (x.type === dom_FRAGMENT) 
+				return append_Array(arr, x.nodes);
+			
+			arr.push(x);
+			return arr;
+		}
 		
+		var RESERVED = ' else placeholder each attr if parent scope'
 		function _getContents(b, node, contents) {
 			if (node == null) 
 				return contents;
@@ -5947,7 +6153,7 @@
 				var imax = node.length,
 					i = -1;
 				while( ++i < imax ){
-					_getContents(b, node[i], contents);
+					_getContents(node === b ? node[i] : b, node[i], contents);
 				}
 				return contents;
 			}
@@ -5961,10 +6167,29 @@
 				if (tagName != null && tagName.charCodeAt(0) === 64) {
 					// @
 					var id = tagName.substring(1);
-					contents[id] = {
+					// if DEBUG
+					if (RESERVED.indexOf(' ' + id + ' ') !== -1) 
+						log_error('MaskMerge. Reserved Name', id);
+					// endif
+					var x = {
+						tagName: node.tagName,
+						parent: _getParentModifiers(b, node),
 						nodes: node.nodes,
-						parent: _getParentModifiers(b, node)
+						attr: node.attr,
+						expression: node.expression
 					};
+					if (contents[id] == null) {
+						contents[id] = x;
+					} else {
+						var current = contents[id];
+						if (is_Array(current)) {
+							current.push(x);
+						}
+						else {
+							contents[id] = [current, x];
+						}
+					}
+					return contents;
 				}
 			}
 			return _getContents(b, node.nodes, contents);
@@ -6018,6 +6243,32 @@
 				modParent = modParent.parent;
 			}
 		}
+		
+		function eval_(expr, contents, tmplNode) {
+			if (tmplNode) 
+				contents.attr = tmplNode.attr;
+			
+			return ExpressionUtil.eval(expr, contents, null, contents);
+		}
+		function Contents(parent){
+			this.scope = this;
+			this.parent = parent;
+		}
+		Contents.prototype = {
+			parent: null,
+			attr: null,
+			scope: null,
+			$getNode: function(id){
+				var ctx = this, node;
+				while(ctx != null){
+					node = ctx[id];
+					if (node != null) 
+						return node;
+					ctx = ctx.parent;
+				}
+			}
+		};
+		
 	}());
 	// end:source /ref-mask/src/feature/merge.js
 	// source /ref-mask/src/mask.js
@@ -6689,11 +6940,22 @@
 				//> static
 				compo.__Ctor = wrapStatic(compo);
 			}	
-					
 			
-			if (custom_Tags_defs.hasOwnProperty(tagName)) {
+			if (custom_Tags_defs.hasOwnProperty(tagName)) 
 				obj_extend(compo.prototype, custom_Tags_defs[tagName]);
-			}
+			
+			var proto = typeof compo === 'function'
+				? compo.prototype
+				: compo;
+			if (proto.meta == null) 
+				proto.meta = proto.$meta || {};
+			
+			/* obsolete meta copy */
+			if (proto.cache) 
+				proto.meta.cache = proto.cache;
+			if (proto.mode) 
+				proto.meta.mode = proto.mode;
+			
 			
 			if (compo_getRenderMode(compo) === compo_renderMode_CLIENT) {
 				custom_Tags[tagName] = mock_TagHandler.create(tagName, compo, 'client');
@@ -6718,15 +6980,16 @@
 				tags[tagName] = mock_TagHandler.create(tagName, null, 'client');
 			}
 			
+			var doNothing = function(){};
 			for (var key in utils){
 				if (utils[key].mode === 'client'){
-					Mask.registerUtil(key, function(){}, 'client');
+					Mask.registerUtil(key, doNothing, 'client');
 				}
 			}
 			
 			for (var key in attributes){
 				if (attributes[key].mode === 'client') {
-					Mask.registerAttrHandler(key, function(){}, 'client');
+					Mask.registerAttrHandler(key, doNothing, 'client');
 				}
 			}
 		};	
@@ -6803,7 +7066,6 @@
 	// source /ref-mask-compo/lib/compo.embed.js
 	
 	var Compo = exports.Compo = (function(mask){
-		'use strict';
 		// source /src/scope-vars.js
 		var Dom = mask.Dom,
 		
@@ -6851,7 +7113,7 @@
 		// if DEBUG
 		if (global.document != null && domLib == null) {
 			
-			log_warn('jQuery-Zepto-Kimbo etc. was not loaded before MaskJS:Compo, please use Compo.config.setDOMLibrary to define dom engine');
+			log_warn('jQuery-Zepto-Kimbo etc. was not loaded before MaskJS:Compo, please use Compo.config.setDOMLibrary to define the dom engine');
 		}
 		// endif
 		// end:source /src/scope-vars.js
@@ -6928,18 +7190,13 @@
 				return target;
 			};
 			
-			obj_copy = function(object) {
-				var copy = {},
-					key;
-			
+			obj_copy = Object.create || function(object) {
+				var copy = {}, key;
 				for (key in object) {
 					copy[key] = object[key];
 				}
-			
 				return copy;
 			};
-			
-			
 		}());
 		
 		// end:source ./object.js
@@ -7091,8 +7348,10 @@
 				if (selector.selector.test != null) 
 					return selector.selector.test(obj[selector.key]);
 				
-				//! == - to match int and string
+				// string | int
+				/* jshint eqeqeq: false */
 				return obj[selector.key] == selector.selector;
+				/* jshint eqeqeq: true */
 			}
 			
 			// PRIVATE
@@ -7441,15 +7700,20 @@
 			(function(){
 				
 				compo_meta_prepairAttributeHandler = function(Proto){
-					if (Proto.meta == null) 
-						Proto.meta = {};
+					if (Proto.meta == null) {
+						Proto.meta = {
+							attributes: null,
+							cache: null,
+							mode: null
+						};
+					}
 					
-					var metas = Proto.meta.attributes,
+					var attr = Proto.meta.attributes,
 						fn = null;
-					if (metas) {
+					if (attr) {
 						var hash = {};
-						for(var key in metas) {
-							_handleProperty_Delegate(Proto, key, metas[key], hash);
+						for(var key in attr) {
+							_handleProperty_Delegate(Proto, key, attr[key], hash);
 						}
 						fn = _handleAll_Delegate(hash);
 					}
@@ -7650,7 +7914,7 @@
 		// end:source ./compo_create.js
 		// source ./compo_inherit.js
 		var compo_inherit;
-		(function(){
+		(function(mask_merge){
 			
 			compo_inherit = function(Proto, Extends){
 				
@@ -7671,7 +7935,7 @@
 						x = x.prototype;
 					}
 					
-					inherit_(Proto, x);
+					inherit_(Proto, x, 'node');
 				}
 				
 				i = -1;
@@ -7685,11 +7949,27 @@
 				}
 			};
 			
-			function inherit_(target, source){
-				var mix, type;
+			function inherit_(target, source, name){
+				if (target == null || source == null) 
+					return;
+				
+				if ('node' === name) {
+					var targetNodes = target.template || target.nodes,
+						sourceNodes = source.template || source.nodes;
+					if (targetNodes == null || sourceNodes == null) {
+						target.template = targetNodes || sourceNodes;
+					} else {
+						target.nodes = mask.merge(sourceNodes, targetNodes, target);
+					}
+				}
+				
+				var mix, type, fnAutoCall, hasFnOverrides = false;
 				for(var key in source){
 					mix = source[key];
 					if (mix == null || key === 'constructor')
+						continue;
+					
+					if ('node' === name && (key === 'template' || key === 'nodes')) 
 						continue;
 					
 					type = typeof mix;
@@ -7700,13 +7980,22 @@
 							: mix;
 						continue;
 					}
-					
+					if ('pipes' === name) {
+						inherit_(target[key], mix, 'pipe');
+						continue;
+					}
 					if ('function' === type) {
-						target[key] = createWrapper_(target[key], mix);
+						fnAutoCall = false;
+						if ('slots' === name || 'events' === name || 'pipe' === name)
+							fnAutoCall = true;
+						else if ('node' === name && ('onRenderStart' === key || 'onRenderEnd' === key)) 
+							fnAutoCall = true;
+						
+						target[key] = createWrapper_(target[key], mix, fnAutoCall);
+						hasFnOverrides = true;
 						continue;
 					}
 					if ('object' !== type) {
-						// value properties are not extended
 						continue;
 					}
 					
@@ -7715,18 +8004,17 @@
 						case 'pipes':
 						case 'events':
 						case 'attr':
-							inherit_(target[key], mix);
-							continue;
-						case 'nodes':
-							target.nodes = mix;
+							inherit_(target[key], mix, key);
 							continue;
 					}
 					defaults_(target[key], mix);
 				}
 				
-				if (target.super != null) 
-					log_error('`super` property is reserved. Dismissed. Current prototype', target);
-				target.super = null;
+				if (hasFnOverrides === true) {
+					if (target.super != null) 
+						log_error('`super` property is reserved. Dismissed. Current prototype', target);
+					target.super = null;
+				}
 			}
 			
 			/*! Circular references are not handled */
@@ -7748,9 +8036,13 @@
 					return arr;
 				}
 				
-				var object = {};
-				for(var key in a){
-					object[key] = clone_(a[key]);
+				var object = obj_copy(a),
+					key, val;
+				for(key in object){
+					val = object[key];
+					if (val == null || typeof val !== 'object') 
+						continue;
+					object[key] = clone_(val);
 				}
 				return object;
 			}
@@ -7769,14 +8061,18 @@
 					}
 				}
 			}
-			function createWrapper_(selfFn, baseFn){
+			function createWrapper_(selfFn, baseFn, autoCallFunctions){
 				if (selfFn.name === 'compoInheritanceWrapper') {
 					selfFn._fn_chain.push(baseFn);
 					return selfFn;
 				}
 				
+				var compileFns = autoCallFunctions === true
+					? compileFns_autocall_
+					: compileFns_
+					;
 				function compoInheritanceWrapper(){
-					var fn = x._fn || (x._fn = compileFns_(x._fn_chain));
+					var fn = x._fn || (x._fn = compileFns(x._fn_chain));
 					return fn.apply(this, arguments);
 				}
 				
@@ -7793,6 +8089,24 @@
 					fn = inheritFn_(fns[i], fn);
 				}
 				return fn;
+			}
+			function compileFns_autocall_(fns) {
+				var imax = fns.length;
+				return function(){
+					var result, fn, x,
+						i = imax;
+					while( --i > -1 ){
+						fn = fns[i];
+						if (fn == null) 
+							continue;
+						
+						x = fn_apply(fn, this, arguments);
+						if (x !== void 0) {
+							result = x;
+						}
+					}
+					return result;
+				}
 			}
 			function inheritFn_(selfFn, baseFn){
 				return function(){
@@ -7812,7 +8126,7 @@
 					}
 				};
 			}
-		}());
+		}(mask.merge));
 		// end:source ./compo_inherit.js
 		// source ./dfr.js
 		var dfr_isBusy;
@@ -7821,8 +8135,16 @@
 				if (dfr == null || typeof dfr.then !== 'function') 
 					return false;
 				
-				// Class.Deferred support, @todo Promise|jQuery dfr etc.
-				return this._resolved != null || this._rejected != null;
+				// Class.Deferred
+				if (is_Function(dfr.isBusy)) 
+					return dfr.isBusy();
+				
+				// jQuery Deferred
+				if (is_Function(dfr.state)) 
+					return dfr.state() === 'pending';
+				
+				log_warn('Class or jQuery deferred interface expected');
+				return false;
 			};
 		}());
 		// end:source ./dfr.js
@@ -8388,7 +8710,10 @@
 						domLib_initialize();
 					},
 			
-			
+					getDOMLibrary: function(){
+						return domLib;
+					},
+					
 					eventDecorator: function(mix){
 						if (typeof mix === 'function') {
 							EventDecorator = mix;
@@ -9036,6 +9361,341 @@
 		
 		// end:source /src/compo/signals.js
 	
+		// source /src/DomLite.js
+		/*
+		 * Extrem simple Dom Library. If (jQuery | Kimbo | Zepto) is not used.
+		 * Only methods, required for the Compo library are implemented.
+		 */
+		var DomLite;
+		(function(document){
+			if (document == null) 
+				return;
+			
+			Compo.DomLite = DomLite = function(els){
+				if (this instanceof DomLite === false) 
+					return new DomLite(els);
+				
+				return this.add(els)
+			};
+			
+			if (domLib == null) 
+				domLib = DomLite;
+			
+			var Proto = DomLite.fn = {
+				constructor: DomLite,
+				length: 0,
+				add: function(mix){
+					if (mix == null) 
+						return this;
+					if (is_Array(mix) === true) 
+						return each(mix, this.add, this);
+					
+					var type = mix.nodeType;
+					if (type === 11 /* Node.DOCUMENT_FRAGMENT_NODE */)
+						return each(mix.childNodes, this.add, this);
+						
+					if (type == null) {
+						if (typeof mix.length === 'number') 
+							return each(mix, this.add, this);
+						
+						log_warn('Uknown domlite object');
+						return this;
+					}
+					
+					this[this.length++] = mix;
+					return this;
+				},
+				on: function(){
+					return binder.call(this, on, delegate, arguments);
+				},
+				off: function(){
+					return binder.call(this, off, undelegate, arguments);
+				},
+				find: function(sel){
+					return each(this, function(node){
+						this.add(_$$.call(node, sel));
+					}, new DomLite);
+				},
+				filter: function(sel){
+					return each(this, function(node, index){
+						_is(node, sel) === true && this.add(node);
+					}, new DomLite);
+				},
+				parent: function(){
+					var x = this[0];
+					return new DomLite(x && x.parentNode);
+				},
+				children: function(sel){
+					var set = each(this, function(node){
+						this.add(node.childNodes);
+					}, new DomLite);
+					return sel == null ? set : set.filter(sel);
+				},
+				closest: function(selector){
+					var x = this[0],
+						dom = new DomLite;
+					while( x != null && x.parentNode != null){
+						x = x.parentNode;
+						if (_is(x, selector)) 
+							return dom.add(x);
+					}
+					return dom;
+				},
+				remove: function(){
+					return each(this, function(x){
+						x.parentNode.removeChild(x);
+					});
+				}
+			};
+			
+			(function(){
+				var Manip = {
+					append: function(node, el){
+						after_(node, node.lastChild, el);
+					},
+					prepend: function(node, el){
+						before_(node, node.firstChild, el);
+					},
+					after: function(node, el){
+						after_(node.parentNode, node, el);
+					},
+					before: function(node, el){
+						before_(node.parentNode, node, el);
+					}
+				};
+				each(['append', 'prepend', 'before', 'after'], function(method){
+					var fn = Manip[method];
+					Proto[method] = function(mix){
+						var isArray = is_Array(mix);
+						return each(this, function(node){
+							if (isArray) {
+								each(mix, function(el){
+									fn(node, el);
+								});
+								return;
+							}
+							fn(node, mix);
+						});
+					};
+				});
+				function before_(parent, anchor, el){
+					if (parent == null || el == null)
+						return;
+					parent.insertBefore(el, anchor);
+				}
+				function after_(parent, anchor, el) {
+					var next = anchor != null ? anchor.nextSibling : null;
+					before_(parent, next, el);
+				}
+			}());
+			
+			
+			function each(arr, fn, ctx){
+				if (arr == null) 
+					return ctx || arr;
+				var imax = arr.length,
+					i = -1;
+				while( ++i < imax ){
+					fn.call(ctx || arr, arr[i], i);
+				}
+				return ctx || arr;
+			}
+			function indexOf(arr, fn, ctx){
+				if (arr == null) 
+					return -1;
+				var imax = arr.length,
+					i = -1;
+				while( ++i < imax ){
+					if (fn.call(ctx || arr, arr[i], i) === true)
+						return i;
+				}
+				return -1;
+			}
+			
+			var docEl = document.documentElement;
+			var _$$ = docEl.querySelectorAll;
+			var _is = (function(){
+				var matchesSelector =
+					docEl.webkitMatchesSelector ||
+					docEl.mozMatchesSelector ||
+					docEl.msMatchesSelector ||
+					docEl.oMatchesSelector ||
+					docEl.matchesSelector
+				;
+				return function (el, selector) {
+					return el == null || el.nodeType !== 1
+						? false
+						: matchesSelector.call(el, selector);
+				};	
+			}());
+			
+			/* Events */
+			var binder, on, off, delegate, undelegate;
+			(function(){
+				binder = function(bind, bindSelector, args){
+					var length = args.length,
+						fn;
+					if (2 === length) 
+						fn = bind
+					if (3 === length) 
+						fn = bindSelector;
+					
+					if (fn != null) {
+						return each(this, function(node){
+							fn.apply(DomLite(node), args);
+						});
+					}
+					log_error('`DomLite.on|off` - invalid arguments count');
+					return this;
+				};
+				on = function(type, fn){
+					return run(this, _addEvent, type, fn);
+				};
+				off = function(type, fn){
+					return run(this, _remEvent, type, fn);
+				};
+				delegate = function(type, selector, fn){
+					function guard(event){
+						var el = event.target,
+							current = event.currentTarget;
+						if (current === el) 
+							return;
+						while(el != null && el !== current){
+							if (_is(el, selector)) {
+								fn(event);
+								return;
+							}
+							el = el.parentNode;
+						}
+					}
+					(fn._guards || (fn._guards = [])).push(guard);
+					return on.call(this, type, guard);
+				};
+				undelegate = function(type, selector, fn){
+					return each(fn._quards, function(guard){
+						off.call(this, type, guard);
+					}, this);
+				};
+				
+				function run(set, handler, type, fn){
+					return each(set, function(node){
+						handler.call(node, type, fn, false);
+					});
+				}
+				var _addEvent = docEl.addEventListener,
+					_remEvent = docEl.removeEventListener;
+			}());
+			
+			/* class handler */
+			each(['add', 'remove', 'toggle', 'has'], function(method){
+				var isHasClass = 'has' === method,
+					isClassListSupported = docEl.classList != null,
+					Fn;
+				
+				var hasClass = isClassListSupported === true
+					? function (node, klass) {
+						return -1 !== _Array_indexOf.call(node.classList, klass);
+					}
+					: function(node, klass) {
+						return -1 !== (' ' + node.className + ' ').indexOf(' ' + klass + ' ');
+					};
+				if (isHasClass) {
+					Fn = function(klass){
+						return -1 !== indexOf(this, function(node){
+							return hasClass(node, klass);
+						});
+					}
+				}
+				else {
+					var mutator = isClassListSupported === true
+						? function(node, klass){
+							var classList = node.classList;
+							classList[method].call(classList, klass);
+						}
+						: (function(){
+							function add(node, klass){
+								node.className += ' ' + klass;
+							}
+							function remove(node, klass){
+								node.className = (' ' + node.className + ' ').replace(' ' + klass + ' ', ' ');
+							}
+							return function(node, klass){
+								var has = hasClass(node, klass)
+								if ('add' === method) {
+									if (false === has) 
+										add(node, klass);
+									return;
+								}
+								if ('remove' === method) {
+									if (true === has) 
+										remove(node, klass);
+									return;
+								}
+								var fn = has ? remove : add;
+								fn(node, klass);
+							}
+						}());
+					Fn = function(klass){
+						return each(this, function(node){
+							mutator(node, klass);
+						});
+					};
+				}
+				
+				Proto[method + 'Class'] = Fn;
+			});
+			
+			// Events
+			(function(){
+				var createEvent = function(type){
+					var event = document.createEvent('Event');
+					event.initEvent(type, true, true);
+					return event;
+				};
+				var create = function(type, data){
+					if (data == null) 
+						return createEvent(type);
+					var event = document.createEvent('CustomEvent');
+					event.initCustomEvent(type, true, true, data);
+					return event;
+				};
+				var dispatch = function(node, event){
+					node.dispatchEvent(event);
+				};
+				Proto['trigger'] = function(type, data){
+					var event = create(type, data);
+					return each(this, function(node){
+						dispatch(node, event);
+					});
+				};
+			}());
+			
+			// Attributes
+			(function(){
+				Proto['attr'] = function(name, val){
+					if (val === void 0) 
+						return this[0] && this[0].getAttribute(name);
+					return each(this, function(node){
+						node.setAttribute(name, val);
+					});
+				};
+				Proto['removeAttr'] = function(name){
+					return each(this, function(node){
+						node.removeAttribute(name);
+					});
+				};
+			}());
+			
+			if (Object.setPrototypeOf) 
+				Object.setPrototypeOf(Proto, Array.prototype);
+			else if (Proto.__proto__) 
+				Proto.__proto__ = Array.prototype;
+			
+			DomLite.prototype = Proto;
+			domLib_initialize();
+			
+		}(global.document));
+		// end:source /src/DomLite.js
 		// source /src/jcompo/jCompo.js
 		// try to initialize the dom lib, or is then called from `setDOMLibrary`
 		domLib_initialize();
@@ -9181,6 +9841,7 @@
 		}
 		
 		// end:source /src/jcompo/jCompo.js
+		
 	
 		// source /src/handler/slot.js
 		
@@ -9215,7 +9876,7 @@
 	// source /ref-mask-j/lib/jmask.embed.js
 	
 	var jmask = exports.jmask = Mask.jmask = (function(mask){
-		'use strict';
+		
 		// source ../src/scope-vars.js
 		var Dom = mask.Dom,
 			_mask_render = mask.render,
@@ -10375,8 +11036,13 @@
 		// end:source utils.js
 		// source CompoCacheCollection.js
 		
-		function CompoCacheCollection(controller) {
-			this.__cacheInfo = new CompoCache(controller.cache);
+		function CompoCacheCollection(ctr, cache) {
+			if (cache == null /* obsolete */) 
+				cache = ctr.cache;
+			
+			if (cache == null) 
+				return;
+			this.__cacheInfo = new CompoCache(cache);
 		}
 		
 		CompoCacheCollection.prototype = {
@@ -10386,28 +11052,28 @@
 		
 		
 		function CompoCache(cache) {
-			
-			if (cache.byProperty) {
-				var prop = cache.byProperty,
-					dot = prop.indexOf('.'),
-					objName = prop.substring(0, dot),
-					obj;
-				
-				prop = prop.substring(dot + 1);
-				
-				switch (objName) {
-					case 'model':
-					case 'ctx':
-						break;
-					default:
-						console.error('[CompoCache] - property accessor not valid - should be "[model/ctx].[accessor]"');
-						return null;	
+			if (typeof cache === 'object') {
+				if (cache.byProperty) {
+					var prop = cache.byProperty,
+						dot = prop.indexOf('.'),
+						objName = prop.substring(0, dot),
+						obj;
+					
+					prop = prop.substring(dot + 1);
+					
+					switch (objName) {
+						case 'model':
+						case 'ctx':
+							break;
+						default:
+							console.error('[CompoCache] - property accessor not valid - should be "[model/ctx].[accessor]"');
+							return null;	
+					}
+					
+					this.propObjName = objName;
+					this.propAccessor = prop;
 				}
-				
-				this.propObjName = objName;
-				this.propAccessor = prop;
 			}
-			
 			this.expire = cache.expire;
 			return this;
 		}
@@ -10458,7 +11124,7 @@
 				return _lastModelID;
 			},
 			
-			cacheCompo: function(model, ctx, compoName, compo){
+			cacheCompo: function(model, ctx, compoName, compo, cache){
 				
 				if (__cfg.allowCache === false) 
 					return;
@@ -10466,7 +11132,7 @@
 				
 				var cached = _cache[compoName];
 				if (cached == null) {
-					cached = _cache[compoName] = new CompoCacheCollection(compo);
+					cached = _cache[compoName] = new CompoCacheCollection(compo, cache);
 				}
 				
 				var cacheInfo = cached.__cacheInfo;
@@ -10948,119 +11614,125 @@
 	}(Mask));
 	
 	// end:source /ref-mask/src/handlers/sys.js
-	// source /ref-mask/src/handlers/utils.js
-	(function(mask) {
-	
-		/**
-		 *	:template
-		 *
-		 *	Child nodes wont be rendered. You can resolve it as custom component and get its nodes for some use
-		 *
-		 **/
-	
-		var TemplateCollection = {};
-	
-		mask.templates = TemplateCollection;
-	
-		mask.registerHandler(':template', TemplateHandler);
-	
-		function TemplateHandler() {}
-		TemplateHandler.prototype.render = function() {
-			if (this.attr.id == null) {
-				log_warn('Template Should be defined with ID attribute for future lookup');
-				return;
-			}
-	
-			TemplateCollection[this.attr.id] = this.nodes;
-		};
-	
-	
-		mask.registerHandler(':import', ImportHandler);
-	
-		function ImportHandler() {}
-		ImportHandler.prototype = {
-			constructor: ImportHandler,
-			attr: null,
-			template: null,
-	
-			renderStart: function() {
-				if (this.attr.id) {
-	
-					this.nodes = this.template;
-	
-					if (this.nodes == null) {
-						this.nodes = TemplateCollection[this.attr.id];
-					}
-	
-					// @TODO = optimize, not use jmask
-					if (this.nodes == null) {
-						var parent = this,
-							template,
-							selector = ':template[id='+this.attr.id+']';
-	
-						while (template == null && (parent = parent.parent) != null) {
-							if (parent.nodes != null) {
-								template = jmask(parent.nodes).filter(selector).get(0);
-							}
-						}
-	
-						if (template != null) {
-							this.nodes = template.nodes;
-						}
-	
-	
-					}
-	
-					// @TODO = load template from remote
-					if (this.nodes == null) {
-						log_warn('Template could be not imported', this.attr.id);
-					}
-				}
-			}
-		};
-	
-	
-		/**
-		 *	:html
-		 *
-		 *	Shoud contain literal, that will be added as innerHTML to parents node
-		 *
-		 **/
-		mask.registerHandler(':html', HTMLHandler);
-	
-		function HTMLHandler() {}
+	// source /ref-mask/src/handlers/html.js
+	(function() {
+		Mask.registerHandler(':html', {
+			$meta: {
+				mode: 'server:all'
+			},
+			render: function(model, ctx, container) {
+				this.html = jmask(this.nodes).text(model, ctx, this);
 		
-		HTMLHandler.prototype = {
-			mode: 'server:all',
-			render: function(model, cntx, container) {
-	
-				var html = jmask(this.nodes).text(model, cntx, this);
-		
-				if (!html) {
-					log_warn('No HTML for node', this);
-					return;
-				}
-				
 				if (container.insertAdjacentHTML) {
-					container.insertAdjacentHTML('beforeend', html);
+					container.insertAdjacentHTML('beforeend', this.html);
 					return;
 				}
-			
-				this.toHtml = function(){
-					return html;
-				};
-				
-			}
+				if (container.ownerDocument) {
+					var div = document.createElement('div'),
+						frag = document.createDocumentFragment(),
+						child;
+					div.innerHTML = this.html;
+					child = div.firstChild;
+					while (child != null) {
+						frag.appendChild(child);
+						child = child.nextSibling;
+					}
+				}
+			},
+			toHtml: function(){
+				return this.html || '';
+			},
+			html: null
+		});
+	}());
+	
+	// end:source /ref-mask/src/handlers/html.js
+	// source /ref-mask/src/handlers/define.js
+	(function(mask){
+		
+		custom_Tags['define']  = Define;
+		
+		function Define(){}
+		Define.prototype = {
+			$meta: {
+				serializeNodes: true
+			},
+			render: define,
+			onRenderStartClient: define
 		};
-	
+		
+		function define(){
+			var name;
+			for(name in this.attr) break;
+			
+			var nodes = this.nodes;
+			mask.registerHandler(name, Compo({
+				renderStart: function(){
+					this.nodes = mask.merge(nodes, this.nodes || [], this);
+				}
+			}));
+		}
 	}(Mask));
+	// end:source /ref-mask/src/handlers/define.js
+	// source /ref-mask/src/handlers/template.js
+	(function(){
+		var templates_ = {},
+			helper_ = {
+				get: function(id){
+					return templates_[id]
+				},
+				resolve: function(node, id){
+					var nodes = templates_[id];
+					if (nodes != null) 
+						return nodes;
+					
+					var selector = ':template[id=' + id +']',
+						parent = node.parent,
+						tmpl = null
+						;
+					while (parent != null) {
+						tmpl = jmask(parent.nodes)
+							.filter(selector)
+							.get(0);
+						
+						if (tmpl != null) 
+							return tmpl.nodes;
+							
+						parent = parent.parent;
+					}
+					log_warn('Template was not found', id);
+					return null;
+				},
+				register: function(id, nodes){
+					if (id == null) {
+						log_warn('`:template` must be define via id attr.');
+						return;
+					}
+					templates_[id] = nodes;
+				}
+			};
 	
-	// end:source /ref-mask/src/handlers/utils.js
+		Mask.templates = helper_;
+		Mask.registerHandler(':template', {
+			render: function() {
+				helper_.register(this.attr.id, this.nodes);
+			}
+		});
+	
+		Mask.registerHandler(':import', {
+			renderStart: function() {
+				var id = this.attr.id;
+				if (id == null) {
+					log_error('`:import` shoud reference the template via id attr')
+					return;
+				}
+				this.nodes = helper_.resolve(this, id);
+			}
+		});
+	}());
+	// end:source /ref-mask/src/handlers/template.js
 	// source /ref-mask-binding/lib/binding.embed.node.js
-	
 	(function(mask, Compo){
-		'use strict'
-	
 	
 		// source ../src/vars.js
 		var domLib = global.jQuery || global.Zepto || global.$,
@@ -11085,20 +11757,13 @@
 		
 		// end:source ../src/util/function.js
 		// source ../src/util/object.js
-		
 		var obj_getProperty,
 			obj_setProperty,
-			obj_addObserver,
-			obj_hasObserver,
-			obj_removeObserver,
-			obj_lockObservers,
-			obj_unlockObservers,
 			obj_extend,
 			obj_isDefined
 			;
 		
 		(function(){
-		
 			obj_getProperty = function(obj, property) {
 				var chain = property.split('.'),
 					imax = chain.length,
@@ -11111,8 +11776,6 @@
 				}
 				return obj;
 			};
-			
-			
 			obj_setProperty = function(obj, property, value) {
 				var chain = property.split('.'),
 					imax = chain.length - 1,
@@ -11127,9 +11790,49 @@
 				}
 				obj[chain[i]] = value;
 			};
-		
-			obj_addObserver = function(obj, property, callback) {
+			obj_extend = function(obj, source) {
+				if (source == null) 
+					return obj;
 				
+				if (obj == null) 
+					obj = {};
+				
+				for (var key in source) {
+					obj[key] = source[key];
+				}
+				return obj;
+			};
+			obj_isDefined = function(obj, path) {
+				if (obj == null) 
+					return false;
+				
+				var parts = path.split('.'),
+					imax = parts.length,
+					i = -1;
+				
+				while ( ++i < imax ) {
+					
+					if ((obj = obj[parts[i]]) == null) 
+						return false;
+				}
+				
+				return true;
+			};
+		}());
+		// end:source ../src/util/object.js
+		// source ../src/util/object.observe.js
+		var obj_addObserver,
+			obj_hasObserver,
+			obj_removeObserver,
+			obj_lockObservers,
+			obj_unlockObservers,
+			obj_ensureObserversProperty,
+			obj_addMutatorObserver,
+			obj_removeMutatorObserver
+			;
+		
+		(function(){
+			obj_addObserver = function(obj, property, cb) {
 				// closest observer
 				var parts = property.split('.'),
 					imax  = parts.length,
@@ -11141,37 +11844,35 @@
 					if (x == null) 
 						break;
 					
-					if (x.__observers != null) {
+					if (x[prop_OBS] != null) {
 						
 						var prop = parts.slice(i + 1).join('.');
-						
-						if (x.__observers[prop]) {
+						if (x[prop_OBS][prop] != null) {
 							
-							listener_push(x, prop, callback);
+							pushListener_(x, prop, cb);
 							
-							var listeners = listener_push(obj, property, callback);
-							if (listeners.length === 1) {
+							var cbs = pushListener_(obj, property, cb);
+							if (cbs.length === 1) {
 								var arr = parts.splice(0, i);
 								if (arr.length !== 0) 
-									obj_attachProxy(obj, property, listeners, arr, true);
+									attachProxy_(obj, property, cbs, arr, true);
 							}
-							
-							
 							return;
 						}
 					}
 				}
 				
-				var listeners = listener_push(obj, property, callback);
+				var cbs = pushListener_(obj, property, cb);
+				if (cbs.length === 1) 
+					attachProxy_(obj, property, cbs, parts, true);
 				
-				if (listeners.length === 1) 
-					obj_attachProxy(obj, property, listeners, parts, true);
-				
-				
-				var val = obj_getProperty(obj, property);
-				if (arr_isArray(val)) 
-					arr_addObserver(val, callback);
-				
+				var val = obj_getProperty(obj, property),
+					mutators = getSelfMutators(val);
+				if (mutators != null) {
+					objMutator_addObserver(
+						val, mutators, cb
+					);
+				}
 			};
 			
 			obj_hasObserver = function(obj, property, callback){
@@ -11185,7 +11886,7 @@
 					if (x == null) 
 						break;
 					
-					if (x.__observers != null) {
+					if (x[prop_OBS] != null) {
 						if (obj_hasObserver(x, parts.slice(i).join('.'), callback))
 							return true;
 						
@@ -11193,7 +11894,7 @@
 					}
 				}
 				
-				var obs = obj.__observers;
+				var obs = obj[prop_OBS];
 				if (obs == null || obs[property] == null) 
 					return false;
 				
@@ -11211,104 +11912,101 @@
 					if (x == null) 
 						break;
 					
-					if (x.__observers != null) {
+					if (x[prop_OBS] != null) {
 						obj_removeObserver(x, parts.slice(i).join('.'), callback);
 						break;
 					}
 				}
 				
 				
-				var obs = obj.__observers;
-				if (obs == null || obs[property] == null) 
-					return;
-				
-			
-				var currentValue = obj_getProperty(obj, property);
-				if (arguments.length === 2) {
-					// <callback> not provided -> remove all observers	
-					obs[property].length = 0;
-					return;
+				var obs = obj_ensureObserversProperty(obj, property),
+					val = obj_getProperty(obj, property);
+				if (callback === void 0) {
+					// callback not provided -> remove all observers	
+					obs.length = 0;
+				} else {
+					arr_remove(obs, callback);
 				}
 			
-				arr_remove(obs[property], callback);
-			
-				if (arr_isArray(currentValue)) 
-					arr_removeObserver(currentValue, callback);
+				var mutators = getSelfMutators(val);
+				if (mutators != null) 
+					objMutator_removeObserver(val, mutators, callback)
+				
 			};
-			
-			
 			obj_lockObservers = function(obj) {
-				if (arr_isArray(obj)) {
-					arr_lockObservers(obj);
-					return;
-				}
-			
-				var obs = obj.__observers;
+				var obs = obj[prop_OBS];
 				if (obs != null) 
-					obs.__dirties = {};
-			};
-			
+					obs[prop_DIRTY] = {};
+			};	
 			obj_unlockObservers = function(obj) {
-				if (arr_isArray(obj)) {
-					arr_unlockObservers(obj);
+				var obs = obj[prop_OBS],
+					dirties = obs == null ? null : obs[prop_DIRTY];
+				if (dirties == null)
 					return;
-				}
-			
-				var obs = obj.__observers,
-					dirties = obs == null
-						? null
-						: obs.__dirties
-						;
-				if (dirties != null) {
-					for (var prop in dirties) {
-						var callbacks = obj.__observers[prop],
-							value = obj_getProperty(obj, prop);
-			
-						if (callbacks != null) {
-							for(var i = 0, imax = callbacks.length; i < imax; i++){
-								callbacks[i](value);
-							}
-						}
-					}
-					obs.__dirties = null;
-				}
-			};
-			
-			
-			obj_extend = function(obj, source) {
-				if (source == null) 
-					return obj;
 				
-				if (obj == null) 
-					obj = {};
+				obs[prop_DIRTY] = null;
 				
-				for (var key in source) {
-					obj[key] = source[key];
-				}
-				return obj;
-			};
-			
-			
-			obj_isDefined = function(obj, path) {
-				if (obj == null) 
-					return false;
-				
-				var parts = path.split('.'),
-					imax = parts.length,
-					i = -1;
-				
-				while ( ++i < imax ) {
+				var prop, cbs, val, imax, i;
+				for(prop in dirties) {
+					cbs = obj[prop_OBS][prop];
+					imax = cbs == null ? 0 : cbs.length;
+					if (imax === 0) 
+						continue;
 					
-					if ((obj = obj[parts[i]]) == null) 
-						return false;
+					i = -1;
+					val = prop === prop_MUTATORS
+							? obj
+							: obj_getProperty(obj, prop)
+							;
+					while ( ++i < imax ) {
+						cbs[i](val);
+					}
 				}
-				
-				return true;
 			};
 		
+			obj_ensureObserversProperty = function(obj, type){
+				var obs = obj[prop_OBS];
+				if (obs == null) {
+					obs = {
+						__dirty: null,
+						__dfrTimeout: null,
+						__mutators: null
+					};
+					defineProp_(obj, '__observers', {
+						value: obs,
+						enumerable: false
+					});
+				}
+				if (type == null) 
+					return obs;
+				
+				var arr = obs[type];
+				return arr == null
+					? (obs[type] = [])
+					: arr
+					;
+			};
+			
+			obj_addMutatorObserver = function(obj, cb){
+				var mutators = getSelfMutators(obj);
+				if (mutators != null) 
+					objMutator_addObserver(obj,  mutators, cb);
+			};
+			obj_removeMutatorObserver = function(obj, cb){
+				objMutator_removeObserver(obj, null, cb);
+			};
+			
+			// PRIVATE
+			var prop_OBS = '__observers',
+				prop_MUTATORS = '__mutators',
+				prop_TIMEOUT = '__dfrTimeout',
+				prop_DIRTY = '__dirty';
+				
+			var defineProp_ = Object.defineProperty;
+				
 			
 			//Resolve object, or if property do not exists - create
-			function obj_ensure(obj, chain) {
+			function ensureProperty_(obj, chain) {
 				var i = -1,
 					imax = chain.length - 1,
 					key
@@ -11322,81 +12020,132 @@
 					obj = obj[key];
 				}
 				return obj;
+			}
+			function getSelfMutators(obj) {
+				if (obj == null || typeof obj !== 'object') 
+					return null;
+				
+				if (typeof obj.length === 'number' && typeof obj.slice === 'function') 
+					return MUTATORS_.Array;
+				if (typeof obj.toUTCString === 'function') 
+					return MUTATORS_.Date;
+				
+				return null;
+			}
+			var MUTATORS_ = {
+				Array: {
+					throttle: false,
+					methods: [
+						// native mutators
+						'push',
+						'unshift',
+						'splice',
+						'pop',
+						'shift',
+						'reverse',
+						'sort',
+						// collections mutator
+						'remove'
+					]
+				},
+				Date: {
+					throttle: true,
+					methods: [
+						'setDate',
+						'setFullYear',
+						'setHours',
+						'setMilliseconds',
+						'setMinutes',
+						'setMonth',
+						'setSeconds',
+						'setTime',
+						'setUTCDate',
+						'setUTCFullYear',
+						'setUTCHours',
+						'setUTCMilliseconds',
+						'setUTCMinutes',
+						'setUTCMonth',
+						'setUTCSeconds',
+					]
+				}
 			};
-			
-			
-			function obj_attachProxy(obj, property, listeners, chain) {
+			function attachProxy_(obj, property, cbs, chain) {
 				var length = chain.length,
 					parent = length > 1
-						? obj_ensure(obj, chain)
+						? ensureProperty_(obj, chain)
 						: obj,
 					key = chain[length - 1],
-					currentValue = parent[key];
+					currentVal = parent[key];
 					
 				if (length > 1) {
 					obj_defineCrumbs(obj, chain);
 				}
+				
+				
+				if ('length' === key) {
+					var mutators = getSelfMutators(parent);
+					if (mutators != null) {
+						objMutator_addObserver(
+							parent, mutators, function(){
+								var imax = cbs.length,
+									i = -1
+									;
+								while ( ++i < imax ) {
+									cbs[i].apply(null, arguments);
+								}
+							});
+						return currentVal;
+					}
 					
-				if (key === 'length' && arr_isArray(parent)) {
-					// we cannot redefine array properties like 'length'
-					arr_addObserver(parent, function(array, method, args, result){
-						var imax = listeners.length,
-							i = -1
-							;
-						while ( ++i < imax ) {
-							listeners[i](array, method, args, result);
-						}
-					});
-					return currentValue;
 				}
 				
-				Object.defineProperty(parent, key, {
+				defineProp_(parent, key, {
 					get: function() {
-						return currentValue;
+						return currentVal;
 					},
 					set: function(x) {
-						var i = 0,
-							imax = listeners.length;
-						
-						if (x === currentValue) 
+						if (x === currentVal) 
 							return;
-						
-						currentValue = x;
-			
-						if (arr_isArray(x)) {
-							for (i = 0; i< imax; i++) {
-								arr_addObserver(x, listeners[i]);
+						currentVal = x;
+						var i = 0,
+							imax = cbs.length,
+							mutators = getSelfMutators(x);
+						if (mutators != null) {
+							for(; i < imax; i++) {
+								objMutator_addObserver(
+									x, mutators, cbs[i]
+								);
 							}
 						}
-			
-						if (listeners.__dirties != null) {
-							listeners.__dirties[property] = 1;
+						
+						if (obj[prop_OBS][prop_DIRTY] != null) {
+							obj[prop_OBS][prop_DIRTY][property] = 1;
 							return;
 						}
 			
 						for (i = 0; i < imax; i++) {
-							listeners[i](x);
+							cbs[i](x);
 						}
 					},
 					configurable: true,
 					enumerable : true
 				});
-			
 				
-				return currentValue;
+				return currentVal;
 			}
 			
 			function obj_defineCrumbs(obj, chain) {
 				var rebinder = obj_crumbRebindDelegate(obj),
 					path = '',
 					key;
-					
-				for (var i = 0, imax = chain.length - 1; i < imax; i++) {
+				
+				var imax = chain.length - 1,
+					i = 0;
+				for(; i < imax; i++) {
 					key = chain[i];
 					path += key + '.';
 					
 					obj_defineCrumb(path, obj, key, rebinder);
-					
 					obj = obj[key];
 				}
 			}
@@ -11406,7 +12155,7 @@
 				var value = obj[key],
 					old;
 				
-				Object.defineProperty(obj, key, {
+				defineProp_(obj, key, {
 					get: function() {
 						return value;
 					},
@@ -11426,7 +12175,7 @@
 			function obj_crumbRebindDelegate(obj) {
 				return function(path, oldValue){
 					
-					var observers = obj.__observers;
+					var observers = obj[prop_OBS];
 					if (observers == null) 
 						return;
 					
@@ -11464,61 +12213,123 @@
 				}
 			}
 			
-			
 			// Create Collection - Check If Exists - Add Listener
-			function listener_push(obj, property, callback) {
-				if (obj.__observers == null) {
-					Object.defineProperty(obj, '__observers', {
-						value: {
-							__dirty: null
-						},
-						enumerable: false
-					});
-				}
-				var obs = obj.__observers;
-				if (obs[property] != null) {
-					
-					if (arr_indexOf(obs[property], callback) === -1) 
-						obs[property].push(callback);
-				}
-				else{
-					obs[property] = [callback];
-				}
-				
-				return obs[property];
+			function pushListener_(obj, property, cb) {
+				var obs = obj_ensureObserversProperty(obj, property);
+				if (arr_indexOf(obs, cb) === -1) 
+					obs.push(cb);
+				return obs;
 			}
 			
+			var objMutator_addObserver,
+				objMutator_removeObserver;
+			(function(){
+				objMutator_addObserver = function(obj, mutators, cb){
+					var methods = mutators.methods,
+						throttle = mutators.throttle,
+						obs = obj_ensureObserversProperty(obj, prop_MUTATORS);
+					if (obs.length === 0) {
+						var imax = methods.length,
+							i = -1,
+							method, fn;
+						while( ++i < imax ){
+							method = methods[i];
+							fn = obj[method];
+							if (fn == null) 
+								continue;
+							
+							obj[method] = objMutator_createWrapper_(
+								obj
+								, fn
+								, method
+								, throttle
+							);
+						}
+					}
+					obs[obs.length++] = cb;
+				};
+				objMutator_removeObserver = function(obj, mutators, cb){
+					var obs = obj_ensureObserversProperty(obj, prop_MUTATORS);
+					if (cb === void 0) {
+						obs.length = 0;
+						return;
+					}
+					arr_remove(obs, cb);
+				};
+				
+				function objMutator_createWrapper_(obj, originalFn, method, throttle) {
+					var fn = throttle === true ? callDelayed : call;
+					return function() {
+						return fn(
+							obj,
+							originalFn,
+							method,
+							_Array_slice.call(arguments)
+						);
+					};
+				}
+				function call(obj, original, method, args) {
+					var cbs = obj_ensureObserversProperty(obj, prop_MUTATORS),
+						result = original.apply(obj, args);
+					
+					tryNotify(obj, cbs, method, args, result);
+					return result;
+				}
+				function callDelayed(obj, original, method, args) {
+					var cbs = obj_ensureObserversProperty(obj, prop_MUTATORS),
+						result = original.apply(obj, args);
+					
+					var obs = obj[prop_OBS];
+					if (obs[prop_TIMEOUT] != null) 
+						return result;
+					
+					obs[prop_TIMEOUT] = setTimeout(function(){
+						obs[prop_TIMEOUT] = null;
+						tryNotify(obj, cbs, method, args, result);
+					});
+					return result;
+				}
+				
+				function tryNotify(obj, cbs, method, args, result){
+					if (cbs.length === 0) 
+						return;
+					
+					var obs = obj[prop_OBS];
+					if (obs[prop_DIRTY] != null) {
+						obs[prop_DIRTY][prop_MUTATORS] = 1;
+						return;
+					}
+					var imax = cbs.length,
+						i = -1,
+						x;
+					while ( ++i < imax ){
+						x = cbs[i];
+						if (typeof x === 'function') {
+							x(obj, method, args, result);
+						}
+					}
+				}
+			}());
+			
 		}());
-		
-		
-		
-		
-		
-		
-		// end:source ../src/util/object.js
+		// end:source ../src/util/object.observe.js
 		// source ../src/util/array.js
-		
 		var arr_isArray,
 			arr_remove,
 			arr_each,
-			arr_indexOf,
-			arr_addObserver,
-			arr_removeObserver,
-			arr_lockObservers,
-			arr_unlockObservers
-			;
-		
+			arr_indexOf;
 		(function(){
 			
 			arr_isArray = function(x) {
-				return x != null && typeof x === 'object' && x.length != null && typeof x.splice === 'function';
+				return x != null
+					&& typeof x === 'object'
+					&& typeof x.length === 'number'
+					&& typeof x.splice === 'function';
 			};
-			
 			arr_remove = function(array /*, .. */ ) {
-				if (array == null) {
+				if (array == null) 
 					return false;
-				}
-			
+				
 				var i = 0,
 					length = array.length,
 					x, j = 1,
@@ -11541,153 +12352,33 @@
 				}
 				return removed + 1 === jmax;
 			};
-			
-			
-			arr_addObserver = function(arr, callback) {
-			
-				if (arr.__observers == null) {
-					Object.defineProperty(arr, '__observers', {
-						value: {
-							__dirty: null
-						},
-						enumerable: false
-					});
-				}
-				
-				var observers = arr.__observers.__array;
-				if (observers == null) {
-					observers = arr.__observers.__array = [];
-				}
-				
-				if (observers.length === 0) {
-					// create wrappers for first time
-					var i = 0,
-						fns = [
-							// native mutators
-							'push',
-							'unshift',
-							'splice',
-							'pop',
-							'shift',
-							'reverse',
-							'sort',
-							
-							// collections mutator
-							'remove'],
-						length = fns.length,
-						fn,
-						method;
-				
-					for (; i < length; i++) {
-						method = fns[i];
-						fn = arr[method];
-						
-						if (fn != null) {
-							arr[method] = _array_createWrapper(arr, fn, method);
-						}
-			
-					}
-				}
-			
-				observers[observers.length++] = callback;
-			};
-			
-			arr_removeObserver = function(arr, callback) {
-				var obs = arr.__observers && arr.__observers.__array;
-				if (obs != null) {
-					for (var i = 0, imax = obs.length; i < imax; i++) {
-						if (obs[i] === callback) {
-							obs[i] = null;
-			
-							for (var j = i; j < imax; j++) {
-								obs[j] = obs[j + 1];
-							}
-							
-							imax--;
-							obs.length--;
-						}
-					}
-				}
-			};
-			
-			arr_lockObservers = function(arr) {
-				if (arr.__observers != null) {
-					arr.__observers.__dirty = false;
-				}
-			};
-			
-			arr_unlockObservers = function(arr) {
-				var list = arr.__observers,
-					obs = list && list.__array;
-					
-				if (obs != null) {
-					if (list.__dirty === true) {
-						for (var i = 0, x, imax = obs.length; i < imax; i++) {
-							x = obs[i];
-							if (typeof x === 'function') {
-								x(arr);
-							}
-						}
-						list.__dirty = null;
-					}
-				}
-			};
-			
-			
 			arr_each = function(array, fn) {
 				for (var i = 0, length = array.length; i < length; i++) {
 					fn(array[i]);
 				}
 			};
-			
 			arr_indexOf = function(arr, x){
 				return arr.indexOf(x);
 			};
-			
-			
-			//= private
-			
-			function _array_createWrapper(array, originalFn, overridenFn) {
-				return function() {
-					return _array_methodWrapper(array, originalFn, overridenFn, _Array_slice.call(arguments));
-				};
-			}
-			
-			
-			function _array_methodWrapper(array, original, method, args) {
-				var callbacks = array.__observers && array.__observers.__array,
-					result = original.apply(array, args);
-			
-			
-				if (callbacks == null || callbacks.length === 0) {
-					return result;
-				}
-			
-				if (array.__observers.__dirty != null) {
-					array.__observers.__dirty = true;
-					return result;
-				}
-			
-				var i = 0,
-					imax = callbacks.length,
-					x;
-				for (; i < imax; i++) {
-					x = callbacks[i];
-					if (typeof x === 'function') {
-						x(array, method, args, result);
-					}
-				}
-			
-				return result;
-			}
-			
-			
-			
-			
-			
 		}());
 		
 		// end:source ../src/util/array.js
+		// source ../src/util/date.js
+		var date_ensure;
+		(function(){
+			date_ensure = function(val){
+				if (val == null || val === '') 
+					return null;
+				if (typeof val === 'string') 
+					val = new Date(val);
+					
+				return isNaN(val) === false && typeof val.getFullYear === 'function'
+					? val
+					: null
+					;
+			};
+		}());
+		// end:source ../src/util/date.js
 		// source ../src/util/dom.js
 		
 		function dom_removeElement(node) {
@@ -11799,7 +12490,7 @@
 		
 			var components = (parent && parent.components) || (compo.parent && compo.parent.components);
 			if (components == null) {
-				console.error('Parent Components Collection is undefined');
+				log_error('Parent Components Collection is undefined');
 				return false;
 			}
 		
@@ -11863,8 +12554,7 @@
 			expression_bind = function(expr, model, ctx, ctr, callback) {
 				
 				if (expr === '.') {
-					if (arr_isArray(model)) 
-						arr_addObserver(model, callback);
+					obj_addMutatorObserver(model, callback);
 					return;
 				}
 				
@@ -11897,7 +12587,7 @@
 					log_warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
 				
 				if (expr === '.') {
-					arr_removeObserver(model, callback);
+					obj_removeMutatorObserver(model, callback);
 					return;
 				}
 				
@@ -12037,13 +12727,13 @@
 					x = signals[i].split(':');
 					
 					if (x.length !== 1 && x.length !== 2) {
-						console.error('Too much ":" in a signal def.', signals[i]);
+						log_error('Too much ":" in a signal def.', signals[i]);
 						continue;
 					}
 					
 					
-					type = x.length == 2 ? x[0] : defaultType;
-					signalName = x[x.length == 2 ? 1 : 0];
+					type = x.length === 2 ? x[0] : defaultType;
+					signalName = x[x.length === 2 ? 1 : 0];
 					
 					signal = signal_create(signalName.trim(), type, isPiped);
 					
@@ -12066,7 +12756,7 @@
 				
 				var index = signal.indexOf('.');
 				if (index === -1) {
-					console.error('No pipe name in a signal', signal);
+					log_error('No pipe name in a signal', signal);
 					return null;
 				}
 				
@@ -12081,26 +12771,185 @@
 		// end:source ../src/util/signal.js
 	
 		// source ../src/bindingProvider.js
-		var BindingProvider = (function() {
-			var Providers = {};
+		// source ./DomObjectTransport.js
+		var DomObjectTransport;
+		(function(){
 			
-			mask.registerBinding = function(type, binding) {
-				Providers[type] = binding;
-			};
-		
-			mask.BindingProvider = BindingProvider;
-			
-			function BindingProvider(model, element, controller, bindingType) {
-		
-				if (bindingType == null) {
-					bindingType = controller.compoName === ':bind' ? 'single' : 'dual';
+			var objectWay = {
+				get: function(provider, expression) {
+					return expression_eval(expression, provider.model, provider.cntx, provider.controller);
+				},
+				set: function(obj, property, value) {
+					obj_setProperty(obj, property, value);
 				}
+			};
+			var domWay  = {
+				get: function(provider) {
+					var getter = provider.getter;
+					if (getter == null) {
+						return obj_getProperty(provider, provider.property);
+					}
+					var ctr = provider.node.parent;
+					if (isValidFn_(ctr, getter, 'Getter') === false) {
+						return null;
+					}
+					return ctr[getter]();
+				},
+				set: function(provider, value) {
+					var setter = provider.setter;
+					if (setter == null) {
+						obj_setProperty(provider, provider.property, value);
+						return;
+					}
+					var ctr = provider.node.parent;
+					if (isValidFn_(ctr, setter, 'Setter') === false) {
+						return;
+					}
+					ctr[setter](value);
+				}
+			};
+			var DateTimeDelegate = {
+				domSet: function(format){
+					return function(prov, val){
+						var date = date_ensure(val);
+						prov.element.value = date == null ? '' : format(date);
+					}
+				},
+				objSet: function(extend){
+					return function(obj, prop, val){
+						
+						var date = date_ensure(val);
+						if (date == null) 
+							return;
+						
+						var target = date_ensure(obj_getProperty(obj, prop));
+						if (target == null) {
+							obj_setProperty(obj, prop, date);
+							return;
+						}
+						extend(target, date);
+					}
+				}
+			};
+			
+			DomObjectTransport = {
+				// generic
+				objectWay: objectWay,
+				domWay: domWay,
+				
+				SELECT: {
+					get: function(provider) {
+						var el = provider.element,
+							i = el.selectedIndex;
+						return  i === -1
+							? ''
+							: el.options[i].getAttribute('name')
+							;
+					},
+					set: function(provider, val) {
+						var el = provider.element,
+							options = el.options,
+							imax = options.length,
+							i = -1;
+						while( ++i < imax ){
+							/* jshint eqeqeq: false */
+							if (options[i].getAttribute('name') == val) {
+								/* jshint eqeqeq: true */
+								el.selectedIndex = i;
+								return;
+							}
+						}
+						log_warn('Value is not an option', val);
+					}
+				},
+				DATE: {
+					domWay: {
+						get: domWay.get,
+						set: function(prov, val){
+							var date = date_ensure(val);
+							prov.element.value = date == null ? '' : formatDate(date);
+						}
+					},
+					objectWay: {
+						get: objectWay.get,
+						set: DateTimeDelegate.objSet(function(a, b){
+							a.setFullYear(b.getFullYear());
+							a.setMonth(b.getMonth());
+							a.setDate(b.getDate());
+						})
+					}
+				},
+				TIME: {
+					domWay: {
+						get: domWay.get,
+						set: DateTimeDelegate.domSet(formatTime)
+					},
+					objectWay: {
+						get: objectWay.get,
+						set: DateTimeDelegate.objSet(function(a, b){
+							a.setHours(b.getHours())
+							a.setMinutes(b.getMinutes());
+							a.setSeconds(b.getSeconds());
+						})
+					}
+				}
+				
+			};
+			
+			function isValidFn_(obj, prop, name) {
+				if (obj== null || typeof obj[prop] !== 'function') {
+					log_error('BindingProvider.', name, 'should be a function. Property:', prop);
+					return false;
+				}
+				return true;
+			}
+			function formatDate(date) {
+				var YYYY = date.getFullYear(),
+					MM = date.getMonth() + 1,
+					DD = date.getDate();
+				return YYYY
+					+ '-'
+					+ (MM < 10 ? '0' : '')
+					+ (MM)
+					+ '-'
+					+ (DD < 10 ? '0' : '')
+					+ (DD)
+					;
+			}
+			function formatTime(date) {
+				var H = date.getHours(),
+					M = date.getMinutes();
+				return H
+					+ ':'
+					+ (M < 10 ? '0' : '')
+					+ (M)
+					;
+			}
+		}());
 		
-				var attr = controller.attr,
+		// end:source ./DomObjectTransport.js
+		// source ./CustomProviders.js
+		var CustomProviders = {};
+		
+		mask.registerBinding = function(name, Prov) {
+			CustomProviders[name] = Prov;
+		};
+		// end:source ./CustomProviders.js
+		
+		var BindingProvider;
+		(function() {
+			
+			mask.BindingProvider =
+			BindingProvider =
+			function BindingProvider(model, element, ctr, bindingType) {
+				if (bindingType == null) 
+					bindingType = ctr.compoName === ':bind' ? 'single' : 'dual';
+				
+				var attr = ctr.attr,
 					type;
 		
-				this.node = controller; // backwards compat.
-				this.controller = controller;
+				this.node = ctr; // backwards compat.
+				this.controller = ctr;
 		
 				this.model = model;
 				this.element = element;
@@ -12125,13 +12974,18 @@
 								this.property = 'element.checked';
 								break;
 							}
+							if ('date' === type) {
+								var x = DomObjectTransport.DATE;
+								this.domWay = x.domWay;
+								this.objectWay = x.objectWay;
+							}
 							this.property = 'element.value';
 							break;
 						case 'TEXTAREA':
 							this.property = 'element.value';
 							break;
 						case 'SELECT':
-							this.domWay = DomWaysProto.SELECT;
+							this.domWay = DomObjectTransport.DATE.SELECT;
 							break;
 						default:
 							this.property = 'element.innerHTML';
@@ -12159,7 +13013,7 @@
 							this['signal_' + signalType + 'Changed'] = signal.signal;
 							break;
 						default:
-							console.error('Signal typs is not supported', signal);
+							log_error('Signal typs is not supported', signal);
 							break;
 					}
 					
@@ -12176,7 +13030,7 @@
 							this['pipe_' + signalType + 'Changed'] = signal;
 							break;
 						default:
-							console.error('Pipe type is not supported');
+							log_error('Pipe type is not supported');
 							break;
 					}
 				}
@@ -12186,7 +13040,7 @@
 					this.slots = {};
 					// @hack - place dualb. provider on the way of a signal
 					// 
-					var parent = controller.parent,
+					var parent = ctr.parent,
 						newparent = parent.parent;
 						
 					parent.parent = this;
@@ -12224,20 +13078,20 @@
 						if (typeof refs === 'string') {
 							this.value = refs;
 						} else {
-							console.warn('Please set value attribute in DualBind Control.');
+							log_warn('Please set value attribute in DualBind Control.');
 						}
 					}
 					return;
 				}
 				
 				this.expression = this.value;
-			}
+			};
 			
 			BindingProvider.create = function(model, element, controller, bindingType) {
 		
 				/* Initialize custom provider */
 				var type = controller.attr.bindingProvider,
-					CustomProvider = type == null ? null : Providers[type],
+					CustomProvider = type == null ? null : CustomProviders[type],
 					provider;
 		
 				if (typeof CustomProvider === 'function') {
@@ -12256,8 +13110,7 @@
 			
 			BindingProvider.bind = function(provider){
 				return apply_bind(provider);
-			}
-		
+			};
 		
 			BindingProvider.prototype = {
 				constructor: BindingProvider,
@@ -12270,7 +13123,7 @@
 						return;
 					}
 					if (this.locked === true) {
-						console.warn('Concurance change detected', this);
+						log_warn('Concurance change detected', this);
 						return;
 					}
 					this.locked = true;
@@ -12296,128 +13149,51 @@
 					this.locked = false;
 				},
 				domChanged: function(event, value) {
-		
 					if (this.locked === true) {
-						console.warn('Concurance change detected', this);
+						log_warn('Concurance change detected', this);
 						return;
 					}
 					this.locked = true;
 		
-					var x = value || this.domWay.get(this),
-						valid = true;
-		
-					if (this.node.validations) {
-		
-						for (var i = 0, validation, length = this.node.validations.length; i < length; i++) {
-							validation = this.node.validations[i];
-							if (validation.validate(x, this.element, this.objectChanged.bind(this)) === false) {
-								valid = false;
+					if (value == null) 
+						value = this.domWay.get(this);
+					
+					var isValid = true,
+						validations = this.node.validations;
+					if (validations) {
+						var imax = validations.length,
+							i = -1, x;
+						while( ++i < imax ) {
+							x = validations[i];
+							if (x.validate(value, this.element, this.objectChanged.bind(this)) === false) {
+								isValid = false;
 								break;
 							}
 						}
 					}
-		
-					if (valid) {
+					if (isValid) {
 						this.dismiss = 1;
-						this.objectWay.set(this.model, this.value, x);
+						this.objectWay.set(this.model, this.value, value);
 						this.dismiss = 0;
 		
 						if (this.log) {
-							console.log('[BindingProvider] domChanged -', x);
+							console.log('[BindingProvider] domChanged -', value);
 						}
-		
 						if (this.signal_domChanged) {
-							signal_emitOut(this.node, this.signal_domChanged, [x]);
+							signal_emitOut(this.node, this.signal_domChanged, [value]);
 						}
-						
 						if (this.pipe_domChanged) {
 							var pipe = this.pipe_domChanged;
 							__Compo.pipe(pipe.pipe).emit(pipe.signal);
 						}	
 					}
-		
 					this.locked = false;
 				},
-				objectWay: {
-					get: function(provider, expression) {
-						return expression_eval(expression, provider.model, provider.cntx, provider.controller);
-					},
-					set: function(obj, property, value) {
-						obj_setProperty(obj, property, value);
-					}
-				},
-				/**
-				 * usually you have to override this object, while getting/setting to element,
-				 * can be very element(widget)-specific thing
-				 *
-				 * Note: The Functions are static
-				 */
-				domWay: {
-					get: function(provider) {
-						if (provider.getter) {
-							var controller = provider.node.parent;
-		
-							// if DEBUG
-							if (controller == null || typeof controller[provider.getter] !== 'function') {
-								console.error('Mask.bindings: Getter should be a function', provider.getter, provider);
-								return null;
-							}
-							// endif
-		
-							return controller[provider.getter]();
-						}
-						return obj_getProperty(provider, provider.property);
-					},
-					set: function(provider, value) {
-						if (provider.setter) {
-							var controller = provider.node.parent;
-		
-							// if DEBUG
-							if (controller == null || typeof controller[provider.setter] !== 'function') {
-								console.error('Mask.bindings: Setter should be a function', provider.setter, provider);
-								return;
-							}
-							// endif
-		
-							controller[provider.setter](value);
-						} else {
-							obj_setProperty(provider, provider.property, value);
-						}
-		
-					}
-				}
+				
+				objectWay: DomObjectTransport.objectWay,
+				domWay: DomObjectTransport.domWay
 			};
 			
-			var DomWaysProto = {
-				SELECT: {
-					get: function(provider) {
-						var element = provider.element;
-						
-						if (element.selectedIndex === -1) {
-							return '';
-						}
-						
-						return element.options[element.selectedIndex].getAttribute('name');
-					},
-					set: function(provider, value) {
-						var element = provider.element;
-						
-						for (var i = 0, x, imax = element.options.length; i < imax; i++){
-							x = element.options[i];
-							
-		                    // eqeq (not strict compare)
-							if (x.getAttribute('name') == value) {
-								element.selectedIndex = i;
-								return;
-							}
-						}
-		
-					}
-				}
-			};
-		
-		
-		
 			function apply_bind(provider) {
 		
 				var expr = provider.expression,
@@ -12449,8 +13225,7 @@
 							if (provider.domWay.get(provider))
 								// and apply when exists
 								provider.domChanged();	
-						})
-						
+						});
 						return provider;
 					}
 				}
@@ -12460,27 +13235,23 @@
 				return provider;
 			}
 		
-			function signal_emitOut(controller, signal, args) {
-				var slots = controller.slots;
+			function signal_emitOut(ctr, signal, args) {
+				if (ctr == null) 
+					return;
+				
+				var slots = ctr.slots;
 				if (slots != null && typeof slots[signal] === 'function') {
-					if (slots[signal].apply(controller, args) === false) {
+					if (slots[signal].apply(ctr, args) === false) 
 						return;
-					}
 				}
-		
-				if (controller.parent != null) {
-					signal_emitOut(controller.parent, signal, args);
-				}
+				
+				signal_emitOut(ctr.parent, signal, args);
 			}
-		
 		
 			obj_extend(BindingProvider, {
 				addObserver: obj_addObserver,
 				removeObserver: obj_removeObserver
 			});
-		
-			return BindingProvider;
-		
 		}());
 		
 		// end:source ../src/bindingProvider.js
@@ -12562,13 +13333,15 @@
 		DualbindHandler.prototype = {
 			constructor: DualbindHandler,
 			
-			renderStart: function(elements, model, cntx, container) {
+			renderStart: function(model, ctx, container) {
 				this.provider = BindingProvider.create(model, container, this);
 				this.provider.objectChanged();
 			},
 			dispose: function(){
-				if (this.provider && typeof this.provider.dispose === 'function') {
-					this.provider.dispose();
+				var provider = this.provider,
+					dispose = provider && provider.dispose;
+				if (typeof dispose === 'function') {
+					dispose.call(provider);
 				}
 			},
 			
@@ -12674,7 +13447,7 @@
 						}
 						
 						if (key in Validators === false) {
-							console.error('Unknown Validator:', key, this);
+							log_error('Unknown Validator:', key, this);
 							continue;
 						}
 						
@@ -12715,7 +13488,7 @@
 			
 		
 			function notifyInvalid(element, message, oncancel) {
-				console.warn('Validate Notification:', element, message);
+				log_warn('Validate Notification:', element, message);
 		
 				var next = domLib(element).next('.' + class_INVALID);
 				if (next.length === 0) {
@@ -12909,7 +13682,7 @@
 							currentValue = element[attrName] = attr_strReplace(element[attrName], currentValue, value);
 							return;
 						default:
-							console.warn('Unsupported elements property type', attrName);
+							log_warn('Unsupported elements property type', attrName);
 							return;
 					}
 				};
@@ -13271,7 +14044,7 @@
 			
 					// if DEBUG
 					if (prev == null || prev.compoName !== '%%' || prev.attr['if'] == null) {
-						console.error('Mask.Binding: Binded ELSE should be after binded IF - %% if="expression" { ...');
+						log_error('Mask.Binding: Binded ELSE should be after binded IF - %% if="expression" { ...');
 						return;
 					}
 					// endif
@@ -13359,7 +14132,7 @@
 							}
 						}
 				
-						console.warn('No Model Found for', array[j]);
+						log_warn('No Model Found for', array[j]);
 					}
 				
 				
@@ -14165,11 +14938,11 @@
 					$meta: {
 						serializeNodes: true
 					},
-					
+					modelRef: null,
 					render: function(model, ctx, container, ctr, childs){
+						this.modelRef = this.expression;
 						
 						var val = expression_eval(this.expression, model, ctx, ctr);
-						
 						return build(this.nodes, val, ctx, container, ctr);
 					},
 					
@@ -14313,7 +15086,7 @@
 							}
 						}
 				
-						console.warn('No Model Found for', array[j]);
+						log_warn('No Model Found for', array[j]);
 					}
 				
 				
@@ -14352,7 +15125,7 @@
 						type = self.type,
 						
 						ctx = self.ctx,
-						ctr = self.node;
+						ctr = self.node
 						;
 					
 					if (deleteIndex != null && deleteCount != null) {
@@ -14605,7 +15378,7 @@
 						_build: function(node, model, ctx, component) {
 							var nodes = For.getNodes(node.nodes, model, this.prop1, this.prop2, this.type);
 							
-							return builder_build(nodes, model, ctx, null, component);
+							return builder_build(nodes, this.model, ctx, null, component);
 						}
 					};
 					
@@ -14707,8 +15480,6 @@
 	}(Mask, Compo));
 	
 	// end:source /ref-mask-binding/lib/binding.embed.node.js
-	
-
 
 	Mask.Compo = Compo;
 	Mask.jmask = jmask;

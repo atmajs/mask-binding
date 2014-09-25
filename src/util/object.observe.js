@@ -75,7 +75,7 @@ var obj_addObserver,
 		if (obs == null || obs[property] == null) 
 			return false;
 		
-		return arr_indexOf(obs[property], callback) !== -1;
+		return arr_contains(obs[property], callback);
 	};
 	
 	obj_removeObserver = function(obj, property, callback) {
@@ -393,7 +393,7 @@ var obj_addObserver,
 	// Create Collection - Check If Exists - Add Listener
 	function pushListener_(obj, property, cb) {
 		var obs = obj_ensureObserversProperty(obj, property);
-		if (arr_indexOf(obs, cb) === -1) 
+		if (arr_contains(obs, cb) === false) 
 			obs.push(cb);
 		return obs;
 	}

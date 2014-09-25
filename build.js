@@ -30,7 +30,8 @@ module.exports = {
 		files: {
 			'../mask/lib/mask.js': '.import/mask.js',
 			'../mask-node/lib/mask.node.js': '.import/mask.node.js',
-			'../mask-node/lib/mask.bootstrap.js': '.import/mask.bootstrap.js'
+			'../mask-node/lib/mask.bootstrap.js': '.import/mask.bootstrap.js',
+			'../utils/lib/utils.embed.js': '.import/utils.embed.js',
 		}
 	},
 
@@ -118,7 +119,57 @@ function JSHint() {
 			"onevar": false,
 			"passfail": false,
 			"white": false,
-			"predef": ["Compo", "log_error", "log_warn", "arr_pushMany", "global", "define", "atma", "io", "net", "mask", "include", "ruta", "ruqq", "Class", "logger", "app", "UTest", "assert", "eq_", "notEq_", "deepEq_", "notDeepEq_", "has_", "hasNot_"]
+			"predef":
+			[
+				/* utils */
+				"is_Object",
+				"is_rawObject",
+				"is_String",
+				"is_Function",
+				"is_Array",
+				"fn_doNothing",
+				"fn_proxy",
+				"fn_apply",
+				"obj_create",
+				"obj_extend",
+				
+				"_Array_slice",
+				"_Array_splice",
+				"_Array_indexOf",
+				
+				"arr_each",
+				"arr_remove",
+				"arr_indexOf",
+				"arr_contains",
+				"obj_setProperty",
+				"obj_getProperty",
+				
+				
+				"Compo",
+				"log_error",
+				"log_warn",
+				"arr_pushMany",
+				"global",
+				"define",
+				"atma",
+				"io",
+				"net",
+				"mask",
+				"include",
+				"ruta",
+				"ruqq",
+				"Class",
+				"logger",
+				"app",
+				"UTest",
+				"assert",
+				"eq_",
+				"notEq_",
+				"deepEq_",
+				"notDeepEq_",
+				"has_",
+				"hasNot_"
+			]
 		}
 	return {
 		options: options,

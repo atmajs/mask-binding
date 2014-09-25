@@ -5,8 +5,8 @@ include
 		util: '/src/util/{0}.js'
 	})
 	.inject({
-		_: '/src/vars.js',
-		util: ['array', 'object', 'object.observe', 'expression']
+		_: [ '/.import/utils.embed.js'],
+		util: ['object', 'object.observe', 'expression']
 	})
 	.done(function() {
 	
