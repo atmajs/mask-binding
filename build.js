@@ -25,7 +25,7 @@ module.exports = {
 		files: 'lib/binding.js'
 	},
 
-	'import.mask': {
+	'import.libs': {
 		action: 'copy',
 		files: {
 			'../mask/lib/mask.js': '.import/mask.js',

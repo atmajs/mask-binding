@@ -167,13 +167,26 @@
 	}());
 	// end:source /src/obj.js
 	// source /src/arr.js
-	var arr_remove;
+	var arr_remove,
+		arr_each,
+		arr_indexOf,
+		arr_contains;
 	(function(){
 		arr_remove = function(array, x){
 			var i = array.indexOf(x);
 			if (i === -1) 
-				return;
+				return false;
 			array.splice(i, 1);
+			return true;
+		};
+		arr_each = function(arr, fn, ctx){
+			arr.forEach(fn, ctx);
+		};
+		arr_indexOf = function(arr, x){
+			return arr.indexOf(x);
+		};
+		arr_contains = function(arr, x){
+			return arr.indexOf(x) !== -1;
 		};
 	}());
 	// end:source /src/arr.js
@@ -5974,14 +5987,9 @@
 		// source /src/scope-vars.js
 		var Dom = mask.Dom,
 		
-			_array_slice = Array.prototype.slice,
-			_Array_slice = Array.prototype.slice,
-			_Array_splice = Array.prototype.splice,
-			_Array_indexOf = Array.prototype.indexOf,
-			
 			_mask_ensureTmplFnOrig = mask.Utils.ensureTmplFn,
 			_mask_ensureTmplFn,
-			_resolve_Ref,
+			_resolve_External,
 			domLib,
 			Class	
 			;
@@ -5993,7 +6001,7 @@
 					: _mask_ensureTmplFnOrig(value)
 					;
 			};
-			_resolve_Ref = function(key){
+			_resolve_External = function(key){
 				return _global[key] || _exports[key] || _atma[key]
 			};
 			
@@ -6004,7 +6012,7 @@
 			function resolve() {
 				var i = arguments.length, val;
 				while( --i > -1 ) {
-					val = _resolve_Ref(arguments[i]);
+					val = _resolve_External(arguments[i]);
 					if (val != null) 
 						return val;
 				}
@@ -6018,171 +6026,12 @@
 		// if DEBUG
 		if (global.document != null && domLib == null) {
 			
-			log_warn('jQuery-Zepto-Kimbo etc. was not loaded before MaskJS:Compo, please use Compo.config.setDOMLibrary to define the dom engine');
+			log_warn('DomLite is used. You can set jQuery-Zepto-Kimbo via `Compo.config.setDOMLibrary($)`');
 		}
 		// endif
 		// end:source /src/scope-vars.js
 	
 		// source /src/util/exports.js
-		// source ./is.js
-		function is_Function(x) {
-			return typeof x === 'function';
-		}
-		
-		function is_Object(x) {
-			return x != null
-				&& typeof x === 'object';
-		}
-		
-		function is_Array(arr) {
-			return arr != null
-				&& typeof arr === 'object'
-				&& typeof arr.length === 'number'
-				&& typeof arr.splice === 'function'
-				;
-		}
-		
-		function is_String(x) {
-			return typeof x === 'string';
-		}
-		
-		function is_notEmptyString(x) {
-			return typeof x === 'string'
-				&& x !== '';
-		}
-		
-		function is_rawObject(obj) {
-			if (obj == null) 
-				return false;
-			
-			if (typeof obj !== 'object')
-				return false;
-			
-			return obj.constructor === Object;
-		}
-		
-		// end:source ./is.js
-		// source ./polyfill.js
-		if (!Array.prototype.indexOf) {
-			Array.prototype.indexOf = function(x){
-				for (var i = 0, imax = this.length; i < imax; i++){
-					if (this[i] === x)
-						return i;
-				}
-				
-				return -1;
-			}
-		}
-		// end:source ./polyfill.js
-		// source ./object.js
-		var obj_extend,
-			obj_copy
-			;
-		(function(){
-			
-			
-			obj_extend = function(target, source){
-				if (target == null)
-					target = {};
-				
-				if (source == null)
-					return target;
-				
-				for(var key in source){
-					target[key] = source[key];
-				}
-			
-				return target;
-			};
-			
-			obj_copy = Object.create || function(object) {
-				var copy = {}, key;
-				for (key in object) {
-					copy[key] = object[key];
-				}
-				return copy;
-			};
-		}());
-		
-		// end:source ./object.js
-		// source ./array.js
-		
-		var arr_each,
-			arr_remove
-			;
-		
-		(function(){
-		
-			arr_each = function(array, fn){
-				var imax = array.length,
-					i = -1;
-				while ( ++i < imax ){
-					fn(array[i], i);
-				}
-			};
-			
-			arr_remove = function(array, child){
-				if (array == null){
-					log_error('Can not remove myself from parent', child);
-					return;
-				}
-				var index = array.indexOf(child);
-				if (index === -1){
-					log_error('Can not remove myself from parent', child);
-					return;
-				}
-				array.splice(index, 1);
-			};
-			
-			
-		}());
-		
-		// end:source ./array.js
-		// source ./function.js
-		var fn_proxy,
-			fn_apply,
-			fn_doNothing
-			;
-		
-		(function(){
-		
-			fn_proxy = function(fn, ctx) {
-				return function() {
-					return fn_apply(fn, ctx, arguments);
-				};
-			};
-			
-			fn_apply = function(fn, ctx, arguments_){
-				switch (arguments_.length) {
-					case 0:
-						return fn.call(ctx);
-					case 1:
-						return fn.call(ctx, arguments_[0]);
-					case 2:
-						return fn.call(ctx,
-							arguments_[0],
-							arguments_[1]);
-					case 3:
-						return fn.call(ctx,
-							arguments_[0],
-							arguments_[1],
-							arguments_[2]);
-					case 4:
-						return fn.call(ctx,
-							arguments_[0],
-							arguments_[1],
-							arguments_[2],
-							arguments_[3]);
-				}
-				return fn.apply(ctx, arguments_);
-			};
-			
-			fn_doNothing = function(){
-				return false;
-			};
-		}());
-		
-		// end:source ./function.js
 		// source ./selector.js
 		var selector_parse,
 			selector_match
@@ -6747,7 +6596,7 @@
 				if (Proto == null)
 					Proto = {};
 				
-				var include = _resolve_Ref('include');
+				var include = _resolve_External('include');
 				if (include != null) 
 					Proto.__resource = include.url;
 				
@@ -6806,14 +6655,14 @@
 					if (compos != null) {
 						// use this.compos instead of compos from upper scope
 						// : in case compos from proto was extended after
-						this.compos = obj_copy(this.compos);
+						this.compos = obj_create(this.compos);
 					}
 			
 					if (pipes != null) 
 						Pipes.addController(this);
 					
 					if (attr != null) 
-						this.attr = obj_copy(this.attr);
+						this.attr = obj_create(this.attr);
 					
 					if (Ctor != null) 
 						Ctor.call(this);
@@ -6967,7 +6816,7 @@
 					return arr;
 				}
 				
-				var object = obj_copy(a),
+				var object = obj_create(a),
 					key, val;
 				for(key in object){
 					val = object[key];
@@ -7374,7 +7223,7 @@
 						args = arguments[1];
 						
 					else if (arguments.length > 1) 
-						args = _array_slice.call(arguments, 1);
+						args = _Array_slice.call(arguments, 1);
 					
 					
 					var i = controllers.length,
@@ -7944,7 +7793,7 @@
 					return find_findSingle(this, selector_parse(selector, Dom.CONTROLLER, 'up'));
 				},
 				on: function() {
-					var x = _array_slice.call(arguments);
+					var x = _Array_slice.call(arguments);
 					if (arguments.length < 3) {
 						log_error('Invalid Arguments Exception @use .on(type,selector,fn)');
 						return this;
@@ -7987,7 +7836,7 @@
 						signalName,
 						this,
 						arguments.length > 1
-							? _array_slice.call(arguments, 1)
+							? _Array_slice.call(arguments, 1)
 							: null
 					);
 					return this;
@@ -7999,7 +7848,7 @@
 						signalName,
 						this,
 						arguments.length > 1
-							? _array_slice.call(arguments, 1)
+							? _Array_slice.call(arguments, 1)
 							: null
 					);
 					return this;
@@ -8155,7 +8004,7 @@
 				}
 		
 				return function(event) {
-					var args = arguments.length > 1 ? _array_slice.call(arguments, 1) : null;
+					var args = arguments.length > 1 ? _Array_slice.call(arguments, 1) : null;
 					
 					_fire(controller, slot, event, args, -1);
 				};
@@ -8665,12 +8514,13 @@
 					'before',
 					'after'
 				];
-				arr_each([
+				
+				[
 					'appendMask',
 					'prependMask',
 					'beforeMask',
 					'afterMask'
-				], function(method, index){
+				].forEach(function(method, index){
 					
 					domLib.fn[method] = function(template, model, controller, ctx){
 						

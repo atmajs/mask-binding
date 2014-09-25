@@ -3,13 +3,10 @@
 	var $With = custom_Statements['with'];
 		
 	mask.registerHandler('+with', {
-		$meta: {
+		meta: {
 			serializeNodes: true
 		},
-		modelRef: null,
 		render: function(model, ctx, container, ctr, childs){
-			this.modelRef = this.expression;
-			
 			var val = expression_eval(this.expression, model, ctx, ctr);
 			return build(this.nodes, val, ctx, container, ctr);
 		},
@@ -86,13 +83,9 @@
 		
 	};
 	
-	
 	function build(nodes, model, ctx, container, controller){
-		
 		var els = [];
 		builder_build(nodes, model, ctx, container, controller, els);
-		
 		return els;
 	}
-
 }());

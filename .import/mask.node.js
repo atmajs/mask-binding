@@ -37,7 +37,192 @@
     'use strict';
 
 // end:source /ref-mask/src/umd-head.js
-
+	
+	// source /ref-utils/lib/utils.embed.js
+	// source /src/polyfill/arr.js
+	if (Array.prototype.forEach === void 0) {
+		Array.prototype.forEach = function(fn, ctx){
+			var imax = this.length,
+				i, x;
+			for(i = 0; i < imax; i++ ){
+				x = this[i];
+				if (ctx === void 0) {
+					fn(x, i);
+					continue;
+				}
+				fn.call(ctx, x, i);
+			}
+		};
+	}
+	if (Array.prototype.indexOf === void 0) {
+		Array.prototype.indexOf = function(x){
+			var imax = this.length,
+				i;
+			for(i = 0; i < imax; i++ ){
+				if (x === this[i]) 
+					return i;
+			}
+			return -1;
+		};
+	}
+	
+	// end:source /src/polyfill/arr.js
+	
+	// source /src/is.js
+	var is_Function,
+		is_Array,
+		is_ArrayLike,
+		is_String,
+		is_Object,
+		is_notEmptyString,
+		is_rawObject;
+	
+	(function() {
+		is_Function = function(x) {
+			return typeof x === 'function';
+		};
+		is_Object = function(x) {
+			return x != null && typeof x === 'object';
+		};
+		is_Array = is_ArrayLike = function(arr) {
+			return arr != null
+				&& typeof arr === 'object'
+				&& typeof arr.length === 'number'
+				&& typeof arr.splice === 'function'
+				;
+		};
+		is_String = function(x) {
+			return typeof x === 'string';
+		};
+		is_notEmptyString = function(x) {
+			return typeof x === 'string' && x !== '';
+		};
+		is_rawObject = function(obj) {
+			if (obj == null || typeof obj !== 'object')
+				return false;
+	
+			return obj.constructor === Object;
+		};
+	}());
+	// end:source /src/is.js
+	// source /src/obj.js
+	var obj_getProperty,
+		obj_setProperty,
+		obj_extend,
+		obj_create;
+	(function(){
+		obj_getProperty = function(obj, path){
+			if ('.' === path) // obsolete
+				return obj;
+			
+			var chain = path.split('.'),
+				imax = chain.length,
+				i = -1;
+			while ( obj != null && ++i < imax ) {
+				obj = obj[chain[i]];
+			}
+			return obj;
+		};
+		obj_setProperty = function(obj, path, val) {
+			var chain = path.split('.'),
+				imax = chain.length - 1,
+				i = -1,
+				key;
+			while ( ++i < imax ) {
+				key = chain[i];
+				if (obj[key] == null) 
+					obj[key] = {};
+				
+				obj = obj[key];
+			}
+			obj[chain[i]] = val;
+		};
+		obj_extend = function(a, b){
+			if (b == null)
+				return a || {};
+			
+			if (a == null)
+				return obj_create(b);
+			
+			for(var key in b){
+				a[key] = b[key];
+			}
+			return a;
+		};
+		obj_create = Object.create || function(x) {
+			var Ctor = function(){};
+			Ctor.prototype = x;
+			return new Ctor;
+		};
+	}());
+	// end:source /src/obj.js
+	// source /src/arr.js
+	var arr_remove,
+		arr_each,
+		arr_indexOf,
+		arr_contains;
+	(function(){
+		arr_remove = function(array, x){
+			var i = array.indexOf(x);
+			if (i === -1) 
+				return false;
+			array.splice(i, 1);
+			return true;
+		};
+		arr_each = function(arr, fn, ctx){
+			arr.forEach(fn, ctx);
+		};
+		arr_indexOf = function(arr, x){
+			return arr.indexOf(x);
+		};
+		arr_contains = function(arr, x){
+			return arr.indexOf(x) !== -1;
+		};
+	}());
+	// end:source /src/arr.js
+	// source /src/fn.js
+	var fn_proxy,
+		fn_apply,
+		fn_doNothing;
+	(function(){
+		fn_proxy = function(fn, ctx) {
+			return function(){
+				return fn_apply(fn, ctx, arguments);
+			};
+		};
+		
+		fn_apply = function(fn, ctx, args){
+			var l = args.length;
+			if (0 === l) 
+				return fn.call(ctx);
+			if (1 === l) 
+				return fn.call(ctx, args[0]);
+			if (2 === l) 
+				return fn.call(ctx, args[0], args[1]);
+			if (3 === l) 
+				return fn.call(ctx, args[0], args[1], args[2]);
+			if (4 === l)
+				return fn.call(ctx, args[0], args[1], args[2], args[3]);
+			
+			return fn.apply(ctx, args);
+		};
+		
+		fn_doNothing = function(){
+			return false;
+		};
+	}());
+	// end:source /src/fn.js
+	
+	// source /src/refs.js
+	var _Array_slice = Array.prototype.slice,
+		_Array_splice = Array.prototype.splice,
+		_Array_indexOf = Array.prototype.indexOf,
+		
+		_Object_create = obj_create,
+		_Object_hasOwnProp = Object.hasOwnProperty;
+	// end:source /src/refs.js
+	// end:source /ref-utils/lib/utils.embed.js
+	
 	// source /src/const.js
 	var mode_SERVER = 'server',
 		mode_SERVER_ALL = 'server:all',
@@ -46,27 +231,18 @@
 		mode_model_NONE = 'none';
 	// end:source /src/const.js
 	// source /ref-mask/src/scope-vars.js
-	var regexpWhitespace = /\s/g,
-		regexpEscapedChar = {
+	var __rgxEscapedChar = {
 			"'": /\\'/g,
 			'"': /\\"/g,
 			'{': /\\\{/g,
 			'>': /\\>/g,
 			';': /\\>/g
 		},
-		hasOwnProp = {}.hasOwnProperty,
 		
 		__cfg = {
-			
-			/*
-			 * Relevant to node.js only, to enable compo caching
-			 */
+			// Relevant to node.js only. Disable compo caching
 			allowCache: true
 		};
-		
-	var _Array_slice = Array.prototype.slice,
-		_Object_create = Object.create;
-	
 	// end:source /ref-mask/src/scope-vars.js
 	// source /ref-mask/src/util/util.js
 	
@@ -234,156 +410,48 @@
 	
 			this.index = index;
 	
-			return isEscaped ? value.replace(regexpEscapedChar[c], c) : value;
+			return isEscaped ? value.replace(__rgxEscapedChar[c], c) : value;
 		}
 	
 	};
 	
 	// end:source /ref-mask/src/util/template.js
     
-    // source /ref-mask/src/util/is.js
-    var is_Function,
-        is_Array,
-        is_Object
-        ;
+    // source /ref-mask/src/util/string.js
+    function str_trim(str) {
     
-    (function(){
+    	var length = str.length,
+    		i = 0,
+    		j = length - 1,
+    		c;
     
-        is_Function = function(x){
-            return typeof x === 'function';
-        };
-        is_Array = function(x){
-            return x != null
-                && typeof x === 'object'
-                && typeof x.length === 'number'
-                && typeof x.splice === 'function'
-                ;
-        };
-        is_Object = function(x){
-            return x != null && typeof x === 'object';
-        };
-        
-    }());
-    
-    // end:source /ref-mask/src/util/is.js
-    // source /ref-mask/src/util/function.js
-    var fn_proxy,
-    	fn_apply,
-    	fn_doNothing
-    	;
-    (function(){
-    	
-    	fn_proxy = function(fn, ctx) {
-    		return function(){
-    			return fn_apply(fn, ctx, arguments);
-    		};
-    	};
-    	
-    	fn_apply = function(fn, ctx, _arguments){
-    		
-    		switch (_arguments.length) {
-    			case 0:
-    				return fn.call(ctx);
-    			case 1:
-    				return fn.call(ctx, _arguments[0]);
-    			case 2:
-    				return fn.call(ctx,
-    					_arguments[0],
-    					_arguments[1]);
-    			case 3:
-    				return fn.call(ctx,
-    					_arguments[0],
-    					_arguments[1],
-    					_arguments[2]);
-    			case 4:
-    				return fn.call(ctx,
-    					_arguments[0],
-    					_arguments[1],
-    					_arguments[2],
-    					_arguments[3]);
+    	for (; i < length; i++) {
+    		c = str.charCodeAt(i);
+    		if (c < 33) {
+    			continue;
     		}
-    		
-    		return fn.apply(ctx, _arguments);
-    	};
+    		break;
+    
+    	}
     	
-    	fn_doNothing = function(){};
+    	for (; j >= i; j--) {
+    		c = str.charCodeAt(j);
+    		if (c < 33) {
+    			continue;
+    		}
+    		break;
+    	}
     
-    }());
-    // end:source /ref-mask/src/util/function.js
-	// source /ref-mask/src/util/string.js
-	function str_trim(str) {
-	
-		var length = str.length,
-			i = 0,
-			j = length - 1,
-			c;
-	
-		for (; i < length; i++) {
-			c = str.charCodeAt(i);
-			if (c < 33) {
-				continue;
-			}
-			break;
-	
-		}
-		
-		for (; j >= i; j--) {
-			c = str.charCodeAt(j);
-			if (c < 33) {
-				continue;
-			}
-			break;
-		}
-	
-		return i === 0 && j === length - 1
-			? str
-			: str.substring(i, j + 1);
-	}
-	// end:source /ref-mask/src/util/string.js
+    	return i === 0 && j === length - 1
+    		? str
+    		: str.substring(i, j + 1);
+    }
+    // end:source /ref-mask/src/util/string.js
     // source /ref-mask/src/util/object.js
-    var obj_extend,
-        obj_getProperty,
-        obj_getPropertyEx,
-        obj_toDictionary
-        ;
-    
-    
+    var obj_getPropertyEx,
+        obj_toDictionary;
     (function(){
-        obj_extend = function(target, source) {
-        
-            if (target == null) {
-                target = {};
-            }
-            for (var key in source) {
-                // if !SAFE
-                if (hasOwnProp.call(source, key) === false) {
-                    continue;
-                }
-                // endif
-                target[key] = source[key];
-            }
-            return target;
-        };
-        
-            
-        obj_getProperty = function(obj, path) {
-            if (path === '.') 
-                return obj;
-            
-            var value = obj,
-                props = path.split('.'),
-                i = -1,
-                imax = props.length;
-        
-            while (value != null && ++i < imax) {
-                value = value[props[i]];
-            }
-        
-            return value;
-        };
-            
-            
-        obj_getPropertyEx = function(path, model, ctx, controller){
+        obj_getPropertyEx = function(path, model, ctx, ctr){
             if (path === '.') 
                 return model;
         
@@ -396,12 +464,12 @@
                 ;
             
             if ('$c' === key) {
-                value = controller;
+                value = ctr;
                 i++;
             }
             
             else if ('$a' === key) {
-                value = controller && controller.attr;
+                value = ctr && ctr.attr;
                 i++;
             }
             
@@ -416,30 +484,26 @@
             }
             
             start_i = i;
-            while (value != null && ++i < imax) 
+            while (value != null && ++i < imax) {
                 value = value[props[i]];
-            
+            }
             if (value == null && start_i === -1) {
                 var $scope;
-                while (true){
+                while (ctr != null){
                     
-                    if (controller == null) 
-                        break;
-                    
-                    $scope = controller.scope;
+                    $scope = ctr.scope;
                     if ($scope != null) {
-                        value = getProperty($scope, props, 0, imax);
+                        value = getProperty_($scope, props, 0, imax);
                         if (value != null) 
                             return value;
                     }
                     
-                    controller = controller.parent;
+                    ctr = ctr.parent;
                 }
             }
             
             return value;
         };
-        
         
         obj_toDictionary = function(obj){
             var array = [],
@@ -455,28 +519,23 @@
             return array;
         };
         
-        
         // = private
         
-        function getProperty(obj, props, i, imax) {
-            var value = obj;
-            
-            while(i < imax && value != null){
-                value = value[props[i]];
+        function getProperty_(obj, props, i, imax) {
+            var val = obj;
+            while(i < imax && val != null){
+                val = val[props[i]];
                 i++;
             }
-            
-            return value;
+            return val;
         }
     }());
     
     // end:source /ref-mask/src/util/object.js
 	// source /ref-mask/src/util/array.js
-	var arr_pushMany,
-		arr_remove;
+	var arr_pushMany;
 	
 	(function(){
-		
 		arr_pushMany = function(arr, arrSource){
 			if (arrSource == null || arr == null) 
 				return;
@@ -487,18 +546,6 @@
 				;
 			while( ++j < jl ){
 				arr[il + j] = arrSource[j];
-			}
-		};
-		arr_remove = function(arr, item){
-			if (arr == null) 
-				return;
-			var imax = arr.length,
-				i = -1;
-			while( ++i < imax ){
-				if (arr[i] === item) {
-					arr.splice(i, 1);
-					return;
-				}
 			}
 		};
 	}());
@@ -571,18 +618,13 @@
 			listeners_emit('error', error);
 		};
 		
-		log_error = function(){
-			log('error', arguments);
-		};
-		log_warn = function(){
-			log('warn', arguments);
-		};
-		
-		function log(type, arguments_){
-			var args = _Array_slice.call(arguments_);
-			args.unshift('<maskjs:' + type.toUpperCase() +'>');
-			
-			console[type].apply(console, args);
+		if (typeof console === 'undefined') {
+			log_warn = log_error = function(){};
+		}
+		else {
+			var bind  = Function.prototype.bind;
+			log_warn  = bind.call(console.warn , console, 'MaskJS [Warn] :');
+			log_error = bind.call(console.error, console, 'MaskJS [Error] :');
 		}
 		
 		var ParserError = createError('Error'),
@@ -1418,7 +1460,7 @@
 			
 				string = template.substring(start, index);
 				if (isEscaped === true) {
-					string = string.replace(regexpEscapedChar[_char], _char);
+					string = string.replace(__rgxEscapedChar[_char], _char);
 				}
 				return string;
 			};
@@ -3247,7 +3289,7 @@
 	
 						token = template.substring(start, index);
 						if (isEscaped === true) {
-							token = token.replace(regexpEscapedChar[_char], _char);
+							token = token.replace(__rgxEscapedChar[_char], _char);
 						}
 						
 						if (state !== state_attr || key !== 'class') 
@@ -4941,7 +4983,7 @@
 				}
 				
 				var cache = compo_getMetaInfo(compo).cache;
-				if (cache != null) {
+				if (cache != null && cache !== false) {
 					Cache.cacheCompo(model, ctx, compoName, compo, cache);
 				}
 				
@@ -5482,7 +5524,7 @@
 				for (key in attr) {
 				
 					/* if !SAFE
-					if (hasOwnProp.call(attr, key) === false) {
+					if (_Object_hasOwnProp.call(attr, key) === false) {
 						continue;
 					}
 					*/
@@ -6302,7 +6344,7 @@
 				// endif
 	
 				if (typeof template === 'string') {
-					if (hasOwnProp.call(cache, template)){
+					if (_Object_hasOwnProp.call(cache, template)){
 						/* if Object doesnt contains property that check is faster
 						then "!=null" http://jsperf.com/not-in-vs-null/2 */
 						template = cache[template];
@@ -7028,7 +7070,7 @@
 			// endif
 		
 			if (typeof template === 'string') {
-				if (hasOwnProp.call(cache, template)){
+				if (_Object_hasOwnProp.call(cache, template)){
 					/* if Object doesnt contains property that check is faster
 					then "!=null" http://jsperf.com/not-in-vs-null/2 */
 					template = cache[template];
@@ -7069,14 +7111,9 @@
 		// source /src/scope-vars.js
 		var Dom = mask.Dom,
 		
-			_array_slice = Array.prototype.slice,
-			_Array_slice = Array.prototype.slice,
-			_Array_splice = Array.prototype.splice,
-			_Array_indexOf = Array.prototype.indexOf,
-			
 			_mask_ensureTmplFnOrig = mask.Utils.ensureTmplFn,
 			_mask_ensureTmplFn,
-			_resolve_Ref,
+			_resolve_External,
 			domLib,
 			Class	
 			;
@@ -7088,7 +7125,7 @@
 					: _mask_ensureTmplFnOrig(value)
 					;
 			};
-			_resolve_Ref = function(key){
+			_resolve_External = function(key){
 				return _global[key] || _exports[key] || _atma[key]
 			};
 			
@@ -7099,7 +7136,7 @@
 			function resolve() {
 				var i = arguments.length, val;
 				while( --i > -1 ) {
-					val = _resolve_Ref(arguments[i]);
+					val = _resolve_External(arguments[i]);
 					if (val != null) 
 						return val;
 				}
@@ -7113,171 +7150,12 @@
 		// if DEBUG
 		if (global.document != null && domLib == null) {
 			
-			log_warn('jQuery-Zepto-Kimbo etc. was not loaded before MaskJS:Compo, please use Compo.config.setDOMLibrary to define the dom engine');
+			log_warn('DomLite is used. You can set jQuery-Zepto-Kimbo via `Compo.config.setDOMLibrary($)`');
 		}
 		// endif
 		// end:source /src/scope-vars.js
 	
 		// source /src/util/exports.js
-		// source ./is.js
-		function is_Function(x) {
-			return typeof x === 'function';
-		}
-		
-		function is_Object(x) {
-			return x != null
-				&& typeof x === 'object';
-		}
-		
-		function is_Array(arr) {
-			return arr != null
-				&& typeof arr === 'object'
-				&& typeof arr.length === 'number'
-				&& typeof arr.splice === 'function'
-				;
-		}
-		
-		function is_String(x) {
-			return typeof x === 'string';
-		}
-		
-		function is_notEmptyString(x) {
-			return typeof x === 'string'
-				&& x !== '';
-		}
-		
-		function is_rawObject(obj) {
-			if (obj == null) 
-				return false;
-			
-			if (typeof obj !== 'object')
-				return false;
-			
-			return obj.constructor === Object;
-		}
-		
-		// end:source ./is.js
-		// source ./polyfill.js
-		if (!Array.prototype.indexOf) {
-			Array.prototype.indexOf = function(x){
-				for (var i = 0, imax = this.length; i < imax; i++){
-					if (this[i] === x)
-						return i;
-				}
-				
-				return -1;
-			}
-		}
-		// end:source ./polyfill.js
-		// source ./object.js
-		var obj_extend,
-			obj_copy
-			;
-		(function(){
-			
-			
-			obj_extend = function(target, source){
-				if (target == null)
-					target = {};
-				
-				if (source == null)
-					return target;
-				
-				for(var key in source){
-					target[key] = source[key];
-				}
-			
-				return target;
-			};
-			
-			obj_copy = Object.create || function(object) {
-				var copy = {}, key;
-				for (key in object) {
-					copy[key] = object[key];
-				}
-				return copy;
-			};
-		}());
-		
-		// end:source ./object.js
-		// source ./array.js
-		
-		var arr_each,
-			arr_remove
-			;
-		
-		(function(){
-		
-			arr_each = function(array, fn){
-				var imax = array.length,
-					i = -1;
-				while ( ++i < imax ){
-					fn(array[i], i);
-				}
-			};
-			
-			arr_remove = function(array, child){
-				if (array == null){
-					log_error('Can not remove myself from parent', child);
-					return;
-				}
-				var index = array.indexOf(child);
-				if (index === -1){
-					log_error('Can not remove myself from parent', child);
-					return;
-				}
-				array.splice(index, 1);
-			};
-			
-			
-		}());
-		
-		// end:source ./array.js
-		// source ./function.js
-		var fn_proxy,
-			fn_apply,
-			fn_doNothing
-			;
-		
-		(function(){
-		
-			fn_proxy = function(fn, ctx) {
-				return function() {
-					return fn_apply(fn, ctx, arguments);
-				};
-			};
-			
-			fn_apply = function(fn, ctx, arguments_){
-				switch (arguments_.length) {
-					case 0:
-						return fn.call(ctx);
-					case 1:
-						return fn.call(ctx, arguments_[0]);
-					case 2:
-						return fn.call(ctx,
-							arguments_[0],
-							arguments_[1]);
-					case 3:
-						return fn.call(ctx,
-							arguments_[0],
-							arguments_[1],
-							arguments_[2]);
-					case 4:
-						return fn.call(ctx,
-							arguments_[0],
-							arguments_[1],
-							arguments_[2],
-							arguments_[3]);
-				}
-				return fn.apply(ctx, arguments_);
-			};
-			
-			fn_doNothing = function(){
-				return false;
-			};
-		}());
-		
-		// end:source ./function.js
 		// source ./selector.js
 		var selector_parse,
 			selector_match
@@ -7546,22 +7424,19 @@
 		(function(){
 			
 			compo_dispose = function(compo) {
-				
 				if (compo.dispose != null) 
 					compo.dispose();
 				
 				Anchor.removeCompo(compo);
 			
 				var compos = compo.components,
-					i = (compos && compos.length) || 0;
-			
+					i = compos == null ? 0 : compos.length;
 				while ( --i > -1 ) {
 					compo_dispose(compos[i]);
 				}
 			};
 			
 			compo_detachChild = function(childCompo){
-				
 				var parent = childCompo.parent;
 				if (parent == null) 
 					return;
@@ -7581,7 +7456,6 @@
 						
 						while(--j > -1){
 							if (el === arr[j]) {
-								
 								elements.splice(i, 1);
 								break;
 							}
@@ -7604,43 +7478,26 @@
 						log_warn('<compo:remove> - i`m not in parents collection', childCompo);
 				}
 			};
-			
-			
-			
 			compo_ensureTemplate = function(compo) {
-				if (compo.nodes != null) 
+				if (compo.nodes == null) {
+					compo.nodes = getTemplateProp_(compo);
 					return;
-				
-				// obsolete
-				if (compo.attr.template != null) {
-					compo.template = compo.attr.template;
-					
-					delete compo.attr.template;
 				}
-				
-				var template = compo.template;
-				if (template == null) 
+				var behaviour = compo.meta.template;
+				if (behaviour == null || behaviour === 'replace') {
 					return;
-				
-				if (is_String(template)) {
-					if (template.charCodeAt(0) === 35 && /^#[\w\d_-]+$/.test(template)) {
-						// #
-						var node = document.getElementById(template.substring(1));
-						if (node == null) {
-							log_error('<compo> Template holder not found by id:', template);
-							return;
-						}
-						template = node.innerHTML;
-					}
-					
-					template = mask.parse(template);
 				}
-			
-				if (typeof template === 'object') 
-					compo.nodes = template;
+				var template = getTemplateProp_(compo);
+				if (behaviour === 'merge') {
+					compo.nodes = mask_merge(template, compo.nodes, compo);
+					return;
+				}
+				if (behaviour === 'join') {
+					compo.nodes = [template, compo.nodes];
+					return;
+				}
+				log_error('Invalid meta.nodes behaviour', behaviour);
 			};
-			
-				
 			compo_attachDisposer = function(compo, disposer) {
 			
 				if (compo.dispose == null) {
@@ -7816,7 +7673,33 @@
 					}
 				};
 			}());
-			
+			function getTemplateProp_(compo){
+				var template = compo.template;
+				if (template == null) {
+					template = compo.attr.template;
+					if (template == null) 
+						return null;
+					
+					delete compo.attr.template;
+				}
+				if (typeof template === 'object') 
+					return template;
+				
+				if (is_String(template)) {
+					if (template.charCodeAt(0) === 35 && /^#[\w\d_-]+$/.test(template)) {
+						// #
+						var node = document.getElementById(template.substring(1));
+						if (node == null) {
+							log_warn('Template not found by id:', template);
+							return null;
+						}
+						template = node.innerHTML;
+					}
+					return mask.parse(template);
+				}
+				log_warn('Invalid template', typeof template);
+				return null;
+			}
 		}());
 		
 		// end:source ./compo.js
@@ -7837,7 +7720,7 @@
 				if (Proto == null)
 					Proto = {};
 				
-				var include = _resolve_Ref('include');
+				var include = _resolve_External('include');
 				if (include != null) 
 					Proto.__resource = include.url;
 				
@@ -7896,14 +7779,14 @@
 					if (compos != null) {
 						// use this.compos instead of compos from upper scope
 						// : in case compos from proto was extended after
-						this.compos = obj_copy(this.compos);
+						this.compos = obj_create(this.compos);
 					}
 			
 					if (pipes != null) 
 						Pipes.addController(this);
 					
 					if (attr != null) 
-						this.attr = obj_copy(this.attr);
+						this.attr = obj_create(this.attr);
 					
 					if (Ctor != null) 
 						Ctor.call(this);
@@ -7980,6 +7863,27 @@
 							: mix;
 						continue;
 					}
+					if ('node' === name) {
+						// http://jsperf.com/indexof-vs-bunch-of-if
+						var isSealed = key === 'renderStart' ||
+								key === 'renderEnd' ||
+								key === 'emitIn' ||
+								key === 'emitOut' ||
+								key === 'components' ||
+								key === 'nodes' ||
+								key === 'template' ||
+								key === 'find' ||
+								key === 'closest' ||
+								key === 'on' ||
+								key === 'remove' ||
+								key === 'slotState' ||
+								key === 'signalState' ||
+								key === 'append' ||
+								key === 'appendTo'
+								;
+						if (isSealed === true) 
+							continue;
+					}
 					if ('pipes' === name) {
 						inherit_(target[key], mix, 'pipe');
 						continue;
@@ -8036,7 +7940,7 @@
 					return arr;
 				}
 				
-				var object = obj_copy(a),
+				var object = obj_create(a),
 					key, val;
 				for(key in object){
 					val = object[key];
@@ -8443,7 +8347,7 @@
 						args = arguments[1];
 						
 					else if (arguments.length > 1) 
-						args = _array_slice.call(arguments, 1);
+						args = _Array_slice.call(arguments, 1);
 					
 					
 					var i = controllers.length,
@@ -8682,7 +8586,7 @@
 							var r = domLib_find(compo.$, selector)
 							// if DEBUG
 							if (r.length === 0) 
-								log_error('<compo-selector> - element not found -', selector, compo);
+								log_warn('<compo-selector> - element not found -', selector, compo);
 							// endif
 							return r;
 						},
@@ -8690,7 +8594,7 @@
 							var r = Compo.find(compo, selector);
 							// if DEBUG
 							if (r == null) 
-								log_error('<compo-selector> - component not found -', selector, compo);
+								log_warn('<compo-selector> - component not found -', selector, compo);
 							// endif
 							return r;
 						}
@@ -8912,14 +8816,12 @@
 						ctx = args[1];
 						container = args[2];
 					}
-		
-					if (this.nodes == null)
-						compo_ensureTemplate(this);
-					
+						
 					if (compo_meta_executeAttributeHandler(this) === false) {
 						// errored
 						return;
 					}
+					compo_ensureTemplate(this);
 					
 					if (is_Function(this.onRenderStart)){
 						var x = this.onRenderStart(model, ctx, container);
@@ -9015,7 +8917,7 @@
 					return find_findSingle(this, selector_parse(selector, Dom.CONTROLLER, 'up'));
 				},
 				on: function() {
-					var x = _array_slice.call(arguments);
+					var x = _Array_slice.call(arguments);
 					if (arguments.length < 3) {
 						log_error('Invalid Arguments Exception @use .on(type,selector,fn)');
 						return this;
@@ -9058,7 +8960,7 @@
 						signalName,
 						this,
 						arguments.length > 1
-							? _array_slice.call(arguments, 1)
+							? _Array_slice.call(arguments, 1)
 							: null
 					);
 					return this;
@@ -9070,7 +8972,7 @@
 						signalName,
 						this,
 						arguments.length > 1
-							? _array_slice.call(arguments, 1)
+							? _Array_slice.call(arguments, 1)
 							: null
 					);
 					return this;
@@ -9226,7 +9128,7 @@
 				}
 		
 				return function(event) {
-					var args = arguments.length > 1 ? _array_slice.call(arguments, 1) : null;
+					var args = arguments.length > 1 ? _Array_slice.call(arguments, 1) : null;
 					
 					_fire(controller, slot, event, args, -1);
 				};
@@ -9736,12 +9638,13 @@
 					'before',
 					'after'
 				];
-				arr_each([
+				
+				[
 					'appendMask',
 					'prependMask',
 					'beforeMask',
 					'afterMask'
-				], function(method, index){
+				].forEach(function(method, index){
 					
 					domLib.fn[method] = function(template, model, controller, ctx){
 						
@@ -11735,73 +11638,20 @@
 	(function(mask, Compo){
 	
 		// source ../src/vars.js
-		var domLib = global.jQuery || global.Zepto || global.$,
-			__Compo = typeof Compo !== 'undefined' ? Compo : (mask.Compo || global.Compo),
+		var __Compo = typeof Compo !== 'undefined' ? Compo : (mask.Compo || global.Compo),
 		    __dom_addEventListener = __Compo.Dom.addEventListener,
 		    __mask_registerHandler = mask.registerHandler,
 		    __mask_registerAttrHandler = mask.registerAttrHandler,
 		    __mask_registerUtil = mask.registerUtil,
 		    
-			_Array_slice = Array.prototype.slice;
+			domLib = __Compo.config.getDOMLibrary();
 			
 		
 		// end:source ../src/vars.js
 	
-		// source ../src/util/function.js
-		function fn_proxy(fn, ctx) {
-		
-			return function() {
-				return fn.apply(ctx, arguments);
-			};
-		}
-		
-		// end:source ../src/util/function.js
 		// source ../src/util/object.js
-		var obj_getProperty,
-			obj_setProperty,
-			obj_extend,
-			obj_isDefined
-			;
-		
+		var obj_isDefined;
 		(function(){
-			obj_getProperty = function(obj, property) {
-				var chain = property.split('.'),
-					imax = chain.length,
-					i = -1;
-				while ( ++i < imax ) {
-					if (obj == null) 
-						return null;
-					
-					obj = obj[chain[i]];
-				}
-				return obj;
-			};
-			obj_setProperty = function(obj, property, value) {
-				var chain = property.split('.'),
-					imax = chain.length - 1,
-					i = -1,
-					key;
-				while ( ++i < imax ) {
-					key = chain[i];
-					if (obj[key] == null) 
-						obj[key] = {};
-					
-					obj = obj[key];
-				}
-				obj[chain[i]] = value;
-			};
-			obj_extend = function(obj, source) {
-				if (source == null) 
-					return obj;
-				
-				if (obj == null) 
-					obj = {};
-				
-				for (var key in source) {
-					obj[key] = source[key];
-				}
-				return obj;
-			};
 			obj_isDefined = function(obj, path) {
 				if (obj == null) 
 					return false;
@@ -11809,13 +11659,11 @@
 				var parts = path.split('.'),
 					imax = parts.length,
 					i = -1;
-				
 				while ( ++i < imax ) {
 					
 					if ((obj = obj[parts[i]]) == null) 
 						return false;
 				}
-				
 				return true;
 			};
 		}());
@@ -11898,7 +11746,7 @@
 				if (obs == null || obs[property] == null) 
 					return false;
 				
-				return arr_indexOf(obs[property], callback) !== -1;
+				return arr_contains(obs[property], callback);
 			};
 			
 			obj_removeObserver = function(obj, property, callback) {
@@ -12216,7 +12064,7 @@
 			// Create Collection - Check If Exists - Add Listener
 			function pushListener_(obj, property, cb) {
 				var obs = obj_ensureObserversProperty(obj, property);
-				if (arr_indexOf(obs, cb) === -1) 
+				if (arr_contains(obs, cb) === false) 
 					obs.push(cb);
 				return obs;
 			}
@@ -12313,56 +12161,6 @@
 			
 		}());
 		// end:source ../src/util/object.observe.js
-		// source ../src/util/array.js
-		var arr_isArray,
-			arr_remove,
-			arr_each,
-			arr_indexOf;
-		(function(){
-			
-			arr_isArray = function(x) {
-				return x != null
-					&& typeof x === 'object'
-					&& typeof x.length === 'number'
-					&& typeof x.splice === 'function';
-			};
-			arr_remove = function(array /*, .. */ ) {
-				if (array == null) 
-					return false;
-				
-				var i = 0,
-					length = array.length,
-					x, j = 1,
-					jmax = arguments.length,
-					removed = 0;
-			
-				for (; i < length; i++) {
-					x = array[i];
-			
-					for (j = 1; j < jmax; j++) {
-						if (arguments[j] === x) {
-			
-							array.splice(i, 1);
-							i--;
-							length--;
-							removed++;
-							break;
-						}
-					}
-				}
-				return removed + 1 === jmax;
-			};
-			arr_each = function(array, fn) {
-				for (var i = 0, length = array.length; i < length; i++) {
-					fn(array[i]);
-				}
-			};
-			arr_indexOf = function(arr, x){
-				return arr.indexOf(x);
-			};
-		}());
-		
-		// end:source ../src/util/array.js
 		// source ../src/util/date.js
 		var date_ensure;
 		(function(){
@@ -12483,27 +12281,21 @@
 				dom_removeAll(compo.elements);
 				compo.elements = null;
 			}
-			
-		
 			__Compo.dispose(compo);
 			
-		
-			var components = (parent && parent.components) || (compo.parent && compo.parent.components);
-			if (components == null) {
+			var compos = (parent && parent.components) || (compo.parent && compo.parent.components);
+			if (compos == null) {
 				log_error('Parent Components Collection is undefined');
 				return false;
 			}
-		
-			return arr_remove(components, compo);
+			return arr_remove(compos, compo);
 		}
 		
 		function compo_inserted(compo) {
-			
 			__Compo.signal.emitIn(compo, 'domInsert');
 		}
 		
 		function compo_attachDisposer(controller, disposer) {
-		
 			if (typeof controller.dispose === 'function') {
 				var previous = controller.dispose;
 				controller.dispose = function(){
@@ -12513,7 +12305,6 @@
 		
 				return;
 			}
-		
 			controller.dispose = disposer;
 		}
 		
@@ -12777,35 +12568,63 @@
 			
 			var objectWay = {
 				get: function(provider, expression) {
-					return expression_eval(expression, provider.model, provider.cntx, provider.controller);
+					var getter = provider.objGetter;
+					if (getter == null) {
+						return expression_eval(
+							expression
+							, provider.model
+							, provider.ctx
+							, provider.ctr
+						);
+					}
+					
+					var obj = getAccessorObject_(provider, getter);
+					if (obj == null) 
+						return null;
+					
+					return obj[getter](expression, provider.model, provider.ctr.parent);
 				},
-				set: function(obj, property, value) {
-					obj_setProperty(obj, property, value);
+				set: function(obj, property, value, provider) {
+					var setter = provider.objSetter;
+					if (setter == null) {
+						obj_setProperty(obj, property, value);
+						return;
+					}
+					var ctx = getAccessorObject_(provider, setter);
+					if (ctx == null) 
+						return;
+					
+					ctx[setter](
+						property
+						, value
+						, provider.model
+						, provider.ctr.parent
+					);
 				}
 			};
 			var domWay  = {
 				get: function(provider) {
-					var getter = provider.getter;
+					var getter = provider.domGetter;
 					if (getter == null) {
 						return obj_getProperty(provider, provider.property);
 					}
-					var ctr = provider.node.parent;
+					var ctr = provider.ctr.parent;
 					if (isValidFn_(ctr, getter, 'Getter') === false) {
 						return null;
 					}
-					return ctr[getter]();
+					return ctr[getter](provider.element);
 				},
 				set: function(provider, value) {
-					var setter = provider.setter;
+					var setter = provider.domSetter;
 					if (setter == null) {
 						obj_setProperty(provider, provider.property, value);
 						return;
 					}
-					var ctr = provider.node.parent;
+					var ctr = provider.ctr.parent;
 					if (isValidFn_(ctr, setter, 'Setter') === false) {
 						return;
 					}
-					ctr[setter](value);
+					ctr[setter](value, provider.element);
 				}
 			};
 			var DateTimeDelegate = {
@@ -12903,6 +12722,17 @@
 				}
 				return true;
 			}
+			function getAccessorObject_(provider, accessor) {
+				var ctr = provider.ctr.parent;
+				if (ctr[accessor] != null) 
+					return ctr;
+				var model = provider.model;
+				if (model[accessor] != null) 
+					return model;
+				
+				log_error('BindingProvider. Accessor `', accessor, '`should be a function');
+				return null;
+			}
 			function formatDate(date) {
 				var YYYY = date.getFullYear(),
 					MM = date.getMonth() + 1,
@@ -12949,14 +12779,18 @@
 					type;
 		
 				this.node = ctr; // backwards compat.
-				this.controller = ctr;
+				this.ctr = ctr;
+				this.ctx = null;
 		
 				this.model = model;
 				this.element = element;
 				this.value = attr.value;
 				this.property = attr.property;
-				this.setter = attr.setter;
-				this.getter = attr.getter;
+				this.domSetter = attr.setter || attr['dom-setter'];
+				this.domGetter = attr.getter || attr['dom-getter'];
+				this.objSetter = attr['obj-setter'];
+				this.objGetter = attr['obj-getter'];
+				
 				this.dismiss = 0;
 				this.bindingType = bindingType;
 				this.log = false;
@@ -12965,7 +12799,7 @@
 				this.locked = false;
 				
 				
-				if (this.property == null && this.getter == null) {
+				if (this.property == null && this.domGetter == null) {
 		
 					switch (element.tagName) {
 						case 'INPUT':
@@ -13087,24 +12921,22 @@
 				this.expression = this.value;
 			};
 			
-			BindingProvider.create = function(model, element, controller, bindingType) {
+			BindingProvider.create = function(model, el, ctr, bindingType) {
 		
 				/* Initialize custom provider */
-				var type = controller.attr.bindingProvider,
+				var type = ctr.attr.bindingProvider,
 					CustomProvider = type == null ? null : CustomProviders[type],
 					provider;
 		
 				if (typeof CustomProvider === 'function') {
-					return new CustomProvider(model, element, controller, bindingType);
+					return new CustomProvider(model, el, ctr, bindingType);
 				}
 		
-				provider = new BindingProvider(model, element, controller, bindingType);
+				provider = new BindingProvider(model, el, ctr, bindingType);
 		
 				if (CustomProvider != null) {
 					obj_extend(provider, CustomProvider);
 				}
-		
-		
 				return provider;
 			};
 			
@@ -13116,7 +12948,7 @@
 				constructor: BindingProvider,
 				
 				dispose: function() {
-					expression_unbind(this.expression, this.model, this.controller, this.binder);
+					expression_unbind(this.expression, this.model, this.ctr, this.binder);
 				},
 				objectChanged: function(x) {
 					if (this.dismiss-- > 0) {
@@ -13138,7 +12970,7 @@
 						console.log('[BindingProvider] objectChanged -', x);
 					}
 					if (this.signal_objectChanged) {
-						signal_emitOut(this.node, this.signal_objectChanged, [x]);
+						signal_emitOut(this.ctr, this.signal_objectChanged, [x]);
 					}
 					
 					if (this.pipe_objectChanged) {
@@ -13159,7 +12991,7 @@
 						value = this.domWay.get(this);
 					
 					var isValid = true,
-						validations = this.node.validations;
+						validations = this.ctr.validations;
 					if (validations) {
 						var imax = validations.length,
 							i = -1, x;
@@ -13173,14 +13005,14 @@
 					}
 					if (isValid) {
 						this.dismiss = 1;
-						this.objectWay.set(this.model, this.value, value);
+						this.objectWay.set(this.model, this.value, value, this);
 						this.dismiss = 0;
 		
 						if (this.log) {
 							console.log('[BindingProvider] domChanged -', value);
 						}
 						if (this.signal_domChanged) {
-							signal_emitOut(this.node, this.signal_domChanged, [value]);
+							signal_emitOut(this.ctr, this.signal_domChanged, [value]);
 						}
 						if (this.pipe_domChanged) {
 							var pipe = this.pipe_domChanged;
@@ -13200,12 +13032,12 @@
 					model = provider.model,
 					onObjChanged = provider.objectChanged = provider.objectChanged.bind(provider);
 		
-				provider.binder = expression_createBinder(expr, model, provider.cntx, provider.node, onObjChanged);
+				provider.binder = expression_createBinder(expr, model, provider.ctx, provider.ctr, onObjChanged);
 		
-				expression_bind(expr, model, provider.cntx, provider.node, provider.binder);
+				expression_bind(expr, model, provider.ctx, provider.ctr, provider.binder);
 		
 				if (provider.bindingType === 'dual') {
-					var attr = provider.node.attr;
+					var attr = provider.ctr.attr;
 					
 					if (!attr['change-slot'] && !attr['change-pipe-event']) {
 						var element = provider.element,
@@ -14935,13 +14767,10 @@
 				var $With = custom_Statements['with'];
 					
 				mask.registerHandler('+with', {
-					$meta: {
+					meta: {
 						serializeNodes: true
 					},
-					modelRef: null,
 					render: function(model, ctx, container, ctr, childs){
-						this.modelRef = this.expression;
-						
 						var val = expression_eval(this.expression, model, ctx, ctr);
 						return build(this.nodes, val, ctx, container, ctr);
 					},
@@ -15018,15 +14847,11 @@
 					
 				};
 				
-				
 				function build(nodes, model, ctx, container, controller){
-					
 					var els = [];
 					builder_build(nodes, model, ctx, container, controller, els);
-					
 					return els;
 				}
-			
 			}());
 			// end:source 4.with.js
 			// source loop/exports.js
@@ -15295,7 +15120,7 @@
 							if (value == null) 
 								return;
 							
-							if (arr_isArray(value)) 
+							if (is_Array(value)) 
 								arr_createRefs(value);
 							
 							For.build(

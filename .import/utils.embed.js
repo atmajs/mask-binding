@@ -98,7 +98,7 @@ var obj_getProperty,
 	};
 	obj_extend = function(a, b){
 		if (b == null)
-			return a;
+			return a || {};
 		
 		if (a == null)
 			return obj_create(b);
