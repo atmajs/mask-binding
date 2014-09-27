@@ -1,4 +1,5 @@
 var expression_eval,
+	expression_eval_strict,
 	expression_bind,
 	expression_unbind,
 	expression_createBinder,
@@ -9,29 +10,21 @@ var expression_eval,
 	;
 	
 (function(){
-	
-	var Expression = mask.Utils.Expression,
-		expression_eval_origin = Expression.eval
-		;
+	var Expression = mask.Utils.Expression;
 
+	expression_eval_strict = Expression.eval;
 	expression_parse = Expression.parse;
-	
 	expression_varRefs = Expression.varRefs;
 	
-	expression_eval = function(expr, model, cntx, controller){
-			
+	expression_eval = function(expr, model, ctx, ctr){
 		if (expr === '.') 
 			return model;
 		
-		var value = expression_eval_origin(expr, model, cntx, controller);
-		return value == null
-			? ''
-			: value
-			;
+		var x = expression_eval_strict(expr, model, ctx, ctr);
+		return x == null ? '' : x;
 	};
 		
 	expression_bind = function(expr, model, ctx, ctr, callback) {
-		
 		if (expr === '.') {
 			obj_addMutatorObserver(model, callback);
 			return;
@@ -127,7 +120,7 @@ var expression_eval,
 		return function(){
 			if (++locks > 1) {
 				locks = 0;
-				log_warn('<mask:listener:expression> concurent binder');
+				log_warn('<listener:expression> concurent binder');
 				return;
 			}
 			
@@ -152,7 +145,7 @@ var expression_eval,
 	}
 	function _getObservableObject(model, ctr, property, type){
 		if (type === 'object') {
-			var obj = expression_eval_origin(property.accessor, model, null, ctr);
+			var obj = expression_eval_strict(property.accessor, model, null, ctr);
 			if (obj == null || typeof obj !== 'object') {
 				log_error('Binding failed to an object over accessor', property);
 				return null;

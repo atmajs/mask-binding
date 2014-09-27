@@ -1,11 +1,11 @@
 
 UTest({
-	'binded sys': function() {
+	'binded each': function() {
 
 		var model = {
 			users: ['A', 'B', 'C']
 		},
-			dom = mask.render('div > %% each="users" > span > "~[.]"', model);
+			dom = mask.render('div > +each (users) > span > "~[.]"', model);
 
 		eq_(dom.textContent, 'ABC', 'Render Failed');
 

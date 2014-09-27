@@ -7,7 +7,7 @@
 			serializeNodes: true
 		},
 		render: function(model, ctx, container, ctr, childs){
-			var val = expression_eval(this.expression, model, ctx, ctr);
+			var val = expression_eval_strict(this.expression, model, ctx, ctr);
 			return build(this.nodes, val, ctx, container, ctr);
 		},
 		

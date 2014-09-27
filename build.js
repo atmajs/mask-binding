@@ -144,6 +144,7 @@ function JSHint() {
 				"obj_setProperty",
 				"obj_getProperty",
 				
+				"custom_Statements",
 				
 				"Compo",
 				"log_error",

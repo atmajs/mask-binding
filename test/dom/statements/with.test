@@ -59,7 +59,7 @@ UTest({
 		
 	},
 	
-	'!+with - backend' (done) {
+	'+with - backend' (done) {
 		var template = `
 			#container {
 				+with (user) {

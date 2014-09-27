@@ -1,0 +1,125 @@
+UTest({
+	
+	'+visible' () {
+		var template = `
+			section >
+				for ((letter, index) of letters)>
+					+visible(index % 2 === current) >
+						span name='~[letter]' data-index='~[index]';
+		`;
+		
+		var model = {
+			letters: [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+			current: 0
+		};
+		var $dom = $render(template, model);
+		
+		$dom
+			.find('span')
+			.eq_('length', model.letters.length)
+			.each(function(){
+				var letter = this.getAttribute('name');
+				var i = model.letters.indexOf(letter);
+				var visible = i / 2 === 0;
+				
+				$(this)
+					[i % 2 === 0 ? 'notEq_' : 'eq_']
+					('css', 'display', 'none');
+			});
+		
+		model.current = 1;
+		$dom
+			.find('span')
+			.each(function(){
+				var letter = this.getAttribute('name');
+				var i = model.letters.indexOf(letter);
+				var visible = i / 2 === 0;
+				
+				$(this)
+					[i % 2 === 1 ? 'notEq_' : 'eq_']
+					('css', 'display', 'none');
+			});
+	},
+	
+	// BACKEND	
+	'$config': {
+		'http.eval': function(done){
+			include
+				.instance()
+				.js(
+					'/.import/mask.node.js::Mask',
+					'/lib/binding.node.js'
+				)
+				.done(function(resp){
+					var source = mask.getHandler(),
+						target = resp.Mask.mask.getHandler()
+						;
+					
+					for (var key in source) {
+						if (target[key] == null && source[key] != null)  {
+							target[key] = source[key];
+						}
+					}
+					
+					Object.extend(mask, resp.Mask.mask);
+					done();
+				})
+		}
+		
+	},
+	
+	'+visible - backend' (done) {
+		
+		var template = `
+			section >
+				for ((letter, index) of letters)>
+					+visible(index % 2 === current) >
+						span.test name='~[letter]' data-index='~[index]';
+		`;
+		
+		var model = {
+			letters: [ 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+			current: 0
+		};
+		
+		UTest
+			.server
+			.render(template, model)
+			.done(function(doc, win){
+				var $dom = $(doc);
+				
+				notEq_(win.app, null);
+				eq_(win.app.model.current, 0);
+				eq_(win.app.components.length, model.letters.length);
+				eq_(win.app.model.__observers.current.length, model.letters.length);
+				
+				$dom
+					.find('span.test')
+					.eq_('length', model.letters.length)
+					.each(function(){
+						var letter = this.getAttribute('name');
+						var i = model.letters.indexOf(letter);
+						var visible = i / 2 === 0;
+						
+						$(this)
+							[i % 2 === 0 ? 'notEq_' : 'eq_']
+							('css', 'display', 'none');
+					});
+				
+				win.app.model.current = 1;
+				$dom
+					.find('span.test')
+					.each(function(index){
+						var letter = this.getAttribute('name');
+						var i = model.letters.indexOf(letter);
+						
+						$(this)
+							[i % 2 === 1 ? 'notEq_' : 'eq_']
+							('css', 'display', 'none');
+					});
+				
+				done();
+			})
+	}
+	
+})

@@ -1,31 +1,113 @@
-// source /src/polyfill/arr.js
-if (Array.prototype.forEach === void 0) {
-	Array.prototype.forEach = function(fn, ctx){
-		var imax = this.length,
-			i, x;
-		for(i = 0; i < imax; i++ ){
-			x = this[i];
-			if (ctx === void 0) {
-				fn(x, i);
-				continue;
-			}
-			fn.call(ctx, x, i);
+// source /src/coll.js
+var coll_each,
+	coll_remove,
+	coll_map,
+	coll_indexOf,
+	coll_find;
+(function(){
+	coll_each = function(coll, fn, ctx){
+		if (ctx == null) 
+			ctx = coll;
+		if (coll == null) 
+			return coll;
+		
+		var imax = coll.length,
+			i = 0;
+		for(; i< imax; i++){
+			fn.call(ctx, coll[i], i);
 		}
+		return ctx;
 	};
-}
-if (Array.prototype.indexOf === void 0) {
-	Array.prototype.indexOf = function(x){
-		var imax = this.length,
-			i;
-		for(i = 0; i < imax; i++ ){
-			if (x === this[i]) 
+	coll_indexOf = function(coll, x){
+		if (coll == null) 
+			return -1;
+		var imax = coll.length,
+			i = 0;
+		for(; i < imax; i++){
+			if (coll[i] === x) 
 				return i;
 		}
 		return -1;
 	};
+	coll_remove = function(coll, x){
+		var i = coll_indexOf(coll, x);
+		if (i === -1) 
+			return false;
+		coll.splice(i, 1);
+		return true;
+	};
+	coll_map = function(coll, fn, ctx){
+		var arr = new Array(coll.length);
+		coll_each(coll, function(x, i){
+			arr[i] = fn.call(this, x, i);
+		}, ctx);
+		return arr;
+	};
+	coll_find = function(coll, fn, ctx){
+		var imax = coll.length,
+			i = 0;
+		for(; i < imax; i++){
+			if (fn.call(ctx || coll, coll[i], i))
+				return true;
+		}
+		return false;
+	};
+}());
+// end:source /src/coll.js
+
+// source /src/polyfill/arr.js
+if (Array.prototype.forEach === void 0) {
+	Array.prototype.forEach = function(fn, ctx){
+		coll_each(this, fn, ctx);
+	};
+}
+if (Array.prototype.indexOf === void 0) {
+	Array.prototype.indexOf = function(x){
+		return coll_indexOf(this, x);
+	};
 }
 
 // end:source /src/polyfill/arr.js
+// source /src/polyfill/str.js
+if (String.prototype.trim == null){
+	String.prototype.trim = function(){
+		var start = -1,
+			end = this.length,
+			code;
+		if (end === 0) 
+			return this;
+		while(++start < end){
+			code = this.charCodeAt(start);
+			if (code > 32)
+				break;
+		}
+		while(--end !== 0){
+			code = this.charCodeAt(end);
+			if (code > 32)
+				break;
+		}
+		return start !== 0 && end !== length - 1
+			? this.substring(start, end + 1)
+			: this;
+	};
+}
+// end:source /src/polyfill/str.js
+// source /src/polyfill/fn.js
+
+if (Function.prototype.bind == null) {
+	var _Array_slice;
+	Function.prototype.bind = function(){
+		if (arguments.length < 2 && typeof arguments[0] === "undefined") 
+			return this;
+		var fn = this,
+			args = _Array_slice.call(arguments),
+			ctx = args.shift();
+		return function() {
+			return fn.apply(ctx, args.concat(_Array_slice.call(arguments)));
+		};
+	};
+}
+// end:source /src/polyfill/fn.js
 
 // source /src/is.js
 var is_Function,
@@ -47,7 +129,7 @@ var is_Function,
 		return arr != null
 			&& typeof arr === 'object'
 			&& typeof arr.length === 'number'
-			&& typeof arr.splice === 'function'
+			&& typeof arr.slice === 'function'
 			;
 	};
 	is_String = function(x) {
