@@ -8,15 +8,12 @@
 		_index;
 	
 	mask.registerHandler('+switch', {
-		
-		$meta: {
+		meta: {
 			serializeNodes: true
 		},
-
 		serializeNodes: function(current){
 			return mask.stringify(current);
 		},
-		
 		render: function(model, ctx, container, ctr, children){
 			
 			var value = expression_eval(this.expression, model, ctx, ctr);

@@ -1,15 +1,13 @@
 (function(){
 	
 	mask.registerHandler('+if', {
-		
-		$meta: {
+		meta: {
 			serializeNodes: true
 		},
-		
-		render: function(model, ctx, container, controller, children){
+		render: function(model, ctx, container, ctr, children){
 			
 			var node = this,
-				nodes = _getNodes('if', node, model, ctx, controller),
+				nodes = _getNodes('if', node, model, ctx, ctr),
 				index = 0;
 			
 			var next = node;
@@ -29,10 +27,10 @@
 			
 			this.attr['switch-index'] = index;
 			
-			return _renderElements(nodes, model, ctx, container, controller, children);
+			return _renderElements(nodes, model, ctx, container, ctr, children);
 		},
 		
-		renderEnd: function(els, model, ctx, container, controller){
+		renderEnd: function(els, model, ctx, container, ctr){
 			
 			var compo = new IFStatement(),
 				index = this.attr['switch-index'];
@@ -40,7 +38,7 @@
 			compo.placeholder = document.createComment('');
 			container.appendChild(compo.placeholder);
 			
-			initialize(compo, this, index, els, model, ctx, container, controller);
+			initialize(compo, this, index, els, model, ctx, container, ctr);
 			
 			
 			return compo;
@@ -160,11 +158,11 @@
 		}
 	};
 	
-	function initialize(compo, node, index, elements, model, ctx, container, controller) {
+	function initialize(compo, node, index, elements, model, ctx, container, ctr) {
 		
 		compo.model = model;
 		compo.ctx = ctx;
-		compo.controller = controller;
+		compo.controller = ctr;
 		
 		compo.refresh = fn_proxy(compo.refresh, compo);
 		compo.binder = expression_createListener(compo.refresh);
@@ -174,7 +172,7 @@
 			elements: null
 		}];
 		
-		expression_bind(node.expression, model, ctx, controller, compo.binder);
+		expression_bind(node.expression, model, ctx, ctr, compo.binder);
 		
 		while (true) {
 			node = node.nextSibling;
@@ -187,7 +185,7 @@
 			});
 			
 			if (node.expression) 
-				expression_bind(node.expression, model, ctx, controller, compo.binder);
+				expression_bind(node.expression, model, ctx, ctr, compo.binder);
 		}
 		
 		if (index != null) 

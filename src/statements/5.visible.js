@@ -6,7 +6,7 @@
 			serializeNodes: true
 		},
 		render: function(model, ctx, container, ctr, childs){
-			return build(this.nodes, this.model, ctx, container, ctr);
+			return build(this.nodes, model, ctx, container, ctr);
 		},
 		renderEnd: function(els, model, ctx, container, ctr){
 			

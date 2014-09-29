@@ -221,7 +221,7 @@ var obj_addObserver,
 				'shift',
 				'reverse',
 				'sort',
-				// collections mutator
+				// collection mutators
 				'remove'
 			]
 		},

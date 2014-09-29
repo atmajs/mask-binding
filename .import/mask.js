@@ -429,25 +429,31 @@
     
     // end:source /src/util/util.js
     // source /src/util/attr.js
-    function attr_extend(target, source) {
-        if (target == null) 
-            target = {};
-        
-        if (source == null) 
-            return target;
-        
-        for (var key in source) {
-            
-            if (key === 'class' && typeof target[key] === 'string') {
-                target[key] += ' ' + source[key];
-                continue;
+    var attr_extend;
+    
+    (function(){
+        attr_extend = function (a, b) {
+            if (a == null) {
+                return b == null
+                    ? {}
+                    : obj_create(b);
             }
             
-            target[key] = source[key];
-        }
-        
-        return target;
-    }
+            if (b == null) 
+                return a;
+            
+            var key;
+            for(key in b) {
+                if ('class' === key && typeof a[key] === 'string') {
+                    a[key] += ' ' + b[key];
+                    continue;
+                }
+                a[key] = b[key];
+            }
+            return a;
+        };
+    }());
+    
     // end:source /src/util/attr.js
 	// source /src/util/template.js
 	function Template(template) {
@@ -4044,35 +4050,31 @@
 		
 			
 		// source util.js
-		function build_resumeDelegate(controller, model, cntx, container, childs){
+		function build_resumeDelegate(controller, model, ctx, container, children){
 			var anchor = container.appendChild(document.createComment(''));
 			
 			return function(){
-				return build_resumeController(controller, model, cntx, anchor, childs);
+				return build_resumeController(controller, model, ctx, anchor, children);
 			};
 		}
-		function build_resumeController(controller, model, cntx, anchor, childs) {
+		function build_resumeController(ctr, model, ctx, anchor, children) {
 			
-			
-			if (controller.tagName != null && controller.tagName !== controller.compoName) {
-				controller.nodes = {
-					tagName: controller.tagName,
-					attr: controller.attr,
-					nodes: controller.nodes,
+			if (ctr.tagName != null && ctr.tagName !== ctr.compoName) {
+				ctr.nodes = {
+					tagName: ctr.tagName,
+					attr: ctr.attr,
+					nodes: ctr.nodes,
 					type: 1
 				};
 			}
-			
-			if (controller.model != null) {
-				model = controller.model;
+			if (ctr.model != null) {
+				model = ctr.model;
 			}
 			
-			
-			var nodes = controller.nodes,
+			var nodes = ctr.nodes,
 				elements = [];
 			if (nodes != null) {
 		
-				
 				var isarray = nodes instanceof Array,
 					length = isarray === true ? nodes.length : 1,
 					i = 0,
@@ -4082,7 +4084,7 @@
 				for (; i < length; i++) {
 					childNode = isarray === true ? nodes[i] : nodes;
 					
-					builder_build(childNode, model, cntx, fragment, controller, elements);
+					builder_build(childNode, model, ctx, fragment, ctr, elements);
 				}
 				
 				anchor.parentNode.insertBefore(fragment, anchor);
@@ -4091,12 +4093,12 @@
 				
 			// use or override custom attr handlers
 			// in Compo.handlers.attr object
-			// but only on a component, not a tag controller
-			if (controller.tagName == null) {
-				var attrHandlers = controller.handlers && controller.handlers.attr,
+			// but only on a component, not a tag ctr
+			if (ctr.tagName == null) {
+				var attrHandlers = ctr.handlers && ctr.handlers.attr,
 					attrFn,
 					key;
-				for (key in controller.attr) {
+				for (key in ctr.attr) {
 					
 					attrFn = null;
 					
@@ -4109,42 +4111,35 @@
 					}
 					
 					if (attrFn != null) {
-						attrFn(anchor, controller.attr[key], model, cntx, elements[0], controller);
+						attrFn(anchor, ctr.attr[key], model, ctx, elements[0], ctr);
 					}
 				}
 			}
 			
-			if (is_Function(controller.renderEnd)) {
-				/* if !DEBUG
-				try{
-				*/
-				controller.renderEnd(elements, model, cntx, anchor.parentNode);
-				/* if !DEBUG
-				} catch(error){ console.error('Custom Tag Handler:', controller.tagName, error); }
-				*/
+			if (is_Function(ctr.renderEnd)) {
+				ctr.renderEnd(elements, model, ctx, anchor.parentNode);
 			}
 			
 		
-			if (childs != null && childs !== elements){
-				var il = childs.length,
+			if (children != null && children !== elements){
+				var il = children.length,
 					jl = elements.length,
 					j  = -1;
 					
 				while(++j < jl){
-					childs[il + j] = elements[j];
+					children[il + j] = elements[j];
 				}
 			}
 		}
 		// end:source util.js
 		// source util.controller.js
-		function controller_pushCompo(controller, compo) {
-			
-			if (controller.components == null) {
-				controller.components = [ compo ];
+		function controller_pushCompo(ctr, compo) {
+			var compos = ctr.components;
+			if (compos == null) {
+				ctr.components = [ compo ];
 				return;
-			} 
-			
-			controller.components.push(compo);
+			}
+			compos.push(compo);
 		}
 		// end:source util.controller.js
 		
@@ -4339,6 +4334,7 @@
 				compo.attr = attr = attr_extend(compo.attr, node.attr);
 				compo.parent = controller;
 				compo.ID = ++builder_componentID;
+				compo.expression = node.expression;
 				
 				if (compo.model == null) 
 					compo.model = model;
@@ -4392,16 +4388,15 @@
 			}
 			
 			
-			function build_Static(static_, node, model, ctx, container, controller, childs) {
+			function build_Static(static_, node, model, ctx, container, ctr, children) {
 				var Ctor = static_.__Ctor,
 					wasRendered = false,
 					elements,
 					compo,
-					
 					clone;
 				
 				if (Ctor) {
-					clone = new Ctor(node, controller);
+					clone = new Ctor(node, ctr);
 				}
 				else {
 					clone = static_;
@@ -4409,30 +4404,37 @@
 					for (var key in node) 
 						clone[key] = node[key];
 					
-					clone.parent = controller;
+					clone.parent = ctr;
 				}
 				
 				var attr = clone.attr;
 				if (attr != null) {
 					for (var key in attr) {
 						if (typeof attr[key] === 'function') 
-							attr[key] = attr[key]('attr', model, ctx, container, controller, key);
+							attr[key] = attr[key]('attr', model, ctx, container, ctr, key);
 					}
 				}
 				
 				if (is_Function(clone.renderStart)) 
-					clone.renderStart(model, ctx, container, controller, childs);
+					clone.renderStart(model, ctx, container, ctr, children);
 				
+				controller_pushCompo(ctr, clone);
+				
+				var i = ctr.components.length - 1;
 				if (is_Function(clone.render)){
 					wasRendered = true;
-					elements = clone.render(model, ctx, container, controller, childs);
-					arr_pushMany(childs, elements);
+					elements = clone.render(model, ctx, container, ctr, children);
+					arr_pushMany(children, elements);
 					
-					if (is_Function(clone.renderEnd))
-						compo = clone.renderEnd(elements, model, ctx, container, controller);
+					if (is_Function(clone.renderEnd)) {
+						compo = clone.renderEnd(elements, model, ctx, container, ctr);
+						if (compo != null) {
+							// overriden
+							ctr.components[i] = compo;
+						}
+					}
 				}
-					
-				controller_pushCompo(controller, compo || clone);
+				
 				return wasRendered
 					? null
 					: clone
@@ -5847,7 +5849,7 @@
 			}
 		};
 		customTag_register('debugger', {
-			render: function(model, ctx, container){
+			render: function(model, ctx, container, compo){
 				debugger;
 			}
 		});
@@ -9523,7 +9525,9 @@
 	// end:source /ref-mask-j/lib/jmask.embed.js
 	// source /ref-mask-binding/lib/binding.embed.js
 	(function(mask, Compo){
-		
+		var IS_BROWSER = true,
+			IS_NODE = false;
+			
 		// source ../src/vars.js
 		var __Compo = typeof Compo !== 'undefined' ? Compo : (mask.Compo || global.Compo),
 		    __dom_addEventListener = __Compo.Dom.addEventListener,
@@ -11679,15 +11683,13 @@
 			(function(){
 				
 				mask.registerHandler('+if', {
-					
-					$meta: {
+					meta: {
 						serializeNodes: true
 					},
-					
-					render: function(model, ctx, container, controller, children){
+					render: function(model, ctx, container, ctr, children){
 						
 						var node = this,
-							nodes = _getNodes('if', node, model, ctx, controller),
+							nodes = _getNodes('if', node, model, ctx, ctr),
 							index = 0;
 						
 						var next = node;
@@ -11707,10 +11709,10 @@
 						
 						this.attr['switch-index'] = index;
 						
-						return _renderElements(nodes, model, ctx, container, controller, children);
+						return _renderElements(nodes, model, ctx, container, ctr, children);
 					},
 					
-					renderEnd: function(els, model, ctx, container, controller){
+					renderEnd: function(els, model, ctx, container, ctr){
 						
 						var compo = new IFStatement(),
 							index = this.attr['switch-index'];
@@ -11718,7 +11720,7 @@
 						compo.placeholder = document.createComment('');
 						container.appendChild(compo.placeholder);
 						
-						initialize(compo, this, index, els, model, ctx, container, controller);
+						initialize(compo, this, index, els, model, ctx, container, ctr);
 						
 						
 						return compo;
@@ -11838,11 +11840,11 @@
 					}
 				};
 				
-				function initialize(compo, node, index, elements, model, ctx, container, controller) {
+				function initialize(compo, node, index, elements, model, ctx, container, ctr) {
 					
 					compo.model = model;
 					compo.ctx = ctx;
-					compo.controller = controller;
+					compo.controller = ctr;
 					
 					compo.refresh = fn_proxy(compo.refresh, compo);
 					compo.binder = expression_createListener(compo.refresh);
@@ -11852,7 +11854,7 @@
 						elements: null
 					}];
 					
-					expression_bind(node.expression, model, ctx, controller, compo.binder);
+					expression_bind(node.expression, model, ctx, ctr, compo.binder);
 					
 					while (true) {
 						node = node.nextSibling;
@@ -11865,7 +11867,7 @@
 						});
 						
 						if (node.expression) 
-							expression_bind(node.expression, model, ctx, controller, compo.binder);
+							expression_bind(node.expression, model, ctx, ctr, compo.binder);
 					}
 					
 					if (index != null) 
@@ -11887,15 +11889,12 @@
 					_index;
 				
 				mask.registerHandler('+switch', {
-					
-					$meta: {
+					meta: {
 						serializeNodes: true
 					},
-			
 					serializeNodes: function(current){
 						return mask.stringify(current);
 					},
-					
 					render: function(model, ctx, container, ctr, children){
 						
 						var value = expression_eval(this.expression, model, ctx, ctr);
@@ -12163,6 +12162,78 @@
 				}
 			}());
 			// end:source 4.with.js
+			// source 5.visible.js
+			(function(){
+				var $Visible = custom_Statements['visible'];
+					
+				mask.registerHandler('+visible', {
+					meta: {
+						serializeNodes: true
+					},
+					render: function(model, ctx, container, ctr, childs){
+						return build(this.nodes, model, ctx, container, ctr);
+					},
+					renderEnd: function(els, model, ctx, container, ctr){
+						
+						var compo = new VisibleStatement(this);
+						compo.elements = els;
+						compo.model = model;
+						compo.parent = ctr;
+						compo.refresh = fn_proxy(compo.refresh, compo);
+						compo.binder = expression_createBinder(
+							compo.expr,
+							model,
+							ctx,
+							ctr,
+							compo.refresh
+						);
+						
+						expression_bind(compo.expr, model, ctx, ctr, compo.binder);
+						compo.refresh();
+						return compo;
+					}
+				});
+				
+				
+				function VisibleStatement(node){
+					this.expr = node.expression;
+					this.nodes = node.nodes;
+				}
+				
+				VisibleStatement.prototype = {
+					compoName: '+visible',
+					elements: null,
+					binder: null,
+					model: null,
+					parent: null,
+					refresh: function(){
+						var isVisible = expression_eval(
+							this.expr, this.model, this.ctx, this
+						);
+						$Visible.toggle(this.elements, isVisible);
+					},
+					dispose: function(){
+						expression_unbind(
+							this.expr,
+							this.model,
+							this.parent,
+							this.binder
+						);
+					
+						this.parent = null;
+						this.model = null;
+						this.ctx = null;
+					}
+					
+				};
+				
+				function build(nodes, model, ctx, container, ctr){
+					var els = [];
+					builder_build(nodes, model, ctx, container, ctr, els);
+					return els;
+				}
+			}());
+			// end:source 5.visible.js
 			// source loop/exports.js
 			(function(){
 				
@@ -12406,14 +12477,12 @@
 						
 					
 					mask.registerHandler('+for', {
-						$meta: {
+						meta: {
 							serializeNodes: true
 						},
-						
 						serializeNodes: function(node){
 							return mask.stringify(node);
 						},
-						
 						render: function(model, ctx, container, controller, childs){
 							
 							var directive = For.parseFor(this.expression),

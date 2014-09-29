@@ -95,7 +95,7 @@ UTest({
 		var model = {
 				name: 'A'
 			},
-			controller = {
+			ctr = {
 				someFn: function(){
 					return this.x;
 				},
@@ -105,18 +105,60 @@ UTest({
 			},
 			dom;
 		
-		dom = mask.render('div > "~[bind: name + $c.someFn().age]"', model, null, null, controller);
+		dom = mask.render('div > "~[bind: name + $c.someFn().age]"', model, null, null, ctr);
 		eq_(dom.textContent, 'A10');
 		
 		model.name = 'B'
 		eq_(dom.textContent, 'B10');
 		
-		controller.x.age = 5;
+		ctr.x.age = 5;
 		eq_(dom.textContent, 'B5');
 		
-		dom = mask.render('div > "~[bind: $c.someFn().age]"', model, null, null, controller);
-		controller.x.age = 7;
+		dom = mask.render('div > "~[bind: $c.someFn().age]"', model, null, null, ctr);
+		ctr.x.age = 7;
 		eq_(dom.textContent, '7');
+	},
+	
+	'controller binder': function(){
+		var Ctor = mask.Compo({
+			template: 'div > "~[bind: $c.age]"',
+			age: 10,
+		})
+		var app = Compo.initialize(Ctor);
+		eq_(app.age, 10);
 		
+		app.$.eq_('text', '10')
+		
+		eq_(app.__observers.age.length, 1);
+		
+		app.age = 5;
+		app.$.eq_('text', '5');
+		
+		app.remove();
+		eq_(app.__observers.age.length, 0);
+		eq_(app.$, null);
+	},
+	'controller scope binder': function(){
+		var Ctor = mask.Compo({
+			template: 'div > "~[bind: foo.bar]"',
+			scope: {
+				foo: {
+					bar: 10
+				}
+			}
+		});
+		var app = Compo.initialize(Ctor);
+		eq_(app.scope.foo.bar, 10);
+		
+		app.$.eq_('text', '10')
+		
+		eq_(app.scope.__observers['foo.bar'].length, 1);
+		
+		app.scope.foo.bar = 5;
+		app.$.eq_('text', '5');
+		
+		app.remove();
+		eq_(app.scope.__observers['foo.bar'].length, 0);
+		eq_(app.$, null);
 	}
 });

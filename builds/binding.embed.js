@@ -1,5 +1,7 @@
 (function(mask, Compo){
-	
+	var IS_BROWSER = true,
+		IS_NODE = false;
+		
 	// import ../src/vars.js
 
 	// import ../src/util/object.js

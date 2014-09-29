@@ -10,14 +10,12 @@
 		
 	
 	mask.registerHandler('+for', {
-		$meta: {
+		meta: {
 			serializeNodes: true
 		},
-		
 		serializeNodes: function(node){
 			return mask.stringify(node);
 		},
-		
 		render: function(model, ctx, container, controller, childs){
 			
 			var directive = For.parseFor(this.expression),

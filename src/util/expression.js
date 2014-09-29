@@ -133,45 +133,80 @@ var expression_eval,
 		if (accessor == null) 
 			return;
 		
-		var accessorType = typeof accessor,
-			obj = _getObservableObject(model, ctr, accessor, accessorType);
-		if (obj == null) 
+		if (typeof accessor === 'object') {
+			var obj = expression_eval_strict(accessor.accessor, model, null, ctr);
+			if (obj == null || typeof obj !== 'object') {
+				console.error('Binding failed to an object over accessor', accessor.ref);
+				return;
+			}
+			mutatorFn(obj, accessor.ref, callback);
 			return;
+		}
 		
-		var property = accessorType === 'object'
-			? accessor.ref
-			: accessor;
+		// string;
+		var property = accessor,
+			parts = property.split('.'),
+			imax = parts.length;
+		
+		if (imax > 1) {
+			var first = parts[0];
+			if (first === '$c') {
+				// Controller Observer
+				ctr = _getObservable_Controller(ctr, parts.slice(1), imax - 1);
+				mutatorFn(ctr, property.substring(3), callback);
+				return;
+			}
+			if ('$a' === first || '$ctx' === first) 
+				return;
+		}
+		
+		var obj = null;
+		if (_isDefined(model, parts, imax)) {
+			obj = model;
+		}
+		if (obj == null) {
+			obj = _getObservable_Scope(ctr, parts, imax);
+		}
+		if (obj == null) {
+			obj = model;
+		}
+		
 		mutatorFn(obj, property, callback);
 	}
-	function _getObservableObject(model, ctr, property, type){
-		if (type === 'object') {
-			var obj = expression_eval_strict(property.accessor, model, null, ctr);
-			if (obj == null || typeof obj !== 'object') {
-				log_error('Binding failed to an object over accessor', property);
-				return null;
-			}
-			return obj;
-		}
-		if (property == null || property === '$c') 
-			return null;
-		
-		if (obj_isDefined(model, property)) 
-			return model;
-		
-		if (obj_isDefined(ctr, property)) 
-			return ctr;
-		
-		var x = ctr,
-			scope;
-		while(x != null){
-			scope = x.scope;
-			if (scope != null && obj_isDefined(scope, property)) 
+	
+	function _getObservable_Scope(ctr, parts, imax){
+		var scope;
+		while(ctr != null){
+			scope = ctr.scope;
+			if (scope != null && _isDefined(scope, parts, imax)) 
 				return scope;
 			
-			x = x.parent;
+			ctr = ctr.parent;
 		}
-		return model;
+		return null;
 	}
+	function _getObservable_Controller(ctr, parts, imax) {
+		while(ctr != null){
+			if (_isDefined(ctr, parts, imax)) 
+				return ctr;
+			ctr = ctr.parent;
+		}
+		return ctr;
+	}
+	function _isDefined(obj, parts, imax){
+		if (obj == null) 
+			return false;
+			
+		var i = 0, val;
+		for(; i < imax; i++) {
+			obj = obj[parts[i]];
+			if (obj === void 0) 
+				return false;
+		}
+		return true;
+	}
+	
+	
 }());
 
 

@@ -1,9 +1,11 @@
 /* jshint -W053 */
 
 (function(global, mask) {
-
 	"use strict";
 
+	var IS_BROWSER = true,
+		IS_NODE = false;
+	
 	var builder_build = mask.build;
 	
 	// import /ref-utils/lib/utils.embed.js
