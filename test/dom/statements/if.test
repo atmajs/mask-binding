@@ -81,8 +81,6 @@ UTest({
 				)
 				.done(function(resp){
 					
-					Object.extend(mask, resp.Mask.mask);
-					
 					var source = mask.getHandler(),
 						target = resp.Mask.mask.getHandler()
 						;
@@ -93,6 +91,7 @@ UTest({
 						}
 					}
 					
+					Object.extend(mask, resp.Mask.mask);
 					done();
 				})
 		}
@@ -121,6 +120,7 @@ UTest({
 	},
 	
 	'+if server - binded' (done) {
+		
 		UTest
 			.server
 			.render(`

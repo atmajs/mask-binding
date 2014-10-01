@@ -55,8 +55,6 @@ UTest({
 				)
 				.done(function(resp){
 					
-					Object.extend(mask, resp.Mask.mask);
-					
 					var source = mask.getHandler(),
 						target = resp.Mask.mask.getHandler()
 						;
@@ -64,10 +62,10 @@ UTest({
 					for (var key in source) {
 						if (target[key] == null && source[key] != null)  {
 							target[key] = source[key];
-							logger.log('>> Override'.red.bold, key);
 						}
 					}
 					
+					Object.extend(mask, resp.Mask.mask);
 					done();
 				})
 		}

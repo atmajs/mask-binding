@@ -13,18 +13,12 @@ var _getNodes,
 		return custom_Statements[name].getNodes(node, model, ctx, controller);
 	};
 	
-	_renderElements = function(nodes, model, ctx, container, controller, children){
+	_renderElements = function(nodes, model, ctx, container, ctr){
 		if (nodes == null) 
 			return null;
 		
 		var elements = [];
-		builder_build(nodes, model, ctx, container, controller, elements);
-		
-		if (children == null) 
-			return elements;
-		
-		arr_pushMany(children, elements);
-		
+		builder_build(nodes, model, ctx, container, ctr, elements);
 		return elements;
 	};
 	
