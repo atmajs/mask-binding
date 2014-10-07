@@ -41,38 +41,16 @@ UTest({
 			});
 	},
 	
-	// BACKEND	
+	// Backend
 	'$config': {
-		'http.eval': function(done){
-			include
-				.instance()
-				.js(
-					'/.import/mask.node.js::Mask',
-					'/lib/binding.node.js'
-				)
-				.done(function(resp){
-					var source = mask.getHandler(),
-						target = resp.Mask.mask.getHandler()
-						;
-					
-					for (var key in source) {
-						if (target[key] == null && source[key] != null)  {
-							target[key] = source[key];
-						}
-					}
-					
-					Object.extend(mask, resp.Mask.mask);
-					done();
-				})
-		}
-		
+		'http.include': '/test/node.libraries.js'
 	},
 	
 	'+visible - backend' (done) {
 		
 		var template = `
 			section >
-				for ((letter, index) of letters)>
+				for ((letter, index) of letters) >
 					+visible(index % 2 === current) >
 						span.test name='~[letter]' data-index='~[index]';
 		`;
@@ -84,7 +62,10 @@ UTest({
 		
 		UTest
 			.server
-			.render(template, model)
+			.render(template, {
+				model: model,
+				scripts: [ '/.import/mask.bootstrap.js' ]
+			})
 			.done(function(doc, win){
 				var $dom = $(doc);
 				

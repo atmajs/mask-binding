@@ -17,7 +17,7 @@ module.exports = {
 		node: {
 			exec: 'node',
 			env: [
-				".import/mask.node.js::mask"
+				"lib/binding.node.js",
 			],
 			tests: [
 				"test/**node.test"

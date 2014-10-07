@@ -6,7 +6,8 @@
 	var IS_BROWSER = true,
 		IS_NODE = false;
 	
-	var builder_build = mask.build;
+	var builder_build = mask.build,
+		Dom = mask.Dom;
 	
 	// import /ref-utils/lib/utils.embed.js
 	

@@ -2,7 +2,7 @@ UTest({
 	
 	'+with' () {
 		
-		var controller = {},
+		var ctr = {},
 			model = {
 				user: {
 					name: 'Foo'
@@ -16,11 +16,8 @@ UTest({
 					}
 			`
 			;
-		
-		
-		$dom = $render(template, model, null, null, controller);
-		
-		var With = Compo.find(controller, '+with');
+		var $dom = $render(template, model, null, null, ctr);
+		var With = Compo.find(ctr, '+with');
 		
 		notEq_(With, null);
 		$dom.eq_('text', 'Foo');
@@ -30,33 +27,9 @@ UTest({
 		$dom.eq_('text', 'Bar');
 	},
 	
-	// BACKEND	
+	// Backend
 	'$config': {
-		'http.eval': function(done){
-			include
-				.instance()
-				.js(
-					'/.import/mask.node.js::Mask',
-					'/lib/binding.node.js'
-				)
-				.done(function(resp){
-					
-					Object.extend(mask, resp.Mask.mask);
-					
-					var source = mask.getHandler(),
-						target = resp.Mask.mask.getHandler()
-						;
-					
-					for (var key in source) {
-						if (target[key] == null && source[key] != null)  {
-							target[key] = source[key];
-						}
-					}
-					
-					done();
-				})
-		}
-		
+		'http.include': '/test/node.libraries.js'
 	},
 	
 	'+with - backend' (done) {
@@ -74,7 +47,7 @@ UTest({
 		};
 		
 		UTest
-			.server
+			.server	
 			.render(template, model)
 			.done(function(doc, win){
 				var $dom = $(doc);

@@ -1,58 +1,90 @@
 (function(){
 	
 	var Each = custom_Statements['each'];
-		
 	
 	mask.registerHandler('+each', {
-		
-		render: function(model, ctx, container, controller, children){
-			
-			var node = this;
-			
-			var array = expression_eval(node.expression, model, ctx, controller);
+		meta: {
+			serializeNodes: true
+		},
+		serializeNodes: function(node){
+			return mask.stringify(node);
+		},
+		//modelRef: null,
+		render: function(model, ctx, container, ctr, children){
+			//this.modelRef = this.expression;
+			var array = expression_eval(this.expression, model, ctx, ctr);
 			if (array == null) 
 				return;
 			
 			arr_createRefs(array);
 			
 			build(
-				node.nodes,
+				this.nodes,
 				array,
 				ctx,
 				container,
-				node,
+				this,
 				children
 			);
 		},
 		
-		renderEnd: function(els, model, ctx, container, controller){
-			
+		renderEnd: function(els, model, ctx, container, ctr){
 			var compo = new EachStatement(this, this.attr);
 			
 			compo.placeholder = document.createComment('');
 			container.appendChild(compo.placeholder);
 			
-			_compo_initAndBind(compo, this, model, ctx, container, controller);
+			_compo_initAndBind(compo, this, model, ctx, container, ctr);
 			
 			return compo;
 		}
 		
 	});
+	mask.registerHandler('each::item', EachItem);
 	
-	function build(nodes, array, ctx, container, controller, elements) {
+	function build(nodes, array, ctx, container, ctr, elements) {
 		var imax = array.length,
-			i = -1,
-			itemCtr;
-		
-		while ( ++i < imax ){
-			
-			itemCtr = Each.createItem(i, nodes, controller);
-			builder_build(itemCtr, array[i], ctx, container, controller, elements);
+			nodes_ = new Array(imax),
+			i = 0;
+		for(; i < imax; i++) {
+			nodes_[i] = createEachNode(nodes, array[i], i, ctr.expression);
 		}
+		builder_build(nodes_, null, ctx, container, ctr, elements);
 	}
 	
+	function createEachNode(nodes, model, index, expr){
+		var x = new EachItem;
+		x.scope = { index: index };
+		x.model = model;
+		x.modelRef = '(' + expr + ')."' + index + '"';
+		return {
+			type: Dom.COMPONENT,
+			tagName: 'each::item',
+			nodes: nodes,
+			controller: x
+		};
+	}
+	
+	function EachItem() {}
+	EachItem.prototype = {
+		compoName: 'each::item',
+		scope: null,
+		model: null,
+		modelRef: null,
+		parent: null,
+		renderEnd: function(els) {
+			this.elements = els;
+		},
+		dispose: function(){
+			if (this.elements != null) {
+				this.elements.length = 0;
+				this.elements = null;
+			}
+		}
+	};
+	
 	function EachStatement(node, attr) {
-		this.expr = node.expression;
+		this.expression = node.expression;
 		this.nodes = node.nodes;
 		
 		if (node.components == null) 

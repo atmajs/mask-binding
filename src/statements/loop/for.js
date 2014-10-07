@@ -16,8 +16,7 @@
 		serializeNodes: function(node){
 			return mask.stringify(node);
 		},
-		render: function(model, ctx, container, controller, childs){
-			
+		render: function(model, ctx, container, ctr, children){
 			var directive = For.parseFor(this.expression),
 				attr = this.attr;
 			
@@ -26,8 +25,7 @@
 			attr[attr_TYPE] = directive[2];
 			attr[attr_EXPR] = directive[3];
 			
-			
-			var value = expression_eval(directive[3], model, ctx, controller);
+			var value = expression_eval_strict(directive[3], model, ctx, ctr);
 			if (value == null) 
 				return;
 			
@@ -42,11 +40,11 @@
 				ctx,
 				container,
 				this,
-				childs
+				children
 			);
 		},
 		
-		renderEnd: function(els, model, ctx, container, controller){
+		renderEnd: function(els, model, ctx, container, ctr){
 			
 			var compo = new ForStatement(this, this.attr);
 			
@@ -55,7 +53,7 @@
 			
 			
 			
-			_compo_initAndBind(compo, this, model, ctx, container, controller);
+			_compo_initAndBind(compo, this, model, ctx, container, ctr);
 			
 			return compo;
 		},
@@ -67,9 +65,9 @@
 		
 	});
 	
-	function initialize(compo, node, els, model, ctx, container, controller) {
+	function initialize(compo, node, els, model, ctx, container, ctr) {
 		
-		compo.parent = controller;
+		compo.parent = ctr;
 		compo.model = model;
 		
 		compo.refresh = fn_proxy(compo.refresh, compo);
@@ -77,12 +75,12 @@
 			compo.expr,
 			model,
 			ctx,
-			controller,
+			ctr,
 			compo.refresh
 		);
 		
 		
-		expression_bind(compo.expr, model, ctx, controller, compo.binder);
+		expression_bind(compo.expr, model, ctx, ctr, compo.binder);
 		
 	}
 	

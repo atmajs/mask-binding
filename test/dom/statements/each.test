@@ -1,0 +1,154 @@
+var TestData = {
+	simple: {
+		template: `
+			#container { 
+				+each (letters) > 
+					span > '~[.]'
+			}
+		`,
+	
+		model: () => ({
+			letters: ['A', 'B']
+		}),
+		
+		check ($container, model, ctr) {
+			$container.eq_('text', 'AB');
+			
+			eq_(model.__observers.letters.length, 1);
+			model.letters.push('C');
+			model.letters.unshift('0');
+			$container.eq_('text', '0ABC');
+			
+			model.letters.splice(1, 2);
+			$container.eq_('text', '0C');
+			
+			ctr.remove();
+			eq_(model.__observers.letters.length, 0);
+		}
+	},
+	nested: {
+		template: `
+			#container {
+				+each (letters) > div {
+					'~[letter]'
+					+each (numbers) > span > '~[.]'
+				}
+			}
+		`,
+		model: () => ({
+			letters: [
+				{ letter: 'A', numbers: [1, 2]},
+				{ letter: 'B', numbers: [1, 2]},
+			]
+		}),
+		check ($container, model, ctr) {
+			$container.eq_('text', 'A12B12');
+			
+			eq_(model.__observers.letters.length, 1);
+			eq_(model.letters[0].__observers.numbers.length, 1);
+			
+			model.letters[0].numbers.push(3);
+			model.letters[0].numbers.splice(0, 1, 0);
+			$container.eq_('text', 'A023B12');
+			
+			model.letters[0].numbers = [5,8];
+			$container.eq_('text', 'A58B12');
+			
+			model.letters.splice(1, 1, {letter: 'C'});
+			$container.eq_('text', 'A58C');
+			
+			model.letters[1].numbers = [0];
+			$container.eq_('text', 'A58C0');
+			
+			model.letters[1].numbers.unshift(-1);
+			$container.eq_('text', 'A58C-10');
+			
+			ctr.remove();
+			eq_(model.__observers.letters.length, 0);
+			eq_(model.letters[0].__observers.numbers.length, 0);
+			eq_(model.letters[1].__observers.numbers.length, 0);
+		}
+	}
+};
+
+UTest({
+	'(Browser) +each - simple' () {
+		var Data = TestData.simple;
+		var model = Data.model();
+		var owner = new (Compo());
+		var $container = $(mask.render(Data.template, model, null, null, owner));
+		Data.check($container, model, owner);
+	},
+	'(Browser) +each - nested' () {
+		var Data = TestData.nested;
+		var model = Data.model();
+		var owner = new (Compo());
+		var $container = $(mask.render(Data.template, model, null, null, owner));
+		Data.check($container, model, owner);
+	},
+	// Backend
+	'$config': {
+		//'http.eval': function(done){
+		//	
+		//	var cache = include.getResources();
+		//	cache.js = {};
+		//	cache.load = {};
+		//	include
+		//		.instance()
+		//		.js(
+		//			'/.import/mask.node.js::Mask'
+		//		)
+		//		.done(function(resp){
+		//			var mask = resp.Mask.mask;
+		//			Object.extend(global.mask.getHandler(), mask.getHandler());
+		//			Object.extend(global.mask, mask);
+		//			
+		//			include
+		//				.instance()
+		//				.js('/lib/binding.node.js::Binding')
+		//				.done(function(){
+		//					done();
+		//				});
+		//		})
+		//}
+		'http.include': '/test/node.libraries.js'
+	},
+	
+	'(Node) +each - simple' (done) {
+		var Data = TestData.simple;
+		UTest
+			.server
+			.render(Data.template, {
+				model: Data.model(),
+				scripts: [ '/.import/mask.bootstrap.js' ]
+			})
+			.done(function(doc, win){
+				
+				Data.check(
+					$(doc).find('#container'),
+					win.app.model,
+					win.app
+				);
+				done();
+			});
+	},
+	
+	'(Node) +each - nested' (done) {
+		var Data = TestData.nested;
+		UTest
+			.server
+			.render(Data.template, {
+				model: Data.model(),
+				scripts: [ '/.import/mask.bootstrap.js' ]
+			})
+			.done(function(doc, win){
+				
+				Data.check(
+					$(doc).find('#container'),
+					win.app.model,
+					win.app
+				);
+				done();
+			});
+	}
+});

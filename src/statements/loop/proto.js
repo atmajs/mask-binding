@@ -73,7 +73,7 @@ var LoopStatementProto = {
 	dispose: function(){
 		
 		expression_unbind(
-			this.expr, this.model, this.parent, this.binder
+			this.expr || this.expression, this.model, this.parent, this.binder
 		);
 	}
 };

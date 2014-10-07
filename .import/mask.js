@@ -1,6 +1,6 @@
 // source /src/license.txt
 /*!
- * MaskJS v0.10.0
+ * MaskJS v0.10.1
  * Part of the Atma.js Project
  * http://atmajs.com/
  *
@@ -2656,16 +2656,16 @@
 	// source 2.for.js
 	
 	(function(){
-		var FOR_OF_ITEM = 'for..of/item',
-			FOR_IN_ITEM = 'for..in/item';
+		var FOR_OF_ITEM = 'for..of::item',
+			FOR_IN_ITEM = 'for..in::item';
 			
 		custom_Statements['for'] = {
 			
-			render: function(node, model, ctx, container, controller, childs){
+			render: function(node, model, ctx, container, ctr, children){
 				
 				parse_For(node.expression);
 				
-				var value = ExpressionUtil.eval(__ForDirective[3], model, ctx, controller);
+				var value = ExpressionUtil.eval(__ForDirective[3], model, ctx, ctr);
 				if (value == null) 
 					return;
 				
@@ -2676,38 +2676,46 @@
 					model,
 					ctx,
 					container,
-					controller,
-					childs
+					ctr,
+					children
 				);
 			},
 			
 			build: build,
 			parseFor: parse_For,
-			createForItem: createForItem,
+			createForNode: createForItemNode,
 			getNodes: getNodes,
 			
 			getHandler: function(compoName, model){
-				return createHandler(compoName, model);
+				return createForItemHandler(compoName, model);
 			}
 		};
 		
-		function createBootstrapCompo(name) {
-			var Ctor = function(){};
-			Ctor.prototype = {
-				type: Dom.COMPONENT,
-				compoName: name,
-				renderEnd: handler_proto_renderEnd,
-				dispose: handler_proto_dispose
-			};
-			return Ctor;
-		}
-		custom_Tags[FOR_OF_ITEM] = createBootstrapCompo(FOR_OF_ITEM);
-		custom_Tags[FOR_IN_ITEM] = createBootstrapCompo(FOR_IN_ITEM);
+		(function(){
+			custom_Tags[FOR_OF_ITEM] = createBootstrapCompo(FOR_OF_ITEM);
+			custom_Tags[FOR_IN_ITEM] = createBootstrapCompo(FOR_IN_ITEM);
+			
+			function createBootstrapCompo(name) {
+				function For_Item(){}
+				For_Item.prototype = {
+					meta: {
+						serializeScope: true
+					},
+					serializeScope: for_proto_serializeScope,
+					type: Dom.COMPONENT,
+					compoName: name,
+					renderEnd: handler_proto_renderEnd,
+					dispose: handler_proto_dispose
+				};
+				return For_Item;
+			}
+		}());
+		
 		
 		function build(value, For, nodes, model, ctx, container, ctr, childs) {
 			
 			builder_build(
-				getNodes(nodes, value, For[0], For[1], For[2]),
+				getNodes(nodes, value, For[0], For[1], For[2], For[3]),
 				model,
 				ctx,
 				container,
@@ -2716,15 +2724,14 @@
 			);
 		}
 		
-		function getNodes(nodes, value, prop1, prop2, type) {
+		function getNodes(nodes, value, prop1, prop2, type, expr) {
 				
 			if ('of' === type) {
 				if (is_Array(value) === false) {
 					log_error('<ForStatement> Value is not enumerable', value);
 					return null;
 				}
-				
-				return loop_Array(nodes, value, prop1, prop2);
+				return loop_Array(nodes, value, prop1, prop2, expr);
 			}
 			
 			if ('in' === type) {
@@ -2732,15 +2739,14 @@
 					log_warn('<ForStatement> Value is not an object', value);
 					return null;
 				}
-				
 				if (is_Array(value)) 
-					log_warn('<mask:for> Consider to use `for..of` for Arrays');
+					log_warn('<ForStatement> Consider to use `for..of` for Arrays');
 				
-				return loop_Object(nodes, value, prop1, prop2);
+				return loop_Object(nodes, value, prop1, prop2, expr);
 			}
 		}
 		
-		function loop_Array(template, arr, prop1, prop2){
+		function loop_Array(template, arr, prop1, prop2, expr){
 			
 			var i = -1,
 				imax = arr.length,
@@ -2749,20 +2755,25 @@
 			
 			while ( ++i < imax ) {
 				scope = {};
-				
 				scope[prop1] = arr[i];
 				
 				if (prop2) 
 					scope[prop2] = i;
 				
-				
-				nodes[i] = createForItem(FOR_OF_ITEM, template, scope);
+				nodes[i] = createForItemNode(
+					FOR_OF_ITEM
+					, template
+					, scope
+					, i
+					, prop1
+					, expr
+				);
 			}
 			
 			return nodes;
 		}
 		
-		function loop_Object(template, obj, prop1, prop2){
+		function loop_Object(template, obj, prop1, prop2, expr){
 			var nodes = [],
 				i = 0,
 				scope, key, value;
@@ -2770,40 +2781,48 @@
 			for (key in obj) {
 				value = obj[key];
 				scope = {};
-				
 				scope[prop1] = key;
 				
 				if (prop2) 
 					scope[prop2] = value;
 				
-				nodes[i++] = createForItem(FOR_IN_ITEM, template, scope);
+				nodes[i++] = createForItemNode(
+					FOR_IN_ITEM
+					, template
+					, scope
+					, key
+					, prop2
+					, expr
+				);
 			}
-			
 			return nodes;
 		}
 		
-		function createForItem(name, nodes, scope) {
-			
+		function createForItemNode(name, nodes, scope, key, propVal, expr) {
 			return {
 				type: Dom.COMPONENT,
 				tagName: name,
 				nodes: nodes,
-				controller: {
-					compoName: name,
-					scope: scope,
-					renderEnd: handler_proto_renderEnd,
-					dispose: handler_proto_dispose
-				}
+				controller: createForItemHandler(name, scope, key, propVal, expr)
 			};
 		}
-		
-		function createHandler(name, scope) {
+		function createForItemHandler(name, scope, key, propVal, expr) {
 			return {
+				meta: {
+					serializeScope: true,
+				},
 				compoName: name,
 				scope: scope,
+				elements: null,
+				
+				propVal: propVal,
+				key: key,
+				expression: expr,
+				
 				renderEnd: handler_proto_renderEnd,
-				dispose: handler_proto_dispose
-			}
+				dispose: handler_proto_dispose,
+				serializeScope: for_proto_serializeScope
+			};
 		}
 		
 		function handler_proto_renderEnd(elements) {
@@ -2813,9 +2832,27 @@
 			if (this.elements) 
 				this.elements.length = 0;
 		}
+		function for_proto_serializeScope(scope, model) {
+			var ctr = this,
+				expr = ctr.expression,
+				key = ctr.key,
+				propVal = ctr.propVal;
+			
+		
+			var val = scope[propVal];
+			if (val != null && typeof val === 'object') 
+				scope[propVal] = '$ref:(' + expr + ')."' + key + '"';
+			
+			return scope;
+		}
 	
 		
 		var __ForDirective = [ 'prop1', 'prop2', 'in|of', 'expression' ],
+			i_PROP_1 = 0,
+			i_PROP_2 = 1,
+			i_TYPE = 2,
+			i_EXPR = 3,
+			
 			state_prop = 1,
 			state_multiprop = 2,
 			state_loopType = 3
@@ -2966,21 +3003,19 @@
 	
 		custom_Statements['each'] = {
 			
-			render: function(node, model, ctx, container, controller, children){
+			render: function(node, model, ctx, container, ctr, children){
 				
-				var array = ExpressionUtil.eval(node.expression, model, ctx, controller);
-				
+				var array = ExpressionUtil.eval(node.expression, model, ctx, ctr);
 				if (array == null) 
 					return;
 				
-				
-				build(node.nodes, array, ctx, container, controller, children);
+				build(node.nodes, array, ctx, container, ctr, children);
 			},
 			createItem: createEachItem,
 			build: build
 		};
 		
-		function build(template, array, ctx, container, controller, children){
+		function build(template, array, ctx, container, ctr, children){
 			var imax = array.length,
 				i = -1,
 				nodes = template,
@@ -2988,15 +3023,15 @@
 			
 			while ( ++i < imax ){
 				
-				itemCtr = createEachItem(i, nodes, controller);
+				itemCtr = createEachItem(i, nodes, ctr);
 				builder_build(nodes, array[i], ctx, container, itemCtr, children);
 				
 				if (itemCtr.components != null) {
-					var compos = controller.components;
+					var compos = ctr.components;
 					if (compos == null) 
-						compos = controller.components = [];
+						compos = ctr.components = [];
 					
-					arr_pushMany(controller.components, itemCtr.components);
+					arr_pushMany(ctr.components, itemCtr.components);
 				}
 			}
 			
@@ -4494,7 +4529,7 @@
 			}
 			
 			if (type === 1 && custom_Tags[node.tagName] != null) {
-				// check if the tag name was overriden
+				// check if custom controller exists
 				type = 4;
 			}
 		
@@ -4677,7 +4712,7 @@
 				;
 			controller.ID = ++builder_componentID;
 			
-			var scripts = document.getElementsByTagName('script'),
+			var scripts = _Array_slice.call(document.getElementsByTagName('script')),
 				script,
 				found = false;
 				
@@ -4746,13 +4781,13 @@
 				case dom_STATEMENT:
 					return _mergeNode(node, contents, tmplNode, clonedParent);
 				case dom_FRAGMENT:
-					return _mergeArray(node.nodes, contents, tmplNode, clonedParent);
+					return _mergeFragment(node, contents, tmplNode, clonedParent);
 			}
 			log_warn('Uknown type', node.type);
 			return null;
 		}
 		function _mergeArray(nodes, contents, tmplNode, clonedParent){
-			var fragment = new Dom.Fragment,
+			var fragment = [],
 				imax = nodes.length,
 				i = -1,
 				x, node;
@@ -4775,6 +4810,12 @@
 				
 				appendAny(fragment, x);
 			}
+			return fragment;
+		}
+		function _mergeFragment(frag, contents, tmplNode, clonedParent) {
+			var fragment = new Dom.Fragment;
+			fragment.parent = clonedParent;
+			fragment.nodes = _mergeArray(frag.nodes, contents, tmplNode, fragment);
 			return fragment;
 		}
 		function _mergeNode(node, contents, tmplNode, clonedParent){
@@ -5027,7 +5068,18 @@
 				appendAny(node, mix.nodes);
 				return;
 			}
-			node.appendChild(mix);
+			
+			if (typeof node.appendChild === 'function') {
+				node.appendChild(mix);
+				return;
+			}
+			
+			var l = node.length;
+			if (l > 0) {
+				var prev = node[l - 1];
+				prev.nextSibling = mix;
+			}
+			node.push(mix);
 		}
 		
 		var RESERVED = ' else placeholder each attr if parent scope'
@@ -5159,7 +5211,6 @@
 	// end:source /src/feature/merge.js
 	
 	// source /src/mask.js
-	
 	/**
 	 *  mask
 	 *
@@ -5343,37 +5394,7 @@
 			 **/
 			
 			registerUtil: customUtil_register,
-			//////function(utilName, mix){
-			//////	if (typeof mix === 'function') {
-			//////		custom_Utils[utilName] = mix;
-			//////		return;
-			//////	}
-			//////	
-			//////	if (typeof mix.process !== 'function') {
-			//////		mix.process = function(expr, model, ctx, element, controller, attrName, type){
-			//////			if ('node' === type) {
-			//////				
-			//////				this.nodeRenderStart(expr, model, ctx, element, controller);
-			//////				return this.node(expr, model, ctx, element, controller);
-			//////			}
-			//////			
-			//////			// asume 'attr'
-			//////			
-			//////			this.attrRenderStart(expr, model, ctx, element, controller, attrName);
-			//////			return this.attr(expr, model, ctx, element, controller, attrName);
-			//////		};
-			//////	
-			//////	}
-			//////	
-			//////	custom_Utils[utilName] = mix;
-			//////},
-			
 			getUtil: customUtil_get,
-			//////function(util){
-			//////	return util != null
-			//////		? custom_Utils[util]
-			//////		: custom_Utils;
-			//////},
 			
 			$utils: customUtil_$utils,
 			
@@ -5427,13 +5448,17 @@
 				 *	mask.render('span > ~[.]', 'Some string') // -> <span>Some string</span>
 				 *	```
 				 **/
-				getProperty: obj_getProperty,
+				getProperty: function (model, path){
+					log_warn('mask.getProperty is deprecated. Use `mask.obj.get`');
+					return obj_getProperty(model, path);
+				},
 				
 				ensureTmplFn: Parser.ensureTemplateFunction
 			},
 			Dom: Dom,
 			plugin: function(source){
-				eval(source);
+				/* In dev mode only as sources are not minimized */
+				global.eval(source);
 			},
 			
 			obj: {
@@ -5622,8 +5647,12 @@
 		
 			function processNodeHead(node) {
 				var tagName = node.tagName,
+					_id, _class;
+		
+				if (node.attr != null) {
 					_id = node.attr.id || '',
 					_class = node.attr['class'] || '';
+				}
 		
 		
 				if (typeof _id === 'function')
@@ -5634,7 +5663,6 @@
 				
 		
 				if (_id) {
-					
 					_id = _id.indexOf(' ') !== -1
 						? ''
 						: '#' + _id
@@ -5646,7 +5674,6 @@
 				
 		
 				var attr = '';
-		
 				for (var key in node.attr) {
 					if (key === 'id' || key === 'class') {
 						// the properties was not deleted as this template can be used later
@@ -6329,19 +6356,19 @@
 					}
 					Proto.meta.handleAttributes = fn;
 				};
-				compo_meta_executeAttributeHandler = function(compo){
+				compo_meta_executeAttributeHandler = function(compo, model){
 					var fn = compo.meta && compo.meta.handleAttributes;
-					return fn == null ? true : fn(compo);
+					return fn == null ? true : fn(compo, model);
 				};
 				
 				function _handleAll_Delegate(hash){
-					return function(compo){
+					return function(compo, model){
 						var attr = compo.attr,
 							key, fn, val, error;
 						for(key in hash){
 							fn    = hash[key];
 							val   = attr[key];
-							error = fn(compo, val);
+							error = fn(compo, val, model);
 							
 							if (error == null)
 								continue;
@@ -6380,11 +6407,11 @@
 					
 					Proto[property] = null;
 					Proto = null;
-					hash [attrName] = function(compo, attrVal){
+					hash [attrName] = function(compo, attrVal, model){
 						if (attrVal == null) 
 							return optional ? null : Error('Expected');
 						
-						var val = fn.call(compo, attrVal, compo);
+						var val = fn.call(compo, attrVal, compo, model, attrName);
 						if (val instanceof Error) 
 							return val;
 						
@@ -6409,7 +6436,10 @@
 						var num = Number(x);
 						return num === num ? num : Error('Number');
 					},
-					'boolean': function(x){
+					'boolean': function(x, compo, model, attrName){
+						if (typeof x === 'boolean') 
+							return x;
+						if (x === attrName)  return true;
 						if (x === 'true'  || x === '1') return true;
 						if (x === 'false' || x === '0') return false;
 						return Error('Boolean');
@@ -6515,12 +6545,13 @@
 			compo_createConstructor = function(Ctor, proto) {
 				var compos = proto.compos,
 					pipes = proto.pipes,
+					scope = proto.scope,
 					attr = proto.attr;
 					
-				if (compos == null
+				if (compos   == null
 					&& pipes == null
-					&& proto.attr == null) {
-					
+					&& attr  == null
+					&& scope == null) {
 					return Ctor;
 				}
 			
@@ -6531,7 +6562,7 @@
 			
 					if (compos != null) {
 						// use this.compos instead of compos from upper scope
-						// : in case compos from proto was extended after
+						// : in case compos they were extended after
 						this.compos = obj_create(this.compos);
 					}
 			
@@ -6541,9 +6572,11 @@
 					if (attr != null) 
 						this.attr = obj_create(this.attr);
 					
+					if (scope != null) 
+						this.scope = obj_create(this.scope);
+					
 					if (Ctor != null) 
 						Ctor.call(this);
-					
 				};
 			};
 		}());
@@ -7230,7 +7263,7 @@
 				return compo_create(arguments);
 			};
 		
-			// source Compo.static.js
+			// source ./Compo.static.js
 			obj_extend(Compo, {
 				create: function(){
 					return compo_create(arguments);
@@ -7405,9 +7438,6 @@
 					return include.instance();
 				},
 				
-				plugin: function(source){
-					
-				},
 				
 				Dom: {
 					addEventListener: dom_addEventListener
@@ -7415,8 +7445,8 @@
 			});
 			
 			
-			// end:source Compo.static.js
-			// source async.js
+			// end:source ./Compo.static.js
+			// source ./async.js
 			(function(){
 				
 				function _on(ctx, type, callback) {
@@ -7525,7 +7555,7 @@
 				};
 				
 			}());
-			// end:source async.js
+			// end:source ./async.js
 		
 			CompoProto = {
 				type: Dom.CONTROLLER,
@@ -7535,6 +7565,7 @@
 				compoName: null,
 				nodes: null,
 				components: null,
+				expression: null,
 				attr: null,
 				model: null,
 				
@@ -7552,6 +7583,8 @@
 					mode: null,
 					modelMode: null,
 					attributes: null,
+					serializeNodes: null,
+					handleAttributes: null,
 				},
 				
 				onRenderStart: null,
@@ -7570,7 +7603,7 @@
 						container = args[2];
 					}
 						
-					if (compo_meta_executeAttributeHandler(this) === false) {
+					if (compo_meta_executeAttributeHandler(this, model) === false) {
 						// errored
 						return;
 					}
@@ -8242,63 +8275,62 @@
 			}());
 			
 			/* class handler */
-			each(['add', 'remove', 'toggle', 'has'], function(method){
-				var isHasClass = 'has' === method,
-					isClassListSupported = docEl.classList != null,
-					Fn;
-				
+			(function(){
+				var isClassListSupported = docEl.classList != null;
 				var hasClass = isClassListSupported === true
 					? function (node, klass) {
-						return -1 !== _Array_indexOf.call(node.classList, klass);
+						return node.classList.contains(klass);
 					}
 					: function(node, klass) {
 						return -1 !== (' ' + node.className + ' ').indexOf(' ' + klass + ' ');
 					};
-				if (isHasClass) {
-					Fn = function(klass){
-						return -1 !== indexOf(this, function(node){
-							return hasClass(node, klass);
-						});
+				Proto.hasClass = function(klass){
+					return -1 !== indexOf(this, function(node){
+						return hasClass(node, klass)
+					});
+				};
+				var Shim;
+				(function(){
+					Shim = {
+						add: function(node, klass){
+							if (hasClass(node, klass) === false) 
+								add(node, klass);
+						},
+						remove: function(node, klass){
+							if (hasClass(node, klass) === true) 
+								remove(node, klass);
+						},
+						toggle: function(node, klass){
+							var fn = hasClass(node, klass) === true
+								? remove
+								: add;
+							fn(node, klass);
+						}
+					};
+					function add(node, klass){
+						node.className += ' ' + klass;
 					}
-				}
-				else {
-					var mutator = isClassListSupported === true
-						? function(node, klass){
+					function remove(node, klass){
+						node.className = (' ' + node.className + ' ').replace(' ' + klass + ' ', ' ');
+					}
+				}());
+				
+				each(['add', 'remove', 'toggle'], function(method){
+					var mutatorFn = isClassListSupported === false
+						? Shim[method]
+						: function(node, klass){
 							var classList = node.classList;
 							classList[method].call(classList, klass);
-						}
-						: (function(){
-							function add(node, klass){
-								node.className += ' ' + klass;
-							}
-							function remove(node, klass){
-								node.className = (' ' + node.className + ' ').replace(' ' + klass + ' ', ' ');
-							}
-							return function(node, klass){
-								var has = hasClass(node, klass)
-								if ('add' === method) {
-									if (false === has) 
-										add(node, klass);
-									return;
-								}
-								if ('remove' === method) {
-									if (true === has) 
-										remove(node, klass);
-									return;
-								}
-								var fn = has ? remove : add;
-								fn(node, klass);
-							}
-						}());
-					Fn = function(klass){
+						};
+					Proto[method + 'Class'] = function(klass){
 						return each(this, function(node){
-							mutator(node, klass);
+							mutatorFn(node, klass);
 						});
 					};
-				}
-				
-				Proto[method + 'Class'] = Fn;
-			});
+				});
+					
+			}());
+			
 			
 			// Events
 			(function(){
@@ -9541,23 +9573,7 @@
 		// end:source ../src/vars.js
 	
 		// source ../src/util/object.js
-		var obj_isDefined;
-		(function(){
-			obj_isDefined = function(obj, path) {
-				if (obj == null) 
-					return false;
-				
-				var parts = path.split('.'),
-					imax = parts.length,
-					i = -1;
-				while ( ++i < imax ) {
-					
-					if ((obj = obj[parts[i]]) == null) 
-						return false;
-				}
-				return true;
-			};
-		}());
+		
 		// end:source ../src/util/object.js
 		// source ../src/util/object.observe.js
 		var obj_addObserver,
@@ -9783,7 +9799,7 @@
 						'shift',
 						'reverse',
 						'sort',
-						// collections mutator
+						// collection mutators
 						'remove'
 					]
 				},
@@ -10327,45 +10343,80 @@
 				if (accessor == null) 
 					return;
 				
-				var accessorType = typeof accessor,
-					obj = _getObservableObject(model, ctr, accessor, accessorType);
-				if (obj == null) 
+				if (typeof accessor === 'object') {
+					var obj = expression_eval_strict(accessor.accessor, model, null, ctr);
+					if (obj == null || typeof obj !== 'object') {
+						console.error('Binding failed to an object over accessor', accessor.ref);
+						return;
+					}
+					mutatorFn(obj, accessor.ref, callback);
 					return;
+				}
 				
-				var property = accessorType === 'object'
-					? accessor.ref
-					: accessor;
+				// string;
+				var property = accessor,
+					parts = property.split('.'),
+					imax = parts.length;
+				
+				if (imax > 1) {
+					var first = parts[0];
+					if (first === '$c') {
+						// Controller Observer
+						ctr = _getObservable_Controller(ctr, parts.slice(1), imax - 1);
+						mutatorFn(ctr, property.substring(3), callback);
+						return;
+					}
+					if ('$a' === first || '$ctx' === first) 
+						return;
+				}
+				
+				var obj = null;
+				if (_isDefined(model, parts, imax)) {
+					obj = model;
+				}
+				if (obj == null) {
+					obj = _getObservable_Scope(ctr, parts, imax);
+				}
+				if (obj == null) {
+					obj = model;
+				}
+				
 				mutatorFn(obj, property, callback);
 			}
-			function _getObservableObject(model, ctr, property, type){
-				if (type === 'object') {
-					var obj = expression_eval_strict(property.accessor, model, null, ctr);
-					if (obj == null || typeof obj !== 'object') {
-						log_error('Binding failed to an object over accessor', property);
-						return null;
-					}
-					return obj;
-				}
-				if (property == null || property === '$c') 
-					return null;
-				
-				if (obj_isDefined(model, property)) 
-					return model;
-				
-				if (obj_isDefined(ctr, property)) 
-					return ctr;
-				
-				var x = ctr,
-					scope;
-				while(x != null){
-					scope = x.scope;
-					if (scope != null && obj_isDefined(scope, property)) 
+			
+			function _getObservable_Scope(ctr, parts, imax){
+				var scope;
+				while(ctr != null){
+					scope = ctr.scope;
+					if (scope != null && _isDefined(scope, parts, imax)) 
 						return scope;
 					
-					x = x.parent;
+					ctr = ctr.parent;
 				}
-				return model;
+				return null;
 			}
+			function _getObservable_Controller(ctr, parts, imax) {
+				while(ctr != null){
+					if (_isDefined(ctr, parts, imax)) 
+						return ctr;
+					ctr = ctr.parent;
+				}
+				return ctr;
+			}
+			function _isDefined(obj, parts, imax){
+				if (obj == null) 
+					return false;
+					
+				var i = 0, val;
+				for(; i < imax; i++) {
+					obj = obj[parts[i]];
+					if (obj === void 0) 
+						return false;
+				}
+				return true;
+			}
+			
+			
 		}());
 		
 		
@@ -10694,7 +10745,7 @@
 							this.property = 'element.value';
 							break;
 						case 'SELECT':
-							this.domWay = DomObjectTransport.DATE.SELECT;
+							this.domWay = DomObjectTransport.SELECT;
 							break;
 						default:
 							this.property = 'element.innerHTML';
@@ -11624,18 +11675,12 @@
 					return custom_Statements[name].getNodes(node, model, ctx, controller);
 				};
 				
-				_renderElements = function(nodes, model, ctx, container, controller, children){
+				_renderElements = function(nodes, model, ctx, container, ctr){
 					if (nodes == null) 
 						return null;
 					
 					var elements = [];
-					builder_build(nodes, model, ctx, container, controller, elements);
-					
-					if (children == null) 
-						return elements;
-					
-					arr_pushMany(children, elements);
-					
+					builder_build(nodes, model, ctx, container, ctr, elements);
 					return elements;
 				};
 				
@@ -11651,7 +11696,7 @@
 					
 					compo.refresh = fn_proxy(compo.refresh, compo);
 					compo.binder = expression_createBinder(
-						compo.expr,
+						compo.expr || compo.expression,
 						model,
 						ctx,
 						controller,
@@ -11659,7 +11704,7 @@
 					);
 					
 					
-					expression_bind(compo.expr, model, ctx, controller, compo.binder);
+					expression_bind(compo.expr || compo.expression, model, ctx, controller, compo.binder);
 				};
 				
 				
@@ -12078,7 +12123,9 @@
 					meta: {
 						serializeNodes: true
 					},
+					modelRef: null,
 					render: function(model, ctx, container, ctr, childs){
+						this.modelRef = this.expression;
 						var val = expression_eval_strict(this.expression, model, ctx, ctr);
 						return build(this.nodes, val, ctx, container, ctr);
 					},
@@ -12458,7 +12505,7 @@
 					dispose: function(){
 						
 						expression_unbind(
-							this.expr, this.model, this.parent, this.binder
+							this.expr || this.expression, this.model, this.parent, this.binder
 						);
 					}
 				};
@@ -12483,8 +12530,7 @@
 						serializeNodes: function(node){
 							return mask.stringify(node);
 						},
-						render: function(model, ctx, container, controller, childs){
-							
+						render: function(model, ctx, container, ctr, childs){
 							var directive = For.parseFor(this.expression),
 								attr = this.attr;
 							
@@ -12493,8 +12539,7 @@
 							attr[attr_TYPE] = directive[2];
 							attr[attr_EXPR] = directive[3];
 							
-							
-							var value = expression_eval(directive[3], model, ctx, controller);
+							var value = expression_eval_strict(directive[3], model, ctx, ctr);
 							if (value == null) 
 								return;
 							
@@ -12513,7 +12558,7 @@
 							);
 						},
 						
-						renderEnd: function(els, model, ctx, container, controller){
+						renderEnd: function(els, model, ctx, container, ctr){
 							
 							var compo = new ForStatement(this, this.attr);
 							
@@ -12522,7 +12567,7 @@
 							
 							
 							
-							_compo_initAndBind(compo, this, model, ctx, container, controller);
+							_compo_initAndBind(compo, this, model, ctx, container, ctr);
 							
 							return compo;
 						},
@@ -12534,9 +12579,9 @@
 						
 					});
 					
-					function initialize(compo, node, els, model, ctx, container, controller) {
+					function initialize(compo, node, els, model, ctx, container, ctr) {
 						
-						compo.parent = controller;
+						compo.parent = ctr;
 						compo.model = model;
 						
 						compo.refresh = fn_proxy(compo.refresh, compo);
@@ -12544,12 +12589,12 @@
 							compo.expr,
 							model,
 							ctx,
-							controller,
+							ctr,
 							compo.refresh
 						);
 						
 						
-						expression_bind(compo.expr, model, ctx, controller, compo.binder);
+						expression_bind(compo.expr, model, ctx, ctr, compo.binder);
 						
 					}
 					
@@ -12591,58 +12636,90 @@
 				(function(){
 					
 					var Each = custom_Statements['each'];
-						
 					
 					mask.registerHandler('+each', {
-						
-						render: function(model, ctx, container, controller, children){
-							
-							var node = this;
-							
-							var array = expression_eval(node.expression, model, ctx, controller);
+						meta: {
+							serializeNodes: true
+						},
+						serializeNodes: function(node){
+							return mask.stringify(node);
+						},
+						//modelRef: null,
+						render: function(model, ctx, container, ctr, children){
+							//this.modelRef = this.expression;
+							var array = expression_eval(this.expression, model, ctx, ctr);
 							if (array == null) 
 								return;
 							
 							arr_createRefs(array);
 							
 							build(
-								node.nodes,
+								this.nodes,
 								array,
 								ctx,
 								container,
-								node,
+								this,
 								children
 							);
 						},
 						
-						renderEnd: function(els, model, ctx, container, controller){
-							
+						renderEnd: function(els, model, ctx, container, ctr){
 							var compo = new EachStatement(this, this.attr);
 							
 							compo.placeholder = document.createComment('');
 							container.appendChild(compo.placeholder);
 							
-							_compo_initAndBind(compo, this, model, ctx, container, controller);
+							_compo_initAndBind(compo, this, model, ctx, container, ctr);
 							
 							return compo;
 						}
 						
 					});
+					mask.registerHandler('each::item', EachItem);
 					
-					function build(nodes, array, ctx, container, controller, elements) {
+					function build(nodes, array, ctx, container, ctr, elements) {
 						var imax = array.length,
-							i = -1,
-							itemCtr;
-						
-						while ( ++i < imax ){
-							
-							itemCtr = Each.createItem(i, nodes, controller);
-							builder_build(itemCtr, array[i], ctx, container, controller, elements);
+							nodes_ = new Array(imax),
+							i = 0;
+						for(; i < imax; i++) {
+							nodes_[i] = createEachNode(nodes, array[i], i, ctr.expression);
 						}
+						builder_build(nodes_, null, ctx, container, ctr, elements);
 					}
 					
+					function createEachNode(nodes, model, index, expr){
+						var x = new EachItem;
+						x.scope = { index: index };
+						x.model = model;
+						x.modelRef = '(' + expr + ')."' + index + '"';
+						return {
+							type: Dom.COMPONENT,
+							tagName: 'each::item',
+							nodes: nodes,
+							controller: x
+						};
+					}
+					
+					function EachItem() {}
+					EachItem.prototype = {
+						compoName: 'each::item',
+						scope: null,
+						model: null,
+						modelRef: null,
+						parent: null,
+						renderEnd: function(els) {
+							this.elements = els;
+						},
+						dispose: function(){
+							if (this.elements != null) {
+								this.elements.length = 0;
+								this.elements = null;
+							}
+						}
+					};
+					
 					function EachStatement(node, attr) {
-						this.expr = node.expression;
+						this.expression = node.expression;
 						this.nodes = node.nodes;
 						
 						if (node.components == null) 

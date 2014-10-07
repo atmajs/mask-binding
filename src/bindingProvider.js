@@ -54,7 +54,7 @@ var BindingProvider;
 					this.property = 'element.value';
 					break;
 				case 'SELECT':
-					this.domWay = DomObjectTransport.DATE.SELECT;
+					this.domWay = DomObjectTransport.SELECT;
 					break;
 				default:
 					this.property = 'element.innerHTML';

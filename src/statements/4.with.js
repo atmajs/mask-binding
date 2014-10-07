@@ -6,14 +6,27 @@
 		meta: {
 			serializeNodes: true
 		},
-		modelRef: null,
-		render: function(model, ctx, container, ctr, childs){
-			this.modelRef = this.expression;
-			var val = expression_eval_strict(this.expression, model, ctx, ctr);
-			return build(this.nodes, val, ctx, container, ctr);
+		rootModel: null,
+		render: function(model, ctx, container, ctr){
+			var expr = this.expression,
+				nodes = this.nodes,
+				val = expression_eval_strict(
+					expr, model, ctx, ctr
+				)
+				;
+			this.rootModel = model;
+			return build(nodes, val, ctx, container, ctr);
+		},
+		
+		onRenderStartClient: function(model, ctx){
+			this.rootModel = model;
+			this.model = expression_eval_strict(
+				this.expression, model, ctx, this
+			);
 		},
 		
 		renderEnd: function(els, model, ctx, container, ctr){
+			model = this.rootModel || model;
 			
 			var compo = new WithStatement(this);
 		

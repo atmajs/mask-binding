@@ -34,7 +34,7 @@ var _getNodes,
 		
 		compo.refresh = fn_proxy(compo.refresh, compo);
 		compo.binder = expression_createBinder(
-			compo.expr,
+			compo.expr || compo.expression,
 			model,
 			ctx,
 			controller,
@@ -42,7 +42,7 @@ var _getNodes,
 		);
 		
 		
-		expression_bind(compo.expr, model, ctx, controller, compo.binder);
+		expression_bind(compo.expr || compo.expression, model, ctx, controller, compo.binder);
 	};
 	
 	

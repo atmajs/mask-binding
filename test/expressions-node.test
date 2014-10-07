@@ -1,12 +1,12 @@
 global.window = global;
-global.mask = global.mask.mask;
+
 include
 	.routes({
 		util: '/src/util/{0}.js'
 	})
 	.inject({
 		_: [ '/.import/utils.embed.js'],
-		util: ['object', 'object.observe', 'expression']
+		util: ['object.observe', 'expression']
 	})
 	.done(function() {
 	
