@@ -797,7 +797,7 @@
 						maskNode = maskNode.nodes[0];
 				}
 				
-				if (meta.mask) {
+				if (meta.mask != null) {
 					setupClientTemplate(meta, Handler, node, model, ctx, ctr);
 					return node;
 				}
@@ -885,7 +885,9 @@
 					type: Dom.COMPONENT,
 					tagName: meta.compoName,
 					attr: meta.attr,
-					nodes: mask.parse(meta.mask),
+					nodes: meta.mask === ''
+						? null
+						: mask.parse(meta.mask),
 					controller: Handler,
 					expression: meta.expression,
 					scope: meta.scope

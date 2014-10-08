@@ -5,7 +5,7 @@ UTest({
 			section >
 				for ((letter, index) of letters)>
 					+visible(index % 2 === current) >
-						span name='~[letter]' data-index='~[index]';
+						span.test name='~[letter]' data-index='~[index]';
 		`;
 		
 		var model = {
@@ -15,16 +15,15 @@ UTest({
 		var $dom = $render(template, model);
 		
 		$dom
-			.find('span')
+			.find('span.test')
 			.eq_('length', model.letters.length)
 			.each(function(){
 				var letter = this.getAttribute('name');
 				var i = model.letters.indexOf(letter);
-				var visible = i / 2 === 0;
 				
-				$(this)
-					[i % 2 === 0 ? 'notEq_' : 'eq_']
-					('css', 'display', 'none');
+				var display = this.style.display;
+				var fn = i % 2 === 0 ? notEq_ : eq_;
+				fn(display, 'none', display + ' at ' + i);
 			});
 		
 		model.current = 1;
@@ -33,17 +32,16 @@ UTest({
 			.each(function(){
 				var letter = this.getAttribute('name');
 				var i = model.letters.indexOf(letter);
-				var visible = i / 2 === 0;
 				
-				$(this)
-					[i % 2 === 1 ? 'notEq_' : 'eq_']
-					('css', 'display', 'none');
+				var display = this.style.display;
+				var fn = i % 2 === 1 ? notEq_ : eq_;
+				fn(display, 'none', display + ' at ' + i);
 			});
 	},
 	
 	// Backend
 	'$config': {
-		'http.include': '/test/node.libraries.js'
+		'http.include': [ '/test/node.libraries.js' ]
 	},
 	
 	'+visible - backend' (done) {
@@ -74,17 +72,18 @@ UTest({
 				eq_(win.app.components.length, model.letters.length);
 				eq_(win.app.model.__observers.current.length, model.letters.length);
 				
+				
 				$dom
 					.find('span.test')
 					.eq_('length', model.letters.length)
 					.each(function(){
 						var letter = this.getAttribute('name');
 						var i = model.letters.indexOf(letter);
-						var visible = i / 2 === 0;
 						
-						$(this)
-							[i % 2 === 0 ? 'notEq_' : 'eq_']
-							('css', 'display', 'none');
+						var display = this.style.display;
+						var fn = i % 2 === 0 ? notEq_ : eq_;
+						
+						fn(display, 'none', display + ' at ' + i);
 					});
 				
 				win.app.model.current = 1;
@@ -94,9 +93,9 @@ UTest({
 						var letter = this.getAttribute('name');
 						var i = model.letters.indexOf(letter);
 						
-						$(this)
-							[i % 2 === 1 ? 'notEq_' : 'eq_']
-							('css', 'display', 'none');
+						var display = this.style.display;
+						var fn = i % 2 === 1 ? notEq_ : eq_;
+						fn(display, 'none', display + ' at ' + i);
 					});
 				
 				done();

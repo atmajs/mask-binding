@@ -2998,65 +2998,61 @@
 	
 	// end:source 2.for.js
 	// source 3.each.js
-	
 	(function(){
 	
-		custom_Statements['each'] = {
-			
+		custom_Statements['each'] = {		
 			render: function(node, model, ctx, container, ctr, children){
 				
 				var array = ExpressionUtil.eval(node.expression, model, ctx, ctr);
 				if (array == null) 
 					return;
 				
-				build(node.nodes, array, ctx, container, ctr, children);
-			},
-			createItem: createEachItem,
-			build: build
+				builder_build(
+					getNodes(node, array)
+					, array
+					, ctx
+					, container
+					, ctr
+					, children
+				);
+			}
 		};
 		
-		function build(template, array, ctx, container, ctr, children){
+		function getNodes(node, array){
 			var imax = array.length,
-				i = -1,
-				nodes = template,
-				itemCtr;
-			
-			while ( ++i < imax ){
-				
-				itemCtr = createEachItem(i, nodes, ctr);
-				builder_build(nodes, array[i], ctx, container, itemCtr, children);
-				
-				if (itemCtr.components != null) {
-					var compos = ctr.components;
-					if (compos == null) 
-						compos = ctr.components = [];
-					
-					arr_pushMany(ctr.components, itemCtr.components);
-				}
+				nodes = new Array(imax),
+				template = node.nodes,
+				expression = node.expression,
+				exprPrefix = expression === '.'
+					? '."'
+					: '(' + node.expression + ')."',
+				i = 0;
+			for(; i < imax; i++){
+				nodes[i] = createEachNode(template, array[i], exprPrefix, i);
 			}
-			
+			return nodes;
 		}
-		
-		function createEachItem(index, nodes, parent) {
-			
+		function createEachNode(nodes, model, exprPrefix, i){
 			return {
 				type: Dom.COMPONENT,
-				compoName: 'each::item',
-				scope: {
-					index: index
-				},
-				parent: parent,
+				tagName: 'each::item',
 				nodes: nodes,
-				model: null,
-				attr: null,
-				components: null,
-				elements: null,
-				ID: null
+				controller: createEachItemHandler(model, i, exprPrefix)
 			};
 		}
-		
+		function createEachItemHandler(model, i, exprPrefix) {
+			return {
+				compoName: 'each::item',
+				model: model,
+				scope: {
+					index: i
+				},
+				modelRef: exprPrefix + i + '"',
+				attr: null,
+				meta: null
+			};
+		}
 	}());
-	
 	// end:source 3.each.js
 	// source 4.with.js
 		
@@ -12123,14 +12119,27 @@
 					meta: {
 						serializeNodes: true
 					},
-					modelRef: null,
-					render: function(model, ctx, container, ctr, childs){
-						this.modelRef = this.expression;
-						var val = expression_eval_strict(this.expression, model, ctx, ctr);
-						return build(this.nodes, val, ctx, container, ctr);
+					rootModel: null,
+					render: function(model, ctx, container, ctr){
+						var expr = this.expression,
+							nodes = this.nodes,
+							val = expression_eval_strict(
+								expr, model, ctx, ctr
+							)
+							;
+						this.rootModel = model;
+						return build(nodes, val, ctx, container, ctr);
+					},
+					
+					onRenderStartClient: function(model, ctx){
+						this.rootModel = model;
+						this.model = expression_eval_strict(
+							this.expression, model, ctx, this
+						);
 					},
 					
 					renderEnd: function(els, model, ctx, container, ctr){
+						model = this.rootModel || model;
 						
 						var compo = new WithStatement(this);
 					
@@ -12530,7 +12539,7 @@
 						serializeNodes: function(node){
 							return mask.stringify(node);
 						},
-						render: function(model, ctx, container, ctr, childs){
+						render: function(model, ctx, container, ctr, children){
 							var directive = For.parseFor(this.expression),
 								attr = this.attr;
 							
@@ -12554,7 +12563,7 @@
 								ctx,
 								container,
 								this,
-								childs
+								children
 							);
 						},
 						

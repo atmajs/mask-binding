@@ -831,8 +831,10 @@
 			return compo_getRenderMode(compo) === compo_renderMode_SERVER;
 		};
 		compo_setMode = function(ctr, mode){
-			if (ctr.meta == null) 
-				ctr.meta = new CompoMeta;
+			ctr.meta = ctr.meta == null
+				? new CompoMeta
+				: obj_create(ctr.meta)
+				;
 			ctr.meta.mode = mode;
 		};
 		compo_getMetaInfo = function(compo){
@@ -3973,65 +3975,61 @@
 	
 	// end:source 2.for.js
 	// source 3.each.js
-	
 	(function(){
 	
-		custom_Statements['each'] = {
-			
+		custom_Statements['each'] = {		
 			render: function(node, model, ctx, container, ctr, children){
 				
 				var array = ExpressionUtil.eval(node.expression, model, ctx, ctr);
 				if (array == null) 
 					return;
 				
-				build(node.nodes, array, ctx, container, ctr, children);
-			},
-			createItem: createEachItem,
-			build: build
+				builder_build(
+					getNodes(node, array)
+					, array
+					, ctx
+					, container
+					, ctr
+					, children
+				);
+			}
 		};
 		
-		function build(template, array, ctx, container, ctr, children){
+		function getNodes(node, array){
 			var imax = array.length,
-				i = -1,
-				nodes = template,
-				itemCtr;
-			
-			while ( ++i < imax ){
-				
-				itemCtr = createEachItem(i, nodes, ctr);
-				builder_build(nodes, array[i], ctx, container, itemCtr, children);
-				
-				if (itemCtr.components != null) {
-					var compos = ctr.components;
-					if (compos == null) 
-						compos = ctr.components = [];
-					
-					arr_pushMany(ctr.components, itemCtr.components);
-				}
+				nodes = new Array(imax),
+				template = node.nodes,
+				expression = node.expression,
+				exprPrefix = expression === '.'
+					? ('."')
+					: ('(' + node.expression + ')."'),
+				i = 0;
+			for(; i < imax; i++){
+				nodes[i] = createEachNode(template, array[i], exprPrefix, i);
 			}
-			
+			return nodes;
 		}
-		
-		function createEachItem(index, nodes, parent) {
-			
+		function createEachNode(nodes, model, exprPrefix, i){
 			return {
 				type: Dom.COMPONENT,
-				compoName: 'each::item',
-				scope: {
-					index: index
-				},
-				parent: parent,
+				tagName: 'each::item',
 				nodes: nodes,
-				model: null,
-				attr: null,
-				components: null,
-				elements: null,
-				ID: null
+				controller: createEachItemHandler(model, i, exprPrefix)
 			};
 		}
-		
+		function createEachItemHandler(model, i, exprPrefix) {
+			return {
+				compoName: 'each::item',
+				model: model,
+				scope: {
+					index: i
+				},
+				modelRef: exprPrefix + i + '"',
+				attr: null,
+				meta: null
+			};
+		}
 	}());
-	
 	// end:source 3.each.js
 	// source 4.with.js
 		
@@ -4390,18 +4388,16 @@
 					
 			}
 			
-			
-			function _prepairControllers(controller, output) {
-				if (output == null) {
+			function _prepairControllers(ctr, output) {
+				if (output == null) 
 					output = {};
-				}
+				
+				output.compoName = ctr.compoName;
+				output.ID = ctr.ID;
 			
-				output.compoName = controller.compoName;
-				output.ID = controller.ID;
-			
-				if (controller.components) {
+				if (ctr.components) {
 					var compos = [],
-						array = controller.components;
+						array = ctr.components;
 					for (var i = 0, x, length = array.length; i < length; i++) {
 						x = array[i];
 			
@@ -4822,7 +4818,6 @@
 		
 		// end:source ./Doctype.js
 		// source ./DocumentFragment.js
-		
 		HtmlDom.DocumentFragment = function() {};
 		
 		obj_inherit(HtmlDom.DocumentFragment, HtmlDom.Node, {
@@ -4839,8 +4834,6 @@
 				return string;
 			}
 		});
-		
-		
 		// end:source ./DocumentFragment.js
 		// source ./Element.js
 		
@@ -5048,7 +5041,6 @@
 		(function(){
 			
 			HtmlDom.Component = function (node, model, ctx, container, ctr) {
-				
 				var compo,
 					attr,
 					key,
@@ -5090,14 +5082,19 @@
 				
 				attr = obj_extend(compo.attr, node.attr);
 				
-				if (attr['x-mode'] !== void 0) 
-					compo_setMode(compo, attr['x-mode']) ;
+				if (attr['x-mode'] !== void 0) {
+					mode = attr['x-mode'];
+					compo_setMode(compo, mode) ;
+				}
 				
 				if (attr['x-mode-model']  !== void 0) 
 					compo.modeModel = attr['x-mode-model'];
 				
 				if (compo_isServerMode(this.compo) === false) {
 					this.ID = this.compo.ID = ++ ctx._id;
+				}
+				if (mode === 'client') {
+					//compo.render = fn_doNothing;
 				}
 				
 				
@@ -5360,7 +5357,6 @@
 		// end:source ./Comment.js
 		
 		// source ./document.js
-		
 		document = {
 			createDocumentFragment: function(){
 				return new HtmlDom.DocumentFragment();
@@ -5371,16 +5367,13 @@
 			createTextNode: function(text){
 				return new HtmlDom.TextNode(text);
 			},
-		
 			createComment: function(text){
 				return new HtmlDom.Comment(text);
 			},
-			
-			createComponent: function(compo, model, ctx, container, controller){
-				return new HtmlDom.Component(compo, model, ctx, container, controller);
+			createComponent: function(compo, model, ctx, container, ctr){
+				return new HtmlDom.Component(compo, model, ctx, container, ctr);
 			}
 		};
-		
 		// end:source ./document.js
 	
 	}());
@@ -5663,12 +5656,12 @@
 		}());
 		// end:source /ref-mask/src/build/type.textNode.js
 		
-		builder_build = function(template, model, ctx, container, controller, children){
+		builder_build = function(template, model, ctx, container, ctr, children){
 			if (container == null) 
 				container = new HtmlDom.DocumentFragment();
 			
-			if (controller == null) 
-				controller = new Dom.Component();
+			if (ctr == null) 
+				ctr = new Dom.Component();
 			
 			if (ctx == null) 
 				ctx = { _model: null, _ctx: null };
@@ -5679,7 +5672,7 @@
 			if (ctx._id == null) 
 				ctx._id = Cache.controllerID;
 				
-			return build(template, model, ctx, container, controller, children);
+			return build(template, model, ctx, container, ctr, children);
 		};
 		
 	
@@ -6574,7 +6567,7 @@
 				 *	```
 				 **/
 				getProperty: function (model, path){
-					log_warn('mask.getProperty is deprecated. Use `mask.obj.get`', new Error().stack);
+					log_warn('mask.getProperty is deprecated. Use `mask.obj.get`');
 					return obj_getProperty(model, path);
 				},
 				
@@ -14644,14 +14637,27 @@
 					meta: {
 						serializeNodes: true
 					},
-					modelRef: null,
-					render: function(model, ctx, container, ctr, childs){
-						this.modelRef = this.expression;
-						var val = expression_eval_strict(this.expression, model, ctx, ctr);
-						return build(this.nodes, val, ctx, container, ctr);
+					rootModel: null,
+					render: function(model, ctx, container, ctr){
+						var expr = this.expression,
+							nodes = this.nodes,
+							val = expression_eval_strict(
+								expr, model, ctx, ctr
+							)
+							;
+						this.rootModel = model;
+						return build(nodes, val, ctx, container, ctr);
+					},
+					
+					onRenderStartClient: function(model, ctx){
+						this.rootModel = model;
+						this.model = expression_eval_strict(
+							this.expression, model, ctx, this
+						);
 					},
 					
 					renderEnd: function(els, model, ctx, container, ctr){
+						model = this.rootModel || model;
 						
 						var compo = new WithStatement(this);
 					
@@ -15051,7 +15057,7 @@
 						serializeNodes: function(node){
 							return mask.stringify(node);
 						},
-						render: function(model, ctx, container, ctr, childs){
+						render: function(model, ctx, container, ctr, children){
 							var directive = For.parseFor(this.expression),
 								attr = this.attr;
 							
@@ -15075,7 +15081,7 @@
 								ctx,
 								container,
 								this,
-								childs
+								children
 							);
 						},
 						
