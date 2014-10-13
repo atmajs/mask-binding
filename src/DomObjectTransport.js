@@ -95,19 +95,29 @@ var DomObjectTransport;
 			get: function(provider) {
 				var el = provider.element,
 					i = el.selectedIndex;
-				return  i === -1
-					? ''
-					: el.options[i].getAttribute('name')
+				if (i === -1) 
+					return '';
+				
+				var opt = el.options[i],
+					val = opt.getAttribute('value');
+				return val == null
+					? opt.getAttribute('name') /* obsolete */
+					: val
 					;
 			},
 			set: function(provider, val) {
 				var el = provider.element,
 					options = el.options,
 					imax = options.length,
-					i = -1;
-				while( ++i < imax ){
+					opt, x, i;
+				for(i = 0; i < imax; i++){
+					opt = options[i];
+					x = opt.getAttribute('value');
+					if (x == null) 
+						x = opt.getAttribute('name');
+					
 					/* jshint eqeqeq: false */
-					if (options[i].getAttribute('name') == val) {
+					if (x == val) {
 						/* jshint eqeqeq: true */
 						el.selectedIndex = i;
 						return;

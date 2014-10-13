@@ -45,27 +45,25 @@
 	function build(nodes, array, ctx, container, ctr, elements) {
 		var imax = array.length,
 			nodes_ = new Array(imax),
-			exprPrefix = ctr.expression === '.'
-				? '."'
-				: '(' + ctr.expression + ')."',
-			i = 0;
+			i = 0, node;
 		
 		for(; i < imax; i++) {
-			nodes_[i] = createEachNode(nodes, array[i], i, exprPrefix);
+			node = createEachNode(nodes, i);
+			builder_build(node, array[i], ctx, container, ctr, elements);
 		}
-		builder_build(nodes_, null, ctx, container, ctr, elements);
 	}
 	
-	function createEachNode(nodes, model, index, exprPrefix){
-		var x = new EachItem;
-		x.scope = { index: index };
-		x.model = model;
-		x.modelRef = exprPrefix + index + '"';
+	function createEachNode(nodes, index){
+		var item = new EachItem;
+		item.scope = { index: index };
+		
 		return {
 			type: Dom.COMPONENT,
 			tagName: 'each::item',
 			nodes: nodes,
-			controller: x
+			controller: function() {
+				return item;
+			}
 		};
 	}
 	
@@ -76,6 +74,16 @@
 		model: null,
 		modelRef: null,
 		parent: null,
+		renderStart: IS_NODE === true
+			?  function(){
+				var expr = this.parent.expression;
+				this.modelRef = ''
+					+ (expr === '.' ? '' : ('(' + expr + ')'))
+					+ '."'
+					+ this.scope.index
+					+ '"';
+			}
+			: null,
 		renderEnd: function(els) {
 			this.elements = els;
 		},

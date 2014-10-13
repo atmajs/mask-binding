@@ -1,6 +1,6 @@
 // source /src/license.txt
 /*!
- * MaskJS v0.10.1
+ * MaskJS v0.11.2
  * Part of the Atma.js Project
  * http://atmajs.com/
  *
@@ -4317,11 +4317,8 @@
 		// end:source type.node.js
 		// source type.component.js
 		var build_compo;
-		
 		(function(){
-			
-			
-			build_compo = function(node, model, ctx, container, controller, childs){
+			build_compo = function(node, model, ctx, container, ctr, children){
 				
 				var compoName = node.tagName,
 					Handler;
@@ -4333,37 +4330,34 @@
 					Handler = custom_Tags[compoName];
 				
 				if (Handler == null) 
-					return build_NodeAsCompo(node, model, ctx, container, controller, childs);
-				
+					return build_NodeAsCompo(node, model, ctx, container, ctr, children);
 				
 				var isStatic = false,
 					handler, attr, key;
 				
 				if (typeof Handler === 'function') {
-					handler = new Handler(model);
+					handler = new Handler(model, node);
 				} else{
 					handler = Handler;
 					isStatic = true;
 				}
-				
 				var fn = isStatic
 					? build_Static
 					: build_Component
 					;
-				
-				return fn(handler, node, model, ctx, container, controller, childs);
+				return fn(handler, node, model, ctx, container, ctr, children);
 			}
 			
 			
 			// PRIVATE
 			
-			function build_Component(compo, node, model, ctx, container, controller, childs){
+			function build_Component(compo, node, model, ctx, container, ctr, children){
 				
 				var attr, key;
 				
 				compo.compoName = node.tagName;
 				compo.attr = attr = attr_extend(compo.attr, node.attr);
-				compo.parent = controller;
+				compo.parent = ctr;
 				compo.ID = ++builder_componentID;
 				compo.expression = node.expression;
 				
@@ -4375,7 +4369,7 @@
 				
 				for (key in attr) {
 					if (typeof attr[key] === 'function') 
-						attr[key] = attr[key]('attr', model, ctx, container, controller, key);
+						attr[key] = attr[key]('attr', model, ctx, container, ctr, key);
 				}
 			
 				
@@ -4391,10 +4385,10 @@
 					compo.renderStart(model, ctx, container);
 				
 				
-				controller_pushCompo(controller, compo);
+				controller_pushCompo(ctr, compo);
 				
 				if (compo.async === true) {
-					compo.await(build_resumeDelegate(compo, model, ctx, container, childs));
+					compo.await(build_resumeDelegate(compo, model, ctx, container, children));
 					return null;
 				}
 				
@@ -4409,7 +4403,6 @@
 				
 				
 				if (typeof compo.render === 'function') {
-					
 					compo.render(compo.model, ctx, container);
 					// Overriden render behaviour - do not render subnodes
 					return null;
@@ -4426,7 +4419,7 @@
 					compo,
 					clone;
 				
-				if (Ctor) {
+				if (Ctor != null) {
 					clone = new Ctor(node, ctr);
 				}
 				else {
@@ -4702,11 +4695,14 @@
 			if (container == null) 
 				container = document.body;
 				
-			var controller = is_Function(Ctr)
+			var ctr = is_Function(Ctr)
 				? new Ctr
 				: new Compo
 				;
-			controller.ID = ++builder_componentID;
+			ctr.ID = ++builder_componentID;
+			
+			if (model == null) 
+				model = ctr.model || {};
 			
 			var scripts = _Array_slice.call(document.getElementsByTagName('script')),
 				script,
@@ -4722,7 +4718,7 @@
 					continue;
 				
 				var fragment = builder_build(
-					parser_parse(script.textContent), model, {}, null, controller
+					parser_parse(script.textContent), model, {}, null, ctr
 				);
 				script.parentNode.insertBefore(fragment, script);
 				found = true;
@@ -4730,11 +4726,11 @@
 			if (found === false) {
 				log_warn("No blocks found: <script type='text/mask' data-run='true'>...</script>");
 			}
-			if (is_Function(controller.renderEnd)) {
-				controller.renderEnd(container, model);
+			if (is_Function(ctr.renderEnd)) {
+				ctr.renderEnd(container, model);
 			}
-			Compo.signal.emitIn(controller, 'domInsert');
-			return controller;
+			Compo.signal.emitIn(ctr, 'domInsert');
+			return ctr;
 		};
 	}());
 	// end:source /src/feature/run.js
@@ -10582,19 +10578,29 @@
 					get: function(provider) {
 						var el = provider.element,
 							i = el.selectedIndex;
-						return  i === -1
-							? ''
-							: el.options[i].getAttribute('name')
+						if (i === -1) 
+							return '';
+						
+						var opt = el.options[i],
+							val = opt.getAttribute('value');
+						return val == null
+							? opt.getAttribute('name') /* obsolete */
+							: val
 							;
 					},
 					set: function(provider, val) {
 						var el = provider.element,
 							options = el.options,
 							imax = options.length,
-							i = -1;
-						while( ++i < imax ){
+							opt, x, i;
+						for(i = 0; i < imax; i++){
+							opt = options[i];
+							x = opt.getAttribute('value');
+							if (x == null) 
+								x = opt.getAttribute('name');
+							
 							/* jshint eqeqeq: false */
-							if (options[i].getAttribute('name') == val) {
+							if (x == val) {
 								/* jshint eqeqeq: true */
 								el.selectedIndex = i;
 								return;
@@ -10713,6 +10719,9 @@
 				this.objSetter = attr['obj-setter'];
 				this.objGetter = attr['obj-getter'];
 				
+				/* Convert to an instance, e.g. Number, on domchange event */
+				this['typeof'] = attr['typeof'] || null;
+				
 				this.dismiss = 0;
 				this.bindingType = bindingType;
 				this.log = false;
@@ -10735,6 +10744,9 @@
 								this.domWay = x.domWay;
 								this.objectWay = x.objectWay;
 							}
+							if ('number' === type) 
+								this['typeof'] = 'Number';
+							
 							this.property = 'element.value';
 							break;
 						case 'TEXTAREA':
@@ -10911,6 +10923,12 @@
 		
 					if (value == null) 
 						value = this.domWay.get(this);
+					
+					var typeof_ = this['typeof'];
+					if (typeof_ != null) {
+						var Converter = window[typeof_];
+						value = Converter(value);
+					}
 					
 					var isValid = true,
 						validations = this.ctr.validations;
@@ -12346,8 +12364,8 @@
 								continue outer;
 							}
 						}
-				
-						log_warn('No Model Found for', array[j]);
+					
+						console.warn('No Model Found for', array[j]);
 					}
 				
 				
@@ -12690,17 +12708,19 @@
 						var imax = array.length,
 							nodes_ = new Array(imax),
 							i = 0;
+						
 						for(; i < imax; i++) {
-							nodes_[i] = createEachNode(nodes, array[i], i, ctr.expression);
+							var x = createEachNode(nodes, array[i], i);
+							builder_build(x, array[i], ctx, container, ctr, elements);
 						}
-						builder_build(nodes_, null, ctx, container, ctr, elements);
+						//builder_build(nodes_, null, ctx, container, ctr, elements);
 					}
 					
-					function createEachNode(nodes, model, index, expr){
+					function createEachNode(nodes, model, index){
 						var x = new EachItem;
 						x.scope = { index: index };
-						x.model = model;
-						x.modelRef = '(' + expr + ')."' + index + '"';
+						//x.model = model;
+						
 						return {
 							type: Dom.COMPONENT,
 							tagName: 'each::item',
@@ -12716,6 +12736,16 @@
 						model: null,
 						modelRef: null,
 						parent: null,
+						renderStart: IS_NODE === true
+							?  function(){
+								var expr = this.parent.expression;
+								this.modelRef = ''
+									+ (expr === '.' ? '' : ('(' + expr + ')'))
+									+ '."'
+									+ this.scope.index
+									+ '"';
+							}
+							: null,
 						renderEnd: function(els) {
 							this.elements = els;
 						},

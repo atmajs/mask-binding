@@ -26,6 +26,9 @@ var BindingProvider;
 		this.objSetter = attr['obj-setter'];
 		this.objGetter = attr['obj-getter'];
 		
+		/* Convert to an instance, e.g. Number, on domchange event */
+		this['typeof'] = attr['typeof'] || null;
+		
 		this.dismiss = 0;
 		this.bindingType = bindingType;
 		this.log = false;
@@ -48,6 +51,9 @@ var BindingProvider;
 						this.domWay = x.domWay;
 						this.objectWay = x.objectWay;
 					}
+					if ('number' === type) 
+						this['typeof'] = 'Number';
+					
 					this.property = 'element.value';
 					break;
 				case 'TEXTAREA':
@@ -224,6 +230,12 @@ var BindingProvider;
 
 			if (value == null) 
 				value = this.domWay.get(this);
+			
+			var typeof_ = this['typeof'];
+			if (typeof_ != null) {
+				var Converter = window[typeof_];
+				value = Converter(value);
+			}
 			
 			var isValid = true,
 				validations = this.ctr.validations;

@@ -50,8 +50,8 @@ function list_sort(self, array) {
 				continue outer;
 			}
 		}
-
-		log_warn('No Model Found for', array[j]);
+	
+		console.warn('No Model Found for', array[j]);
 	}
 
 
