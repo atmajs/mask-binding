@@ -200,7 +200,7 @@ var expression_eval,
 		var i = 0, val;
 		for(; i < imax; i++) {
 			obj = obj[parts[i]];
-			if (obj === void 0) 
+			if (obj == null) 
 				return false;
 		}
 		return true;
