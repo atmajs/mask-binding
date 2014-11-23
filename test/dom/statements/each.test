@@ -86,6 +86,26 @@ UTest({
 		var $container = $(mask.render(Data.template, model, null, null, owner));
 		Data.check($container, model, owner);
 	},
+	
+	'(Browser) +each with correct model() behaviour' () {
+		mask.registerHandler(':foo', Compo({}));
+		
+		var tmpl = `
+			:foo > ul > +each (names) > li > '~[name]';
+		`;
+		var model = {
+			names: [
+				{ name: 'Foo' },
+				{ name: 'Baz' },
+				{ name: 'Qux' },
+			]
+		};
+		var $div = $(mask.render(tmpl, model));
+		
+		var m1 = $div.find('li:eq(0)').model();
+		eq_(model.names[0], m1);
+	},
+	
 	// Backend
 	'$config': {
 		'http.include': [ '/test/node.libraries.js' ]
