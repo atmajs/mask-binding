@@ -26,6 +26,33 @@ UTest({
 		
 		$dom.eq_('text', 'Bar');
 	},
+	'+with and accessor' () {
+		var model = {
+				user: {
+					name: 'Foo'
+				}
+			};
+			
+		var dom = mask.render(`
+			h4 > '~[bind:user.name]';
+			+with (user) {
+				span > '~[name]';
+			}
+		`, model);
+		
+		ensure('Foo');
+		model.user = { name: 'Bar' };
+		ensure('Bar');
+		
+		function ensure(txt) {
+			$(dom)
+			.filter('h4')
+			.eq_('text', txt)
+			.end()
+			.filter('span')
+			.eq_('text', txt);
+		}
+	},
 	
 	// Backend
 	'$config': {
