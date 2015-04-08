@@ -34,13 +34,19 @@
 			var compo = new SwitchStatement(),
 				index = this.attr[attr_SWITCH];
 			
-			_renderPlaceholder(compo, container);
+			_renderPlaceholder(this, compo, container);
 			
-			initialize(compo, this, index, els, model, ctx, container, ctr);
-			
-			return compo;
+			return initialize(
+				compo
+				, this
+				, index
+				, els
+				, model
+				, ctx
+				, container
+				, ctr
+			);
 		}
-		
 	});
 	
 	
@@ -179,10 +185,12 @@
 		
 		compo.Switch = new Array(node.nodes.length);
 		
-		if (index != null) 
+		if (index != null) {
 			compo.Switch[index] = elements;
-		
+		}
 		expression_bind(node.expression, model, ctx, ctr, compo.binder);
+		
+		return compo;
 	}
 
 	

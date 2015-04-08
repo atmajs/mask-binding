@@ -26,7 +26,6 @@
 	// import ../src/mask-attr/xToggle.js
 	// import ../src/mask-attr/xClassToggle.js
 
-	// import ../src/sys/sys.js
 	// import ../src/statements/exports.js
 	
 }(Mask, Compo));

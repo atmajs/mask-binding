@@ -8,9 +8,7 @@ include
 		'/.import/mask.node.js::Mask'
 	)
 	.done(function(resp){
-		var mask = resp.Mask.mask;
-		Object.extend(global.mask.getHandler(), mask.getHandler());
-		Object.extend(global.mask, mask);
+		global.mask = resp.Mask;
 		
 		include
 			.instance()

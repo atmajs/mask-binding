@@ -31,11 +31,8 @@
 		renderEnd: function(els, model, ctx, container, ctr){
 			var compo = new EachStatement(this, this.attr);
 			
-			compo.placeholder = document.createComment('');
-			container.appendChild(compo.placeholder);
-			
+			_renderPlaceholder(this, compo, container);
 			_compo_initAndBind(compo, this, model, ctx, container, ctr);
-			
 			return compo;
 		}
 		

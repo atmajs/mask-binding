@@ -1,148 +1,145 @@
 
 UTest({
-	'+if' () {
-		
-		var template = `
-				div { 
-					+if (foo == 1) > h1; 
-					else (foo == 2) > h2; 
-					else > h3;
-				}
-			`,
-		
-			model = {
-				foo: 2
-			},
-			controller = {};
-		
-		window.$dom = $render(template, model, null, null, controller);
-		
-		eq_(model.__observers.foo.length, 1);
-		
-		
-		$has('h1', false);
-		$has('h2', true);
-		$has('h3', false);
+	'Browser': {
+		'+if' () {
 			
-		model.foo = 1;
-		$has('h1', true);
-		$has('h2', true);
-		$has('h3', false);
-		$visible('h2', false);
-		
-		model.foo = 3;
-		$has('h1', true);
-		$has('h2', true);
-		$has('h3', true);
-		$visible('h1', false);
-		$visible('h2', false);
-		$visible('h3', true);
-		
-		model.foo = 1;
-		$visible('h1', true);
-		$visible('h2', false);
-		$visible('h3', false);
-		
-		Compo.dispose(controller);
-		eq_(model.__observers.foo.length, 0);
-	},
+			var template = `
+					div { 
+						+if (foo == 1) > h1; 
+						else (foo == 2) > h2; 
+						else > h3;
+					}
+				`,
+			
+				model = {
+					foo: 2
+				},
+				controller = {};
+			
+			window.$dom = $render(template, model, null, null, controller);
+			
+			eq_(model.__observers.foo.length, 1);
+			
+			
+			$has('h1', false);
+			$has('h2', true);
+			$has('h3', false);
+				
+			model.foo = 1;
+			$has('h1', true);
+			$has('h2', true);
+			$has('h3', false);
+			$visible('h2', false);
+			
+			model.foo = 3;
+			$has('h1', true);
+			$has('h2', true);
+			$has('h3', true);
+			$visible('h1', false);
+			$visible('h2', false);
+			$visible('h3', true);
+			
+			model.foo = 1;
+			$visible('h1', true);
+			$visible('h2', false);
+			$visible('h3', false);
+			
+			Compo.dispose(controller);
+			eq_(model.__observers.foo.length, 0);
+		},
 	
-	'+if single': function(){
-		var template = `
-			div >
-				+if (message) {
-					.baz > '~[bind:message]'
-				}
-			`,
-			model = {message: false};
-		
-		window.$dom = $render(template, model);
-		eq_(model.__observers.message.length, 1);
-		
-		$dom.hasNot_('.baz');
-		
-		model.message = 'success';
-		
-		$dom
-			.has_('.baz')
-			.eq_('text', 'success')
-			;
+		'+if single': function(){
+			var template = `
+				div >
+					+if (message) {
+						.baz > '~[bind:message]'
+					}
+				`,
+				model = {message: false};
+			
+			window.$dom = $render(template, model);
+			eq_(model.__observers.message.length, 1);
+			
+			$dom.hasNot_('.baz');
+			
+			model.message = 'success';
+			
+			$dom
+				.has_('.baz')
+				.eq_('text', 'success')
+				;
+		},
 	},
-
-	// Backend
-	'$config': {
-		'http.include': '/test/node.libraries.js'
-	},
-	
-	'+if server' (done) {
+	'Server': {
+		// Backend
+		'$config': {
+			'http.include': '/test/node.libraries.js'
+		},
 		
-		UTest
-			.server
-			.render(`
+		'+if server' () {
+			var model = { foo: true };
+			var template = `
 				#foo {
 					if (foo) > 'bang'
 					else > '?'
 				}
-			`, { foo: true }, (error, document, window) => {
-				
-				
-				$(document)
-					.find('#foo')
-					.eq_('length', 1)
-					.eq_('text', 'bang')
-					;
-				done();
-			});
-	},
-	
-	'+if server - binded' (done) {
+			`;
+			return $renderServer(template, { model })
+				.done((el, doc, win) => {
+					$(doc)
+						.find('#foo')
+						.eq_('length', 1)
+						.eq_('text', 'bang')
+						;
+				});
+		},
 		
-		UTest
-			.server
-			.render(`
+		'+if server - binded' () {
+			var model = { foo: true };
+			var template = `
 				#foo {
 					+if (foo) > .trueContainer > 'bang'
 					else > .falseContainer > 'big'
 					
 					footer > 'baz'
 				}
-			`, { foo: true }, (error, doc, win) => {
-				
-				window.$dom = $(doc);
-				
-				$has('#foo', true);
-				$has('.trueContainer', true);
-				$dom
-					.find('#foo')
-					.eq_('length', 1)
-					.eq_('text', 'bangbaz')
-					;
+			`;
+			return $renderServer(template, { model })
+				.done((el, doc, win) => {
+					window.$dom = $(doc);
 					
-				has_(doc.body.innerHTML, 'expression');
-				has_(doc.body.innerHTML, '.falseContainer');
-				has_(doc.body.innerHTML, 'nodes:');
-				has_(doc.body.innerHTML, '"foo":true');
-				
-				
-				notEq_(win.app, null);
-				notEq_(win.app.model, null);
-				
-				eq_(win.app.model.foo, true);
-				
-				notEq_(win.app.model.__observers, null);
-				eq_(win.app.model.__observers.foo.length, 1);
-				
-				win.app.model.foo = false;
-				
-				$visible('.falseContainer', true);
-				$visible('.trueContainer', false);
-				$has('.falseContainer', true);
-				$dom
-					.find('#foo')
-					.eq_('text', 'bangbigbaz')
-					;
-				done();
-			});
-		
+					$has('#foo', true);
+					$has('.trueContainer', true);
+					$dom
+						.find('#foo')
+						.eq_('length', 1)
+						.eq_('text', 'bangbaz')
+						;
+						
+					has_(doc.body.innerHTML, 'expression');
+					has_(doc.body.innerHTML, '.falseContainer');
+					has_(doc.body.innerHTML, 'nodes:');
+					has_(doc.body.innerHTML, '"foo":true');
+					
+					
+					notEq_(win.app, null);
+					notEq_(win.app.model, null);
+					
+					eq_(win.app.model.foo, true);
+					
+					notEq_(win.app.model.__observers, null);
+					eq_(win.app.model.__observers.foo.length, 1);
+					
+					win.app.model.foo = false;
+					
+					$visible('.falseContainer', true);
+					$visible('.trueContainer', false);
+					$has('.falseContainer', true);
+					$dom
+						.find('#foo')
+						.eq_('text', 'bangbigbaz')
+						;
+				});
+		}
 	}
 });

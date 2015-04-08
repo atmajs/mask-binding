@@ -1,3 +1,14 @@
+// source /src/refs.js
+var _Array_slice = Array.prototype.slice,
+	_Array_splice = Array.prototype.splice,
+	_Array_indexOf = Array.prototype.indexOf,
+	
+	_Object_create = null, // in obj.js
+	_Object_hasOwnProp = Object.hasOwnProperty,
+	_Object_getOwnProp = Object.getOwnPropertyDescriptor,
+	_Object_defineProperty = Object.defineProperty;
+// end:source /src/refs.js
+
 // source /src/coll.js
 var coll_each,
 	coll_remove,
@@ -116,7 +127,9 @@ var is_Function,
 	is_String,
 	is_Object,
 	is_notEmptyString,
-	is_rawObject;
+	is_rawObject,
+	is_NODE,
+	is_DOM;
 
 (function() {
 	is_Function = function(x) {
@@ -144,13 +157,22 @@ var is_Function,
 
 		return obj.constructor === Object;
 	};
+
+	is_DOM = typeof window !== 'undefined' && window.navigator != null;
+	is_NODE = !is_DOM;
+	
 }());
 // end:source /src/is.js
 // source /src/obj.js
 var obj_getProperty,
 	obj_setProperty,
+	obj_hasProperty,
 	obj_extend,
-	obj_create;
+	obj_extendDefaults,
+	obj_extendMany,
+	obj_extendProperties,
+	obj_create,
+	obj_toFastProps;
 (function(){
 	obj_getProperty = function(obj, path){
 		if ('.' === path) // obsolete
@@ -178,6 +200,10 @@ var obj_getProperty,
 		}
 		obj[chain[i]] = val;
 	};
+	obj_hasProperty = function(obj, path) {
+		var x = obj_getProperty(obj, path);
+		return x !== void 0;
+	};
 	obj_extend = function(a, b){
 		if (b == null)
 			return a || {};
@@ -190,7 +216,61 @@ var obj_getProperty,
 		}
 		return a;
 	};
-	obj_create = Object.create || function(x) {
+	obj_extendDefaults = function(a, b){
+		if (b == null) 
+			return a || {};
+		if (a == null) 
+			return obj_create(b);
+		
+		for(var key in b) {
+			if (a[key] == null) 
+				a[key] = b[key];
+		}
+		return a;
+	}
+	obj_extendProperties = (function(){
+		if (_Object_getOwnProp == null) 
+			return obj_extend;
+		
+		return function(a, b){
+			if (b == null)
+				return a || {};
+			
+			if (a == null)
+				return obj_create(b);
+			
+			var key, descr;
+			for(key in b){
+				descr = _Object_getOwnProp(b, key);
+				if (descr == null) 
+					continue;
+				
+				if (descr.hasOwnProperty('value')) {
+					a[key] = descr.value;
+					continue;
+				}
+				_Object_defineProperty(a, key, descr);
+			}
+			return a;
+		};
+	}());
+	obj_extendMany = function(a){
+		var imax = arguments.length,
+			i = 1;
+		for(; i<imax; i++) {
+			a = obj_extend(a, arguments[i]);
+		}
+		return a;
+	};
+	obj_toFastProps = function(obj){
+		/*jshint -W027*/
+		function F() {}
+		F.prototype = obj;
+		new F();
+		return;
+		eval(obj);
+	};
+	_Object_create = obj_create = Object.create || function(x) {
 		var Ctor = function(){};
 		Ctor.prototype = x;
 		return new Ctor;
@@ -201,7 +281,8 @@ var obj_getProperty,
 var arr_remove,
 	arr_each,
 	arr_indexOf,
-	arr_contains;
+	arr_contains,
+	arr_pushMany;
 (function(){
 	arr_remove = function(array, x){
 		var i = array.indexOf(x);
@@ -218,6 +299,18 @@ var arr_remove,
 	};
 	arr_contains = function(arr, x){
 		return arr.indexOf(x) !== -1;
+	};
+	arr_pushMany = function(arr, arrSource){
+		if (arrSource == null || arr == null || arr === arrSource) 
+			return;
+		
+		var il = arr.length,
+			jl = arrSource.length,
+			j = -1
+			;
+		while( ++j < jl ){
+			arr[il + j] = arrSource[j];
+		}
 	};
 }());
 // end:source /src/arr.js
@@ -253,12 +346,392 @@ var fn_proxy,
 	};
 }());
 // end:source /src/fn.js
+// source /src/class.js
+/**
+ * create([...Base], Proto)
+ * Base: Function | Object
+ * Proto: Object {
+ *    constructor: ?Function
+ *    ...
+ */
+var class_create,
 
-// source /src/refs.js
-var _Array_slice = Array.prototype.slice,
-	_Array_splice = Array.prototype.splice,
-	_Array_indexOf = Array.prototype.indexOf,
+	// with property accessor functions support
+	class_createEx;
+(function(){
 	
-	_Object_create = obj_create,
-	_Object_hasOwnProp = Object.hasOwnProperty;
-// end:source /src/refs.js
+	class_create   = function(){
+		var args = _Array_slice.call(arguments),
+			Proto = args.pop();
+		if (Proto == null) 
+			Proto = {};
+		
+		var Ctor = Proto.hasOwnProperty('constructor')
+			? Proto.constructor
+			: function () {};
+		
+		var i = args.length,
+			BaseCtor, x;
+		while ( --i > -1 ) {
+			x = args[i];
+			if (typeof x === 'function') {
+				BaseCtor = wrapFn(x, BaseCtor);
+				x = x.prototype;
+			}
+			obj_extendDefaults(Proto, x);
+		}
+		return createClass(wrapFn(BaseCtor, Ctor), Proto);
+	};
+	class_createEx = function(){
+		var args = _Array_slice.call(arguments),
+			Proto = args.pop();
+		if (Proto == null) 
+			Proto = {};
+		
+		var Ctor = Proto.hasOwnProperty('constructor')
+			? Proto.constructor
+			: function () {};
+			
+		var imax = args.length,
+			i = -1,
+			BaseCtor, x;
+		while ( ++i < imax ) {
+			x = args[i];
+			if (typeof x === 'function') {
+				BaseCtor = wrapFn(BaseCtor, x);
+				x = x.prototype;
+			}
+			obj_extendProperties(Proto, x);
+		}
+		return createClass(wrapFn(BaseCtor, Ctor), Proto);
+	};
+	
+	function createClass(Ctor, Proto) {
+		Proto.constructor = Ctor;
+		Ctor.prototype = Proto;
+		return Ctor;
+	}
+	function wrapFn(fnA, fnB) {
+		if (fnA == null) {
+			return fnB;
+		}
+		if (fnB == null) {
+			return fnA;
+		}
+		return function(){
+			var args = _Array_slice.call(arguments);
+			var x = fnA.apply(this, args);
+			if (x !== void 0) 
+				return x;
+			
+			return fnB.apply(this, args);
+		};
+	}
+}());
+// end:source /src/class.js
+
+// source /src/class/Dfr.js
+var class_Dfr;
+(function(){
+	class_Dfr = function(){};
+	class_Dfr.prototype = {
+		_isAsync: true,
+		_done: null,
+		_fail: null,
+		_always: null,
+		_resolved: null,
+		_rejected: null,
+		
+		defer: function(){
+			this._rejected = null;
+			this._resolved = null;
+			return this;
+		},
+		isResolved: function(){
+			return this._resolved != null;
+		},
+		isRejected: function(){
+			return this._rejected != null;
+		},
+		isBusy: function(){
+			return this._resolved == null && this._rejected == null;
+		},
+		resolve: function() {
+			var done = this._done,
+				always = this._always
+				;
+			
+			this._resolved = arguments;
+			
+			dfr_clearListeners(this);
+			arr_callOnce(done, this, arguments);
+			arr_callOnce(always, this, [ this ]);
+			
+			return this;
+		},
+		reject: function() {
+			var fail = this._fail,
+				always = this._always
+				;
+			
+			this._rejected = arguments;
+			
+			dfr_clearListeners(this);
+			arr_callOnce(fail, this, arguments);
+			arr_callOnce(always, this, [ this ]);	
+			return this;
+		},
+		then: function(filterSuccess, filterError){
+			return this.pipe(filterSuccess, filterError);
+		},
+		done: function(callback) {
+			if (this._rejected != null) 
+				return this;
+			return dfr_bind(
+				this,
+				this._resolved,
+				this._done || (this._done = []),
+				callback
+			);
+		},
+		fail: function(callback) {
+			if (this._resolved != null) 
+				return this;
+			return dfr_bind(
+				this,
+				this._rejected,
+				this._fail || (this._fail = []),
+				callback
+			);
+		},
+		always: function(callback) {
+			return dfr_bind(
+				this,
+				this._rejected || this._resolved,
+				this._always || (this._always = []),
+				callback
+			);
+		},
+		pipe: function(mix /* ..methods */){
+			var dfr;
+			if (typeof mix === 'function') {
+				dfr = new class_Dfr;
+				var done_ = mix,
+					fail_ = arguments.length > 1
+						? arguments[1]
+						: null;
+					
+				this
+					.done(delegate(dfr, 'resolve', done_))
+					.fail(delegate(dfr, 'reject',  fail_))
+					;
+				return dfr;
+			}
+			
+			dfr = mix;
+			var imax = arguments.length,
+				done = imax === 1,
+				fail = imax === 1,
+				i = 0, x;
+			while( ++i < imax ){
+				x = arguments[i];
+				switch(x){
+					case 'done':
+						done = true;
+						break;
+					case 'fail':
+						fail = true;
+						break;
+					default:
+						console.error('Unsupported pipe channel', arguments[i])
+						break;
+				}
+			}
+			done && this.done(delegate(dfr, 'resolve'));
+			fail && this.fail(delegate(dfr, 'reject' ));
+			
+			function pipe(dfr, method) {
+				return function(){
+					dfr[method].apply(dfr, arguments);
+				};
+			}
+			function delegate(dfr, name, fn) {
+				return function(){
+					if (fn != null) {
+						var override = fn.apply(this, arguments);
+						if (override != null) {
+							if (isDeferred(override) === true) {
+								override.pipe(dfr);
+								return;
+							}
+							
+							dfr[name](override)
+							return;
+						}
+					}
+					dfr[name].apply(dfr, arguments);
+				};
+			}
+			
+			return this;
+		},
+		pipeCallback: function(){
+			var self = this;
+			return function(error){
+				if (error != null) {
+					self.reject(error);
+					return;
+				}
+				var args = _Array_slice.call(arguments, 1);
+				fn_apply(self.resolve, self, args);
+			};
+		}
+	};
+	
+	class_Dfr.run = function(fn, ctx){
+		var dfr = new class_Dfr();
+		if (ctx == null) 
+			ctx = dfr;
+		
+		fn.call(
+			ctx
+			, fn_proxy(dfr.resolve, ctx)
+			, fn_proxy(dfr.reject, dfr)
+			, dfr
+		);
+		return dfr;
+	};
+	
+	// PRIVATE
+	
+	function dfr_bind(dfr, arguments_, listeners, callback){
+		if (callback == null) 
+			return dfr;
+		
+		if ( arguments_ != null) 
+			fn_apply(callback, dfr, arguments_);
+		else 
+			listeners.push(callback);
+		
+		return dfr;
+	}
+	
+	function dfr_clearListeners(dfr) {
+		dfr._done = null;
+		dfr._fail = null;
+		dfr._always = null;
+	}
+	
+	function arr_callOnce(arr, ctx, args) {
+		if (arr == null) 
+			return;
+		
+		var imax = arr.length,
+			i = -1,
+			fn;
+		while ( ++i < imax ) {
+			fn = arr[i];
+			
+			if (fn) 
+				fn_apply(fn, ctx, args);
+		}
+		arr.length = 0;
+	}
+	function isDeferred(x){
+		if (x == null || typeof x !== 'object') 
+			return false;
+		
+		if (x instanceof class_Dfr) 
+			return true;
+		
+		return typeof x.done === 'function'
+			&& typeof x.fail === 'function'
+			;
+	}
+}());
+// end:source /src/class/Dfr.js
+// source /src/class/EventEmitter.js
+var class_EventEmitter;
+(function(){
+ 
+	class_EventEmitter = function() {
+		this._listeners = {};
+	};
+    class_EventEmitter.prototype = {
+        on: function(event, fn) {
+            if (fn != null){
+				(this._listeners[event] || (this._listeners[event] = [])).push(fn);
+			}
+            return this;
+        },
+        once: function(event, fn){
+			if (fn != null) {
+				fn._once = true;
+				(this._listeners[event] || (this._listeners[event] = [])).push(fn);
+			}
+            return this;
+        },
+		
+		pipe: function(event){
+			var that = this,
+				args;
+			return function(){
+				args = _Array_slice.call(arguments);
+				args.unshift(event);
+				fn_apply(that.trigger, that, args);
+			};
+		},
+        
+		emit: event_trigger,
+        trigger: event_trigger,
+		
+        off: function(event, fn) {
+			var listeners = this._listeners[event];
+            if (listeners == null)
+				return this;
+			
+			if (arguments.length === 1) {
+				listeners.length = 0;
+				return this;
+			}
+			
+			var imax = listeners.length,
+				i = -1;
+			while (++i < imax) {
+				
+				if (listeners[i] === fn) {
+					listeners.splice(i, 1);
+					i--;
+					imax--;
+				}
+				
+			}
+            return this;
+		}
+    };
+    
+	function event_trigger() {
+		var args = _Array_slice.call(arguments),
+			event = args.shift(),
+			fns = this._listeners[event],
+			fn, imax, i = 0;
+			
+		if (fns == null)
+			return this;
+		
+		for (imax = fns.length; i < imax; i++) {
+			fn = fns[i];
+			fn_apply(fn, this, args);
+			
+			if (fn._once === true){
+				fns.splice(i, 1);
+				i--;
+				imax--;
+			}
+		}
+		return this;
+	}
+}());
+
+// end:source /src/class/EventEmitter.js
+

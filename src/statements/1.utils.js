@@ -22,9 +22,13 @@ var _getNodes,
 		return elements;
 	};
 	
-	_renderPlaceholder = function(compo, container){
-		compo.placeholder = document.createComment('');
-		container.appendChild(compo.placeholder);
+	_renderPlaceholder = function(staticCompo, compo, container){
+		var placeholder = staticCompo.placeholder;
+		if (placeholder == null) {
+			placeholder = document.createComment('');
+			container.appendChild(placeholder);
+		}
+		compo.placeholder = placeholder;
 	};
 	
 	_compo_initAndBind = function(compo, node, model, ctx, container, controller) {

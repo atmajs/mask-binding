@@ -8,7 +8,7 @@ module.exports = {
 				".import/mask.js",
 				".import/mask.bootstrap.js",
 				"lib/binding.js",
-				"test/dom/utils.js"
+				"test/dom/utils.es6"
 			],
 			tests: [
 				"test/dom/**.test"

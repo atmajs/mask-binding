@@ -72,80 +72,71 @@ var TestData = {
 };
 
 UTest({
-	'(Browser) +each - simple' () {
-		var Data = TestData.simple;
-		var model = Data.model();
-		var owner = new (Compo());
-		var $container = $(mask.render(Data.template, model, null, null, owner));
-		Data.check($container, model, owner);
-	},
-	'(Browser) +each - nested' () {
-		var Data = TestData.nested;
-		var model = Data.model();
-		var owner = new (Compo());
-		var $container = $(mask.render(Data.template, model, null, null, owner));
-		Data.check($container, model, owner);
-	},
-	
-	'(Browser) +each with correct model() behaviour' () {
-		mask.registerHandler(':foo', Compo({}));
-		
-		var tmpl = `
-			:foo > ul > +each (names) > li > '~[name]';
-		`;
-		var model = {
-			names: [
-				{ name: 'Foo' },
-				{ name: 'Baz' },
-				{ name: 'Qux' },
-			]
-		};
-		var $div = $(mask.render(tmpl, model));
-		
-		var m1 = $div.find('li:eq(0)').model();
-		eq_(model.names[0], m1);
-	},
-	
-	// Backend
-	'$config': {
-		'http.include': [ '/test/node.libraries.js' ]
-	},
-	
-	'(Node) +each - simple' (done) {
-		var Data = TestData.simple;
-		UTest
-			.server
-			.render(Data.template, {
-				model: Data.model(),
-				scripts: [ '/.import/mask.bootstrap.js' ]
-			})
-			.done(function(doc, win){
-				
-				Data.check(
-					$(doc).find('#container'),
-					win.app.model,
-					win.app
-				);
-				done();
+	'Browser': {
+		'+each - simple' () {
+			var Data = TestData.simple;
+			var Ctor = Compo({
+				template: Data.template,
+				model: Data.model()
 			});
+			var app = Compo.initialize(Ctor);
+			Data.check(app.$, app.model, app);
+		},
+		'+each - nested' () {
+			var Data = TestData.nested;
+			var Ctor = Compo({
+				template: Data.template,
+				model: Data.model()
+			});
+			var app = Compo.initialize(Ctor);
+			Data.check(app.$, app.model, app);
+		},
+		
+		'+each with correct jQuery.model() behaviour' () {
+			mask.registerHandler(':foo', Compo({}));
+			
+			var tmpl = `
+				:foo > ul > +each (names) > li > '~[name]';
+			`;
+			var model = {
+				names: [
+					{ name: 'Foo' },
+					{ name: 'Baz' },
+					{ name: 'Qux' },
+				]
+			};
+			var $div = $(mask.render(tmpl, model));
+			
+			var m1 = $div.find('li:eq(0)').model();
+			eq_(model.names[0], m1);
+		},
+			
 	},
 	
-	'(Node) +each - nested' (done) {
-		var Data = TestData.nested;
-		UTest
-			.server
-			.render(Data.template, {
-				model: Data.model(),
-				scripts: [ '/.import/mask.bootstrap.js' ]
-			})
-			.done(function(doc, win){
-				
-				Data.check(
-					$(doc).find('#container'),
-					win.app.model,
-					win.app
-				);
-				done();
-			});
+	'NodeJS': {
+		// Backend
+		'$config': {
+			'http.include': [ '/test/node.libraries.js' ]
+		},
+		'+each - simple' () {
+			return TestNode(TestData.simple);
+		},
+		
+		'+each - nested' (done) {
+			return TestNode(TestData.nested);
+		}
 	}
 });
+
+function TestNode(Data) {
+	return $renderServer(Data.template, {
+		model: Data.model()
+	})
+	.done((el, doc, win) => {
+		Data.check(
+			$(el),
+			win.app.model,
+			win.app
+		)
+	});
+}

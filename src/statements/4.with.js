@@ -44,8 +44,7 @@
 			
 			expression_bind(compo.expr, model, ctx, ctr, compo.binder);
 			
-			_renderPlaceholder(compo, container);
-			
+			_renderPlaceholder(this, compo, container);
 			return compo;
 		}
 	});

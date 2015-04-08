@@ -68,46 +68,48 @@ var TestData = {
 };
 
 UTest({
-	'(Browser) +for..in - simple' () {
-		TestClient(TestData.simple);
+	'Browser': {
+		'+for..in - simple' () {
+			TestClient(TestData.simple);
+		},
+		'+for..in - nested' () {
+			TestClient(TestData.nested);
+		},
 	},
-	'(Browser) +for..in - nested' () {
-		TestClient(TestData.nested);
-	},
-	// Backend
-	'$config': {
-		'http.include': '/test/node.libraries.js'
-	},
-	
-	'(Node) +for..in - simple' (done) {
-		TestServer(TestData.simple, done);
-	},
-	
-	'(Node) +for..in - nested' (done) {
-		TestServer(TestData.nested, done);
+	'Server': {
+		// Backend
+		'$config': {
+			'http.include': '/test/node.libraries.js'
+		},
+		
+		'+for..in - simple' () {
+			return TestServer(TestData.simple);
+		},
+		
+		'+for..in - nested' () {
+			return TestServer(TestData.nested);
+		}
 	}
 });
 
-function TestClient (TestData) {
-	var model = TestData.model();
-	var owner = new (Compo());
-	var $container = $(mask.render(TestData.template, model, null, null, owner));
-	TestData.check($container, model, owner);
+function TestClient (Data) {
+	var Data = TestData.simple;
+	var Ctor = Compo({
+		template: Data.template,
+		model: Data.model()
+	});
+	var app = Compo.initialize(Ctor);
+	Data.check(app.$, app.model, app);
 }
-function TestServer (TestData, done) {
-	UTest
-		.server
-		.render(TestData.template, {
-			model: TestData.model(),
-			scripts: [ '/.import/mask.bootstrap.js' ]
-		})
-		.done(function(doc, win){
-			
-			TestData.check(
-				$(doc).find('#container'),
-				win.app.model,
-				win.app
-			);
-			done();
-		});
+function TestServer (Data) {
+	return $renderServer(Data.template, {
+		model: Data.model()
+	})
+	.done((el, doc, win) => {
+		Data.check(
+			$(el),
+			win.app.model,
+			win.app
+		)
+	});
 }

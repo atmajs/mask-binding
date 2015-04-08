@@ -1,146 +1,144 @@
 
 UTest({
-	
-	'+for..of' () {
-		loopTest('+for', `
-			div { 
-				+for (name of names) > 
-					span > 
-						"~[name]"; 
-			}
-		`);
-	},
-	'+each': function(){
-		loopTest('+each', `
-			div { 
-				+each (names) > 
-					span > 
-						"~[.]"; 
-			}
-		`);
-	},
-	
-	'+for..in' () {
-		var template = `
+	'Browser': {
+		'+for..of' () {
+			loopTest('+for', `
 				div { 
-					+for ((key, name) in user) > 
+					+for (name of names) > 
 						span > 
-							"~[key]:~[name]"; 
+							"~[name]"; 
 				}
-			`,
-		
-			model = {
-				user: {
-					foo: 'Foo',
-					bar: 'Bar'
+			`);
+		},
+		'+each': function(){
+			loopTest('+each', `
+				div { 
+					+each (names) > 
+						span > 
+							"~[.]"; 
 				}
-			},
-			controller = {},
-			For;
+			`);
+		},
 		
-		window.$dom = $render(template, model, null, null, controller);
-		
-		'> compo check'
-		For = Compo.find(controller, '+for');
-		notEq(For, null);
-		
-		eq_(For.components.length, 2);
-		
-		
-		'> render check'
-		$dom.has_('html', 'foo:Foo');
-		$dom.has_('html', 'bar:Bar');
-		
-		'> reassign'
-		model.user = { baz: 'Bazar' };
-		
-		$dom.hasNot_('html', 'foo:Foo');
-		$dom.hasNot_('html', 'bar:Bar');
-		$dom.has_('html', 'baz:Baz');
-		
-		'> dispose'
-		Compo.dispose(For);
-		eq_(model.__observers.user.length, 0);
-	},
-
-	// Backend
-	'$config': {
-		'http.include': '/test/node.libraries.js'
-	},
-	
-	'+for..in - server' (done) {
-		var template = `
-				#container { 
-					+for (username of users) > 
-						span > "~[username]";
-					
-					footer > 'Footer'
-				}
-			`,
-		
-			model = {
-				users: ['Baz']
-			},
-			For;
+		'+for..in' () {
+			var template = `
+					div { 
+						+for ((key, name) in user) > 
+							span > 
+								"~[key]:~[name]"; 
+					}
+				`,
 			
-		UTest
-			.server
-			.render(template, model)
-			.done(function(doc, win){
-				var $dom = $(doc),
-					model = win.app.model,
-					users = win.app.model.users
-					;
-				
-				notEq_(model, null);
-				eq_(win.app.components.length, 1);
-				
-				$dom
-					.find('#container')
-					.eq_('text', 'BazFooter')
-					;
-				
-				has_(users, 'Baz');
-				notEq_(model.__observers, null);
-				eq_(model.__observers.users.length, 1);
-				
-				users.push('Qux');
-				
-				$dom
-					.find('#container')
-					.eq_('length', 1)
-					.eq_('text', 'BazQuxFooter')
-					;
-				
-				'> pop'
-				users.pop();
-				$dom
-					.find('#container')
-					.eq_('text', 'BazFooter');
-				
-				users.pop();
-				$dom
-					.find('#container')
-					.eq_('text', 'Footer');
-				
-				users.splice(0, 0, 'Quux', 'Quax');
-				$dom
-					.find('#container')
-					.eq_('text', 'QuuxQuaxFooter')
-					;
-				
-				'> dispose'
-				win.app.remove();
-				$dom
-					.find('#container')
-					.eq_('text', 'Footer')
-					;
-					
-				eq_(model.__observers.users.length, 0);
-				done();
-			});
+				model = {
+					user: {
+						foo: 'Foo',
+						bar: 'Bar'
+					}
+				},
+				controller = {},
+				For;
+			
+			window.$dom = $render(template, model, null, null, controller);
+			
+			'> compo check'
+			For = Compo.find(controller, '+for');
+			notEq(For, null);
+			
+			eq_(For.components.length, 2);
+			
+			
+			'> render check'
+			$dom.has_('html', 'foo:Foo');
+			$dom.has_('html', 'bar:Bar');
+			
+			'> reassign'
+			model.user = { baz: 'Bazar' };
+			
+			$dom.hasNot_('html', 'foo:Foo');
+			$dom.hasNot_('html', 'bar:Bar');
+			$dom.has_('html', 'baz:Baz');
+			
+			'> dispose'
+			Compo.dispose(For);
+			eq_(model.__observers.user.length, 0);
+		},
 	},
-	
+	'Server': {
+		// Backend
+		'$config': {
+			'http.include': '/test/node.libraries.js'
+		},
+		
+		'+for..in - server' () {
+			var template = `
+					#container { 
+						+for (username of users) > 
+							span > "~[username]";
+						
+						footer > 'Footer'
+					}
+				`,
+			
+				model = {
+					users: ['Baz']
+				},
+				For;
+			
+			return $renderServer(template, { model })
+				.done((el, doc, win) => {
+					var $dom = $(doc),
+						model = win.app.model,
+						users = win.app.model.users
+						;
+					
+					notEq_(model, null);
+					eq_(win.app.components.length, 1);
+					
+					$dom
+						.find('#container')
+						.eq_('text', 'BazFooter')
+						;
+					
+					has_(users, 'Baz');
+					notEq_(model.__observers, null);
+					eq_(model.__observers.users.length, 1);
+					
+					users.push('Qux');
+					
+					$dom
+						.find('#container')
+						.eq_('length', 1)
+						.eq_('text', 'BazQuxFooter')
+						;
+					
+					'> pop'
+					users.pop();
+					$dom
+						.find('#container')
+						.eq_('text', 'BazFooter');
+					
+					users.pop();
+					$dom
+						.find('#container')
+						.eq_('text', 'Footer');
+					
+					users.splice(0, 0, 'Quux', 'Quax');
+					$dom
+						.find('#container')
+						.eq_('text', 'QuuxQuaxFooter')
+						;
+					
+					'> dispose'
+					win.app.remove();
+					$dom
+						.find('#container')
+						.eq_('text', 'Footer')
+						;
+						
+					eq_(model.__observers.users.length, 0);
+				});
+		},
+	}
 	
 });
 

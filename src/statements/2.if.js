@@ -1,6 +1,7 @@
 (function(){
 	
 	mask.registerHandler('+if', {
+		placeholder: null,
 		meta: {
 			serializeNodes: true
 		},
@@ -35,13 +36,18 @@
 			var compo = new IFStatement(),
 				index = this.attr['switch-index'];
 			
-			compo.placeholder = document.createComment('');
-			container.appendChild(compo.placeholder);
+			_renderPlaceholder(this, compo, container);
 			
-			initialize(compo, this, index, els, model, ctx, container, ctr);
-			
-			
-			return compo;
+			return initialize(
+				compo
+				, this
+				, index
+				, els
+				, model
+				, ctx
+				, container
+				, ctr
+			);
 		},
 		
 		serializeNodes: function(current){
@@ -162,8 +168,7 @@
 		
 		compo.model = model;
 		compo.ctx = ctx;
-		compo.controller = ctr;
-		
+		compo.controller = ctr;		
 		compo.refresh = fn_proxy(compo.refresh, compo);
 		compo.binder = expression_createListener(compo.refresh);
 		compo.index = index;
@@ -187,10 +192,10 @@
 			if (node.expression) 
 				expression_bind(node.expression, model, ctx, ctr, compo.binder);
 		}
-		
-		if (index != null) 
+		if (index != null) {
 			compo.Switch[index].elements = elements;
-		
+		}
+		return compo;
 	}
 
 	
