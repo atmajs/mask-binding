@@ -22,7 +22,9 @@
         "atma": ">0.9.26"
     },
     "scripts": {
-        "test": "node_modules/.bin/atma test"
+        "test": "atma test",
+        "build": "atma",
+        "server": "atma server"
     },
     "keywords": [],
     "engines": {
