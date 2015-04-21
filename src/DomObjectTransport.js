@@ -137,9 +137,9 @@ var DomObjectTransport;
 			objectWay: {
 				get: objectWay.get,
 				set: DateTimeDelegate.objSet(function(a, b){
-					a.setFullYear(b.getFullYear());
-					a.setMonth(b.getMonth());
-					a.setDate(b.getDate());
+					a.setUTCFullYear(b.getUTCFullYear());
+					a.setUTCMonth(b.getUTCMonth());
+					a.setUTCDate(b.getUTCDate());
 				})
 			}
 		},
