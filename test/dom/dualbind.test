@@ -58,10 +58,13 @@ UTest({
 		
 		
 		function checkDates() {
-			console.log('> Input', input.value, 'Object', model.foo.toString());
 			var date = new Date(input.value);
-			eq_(date.getUTCFullYear(), model.foo.getUTCFullYear());
-			eq_(date.getUTCMonth(), model.foo.getUTCMonth());
+			date.setMinutes(date.getTimezoneOffset());
+			
+			eq_(date.getFullYear(), model.foo.getFullYear());
+			eq_(date.getMonth(), model.foo.getMonth());
+			eq_(date.getDate(), model.foo.getDate());
+			eq_(date.getTimezoneOffset(), model.foo.getTimezoneOffset());
 			eq_(date.getUTCDate(), model.foo.getUTCDate());
 			return date;
 		}
