@@ -19,41 +19,60 @@ rebind listener and will trigger the 'name' listener callback.
 #### One-way binding
 
 - Inline Binding Util
-	**``` "~[bind:EXPRESSION]" ```**
+
+	```mask
+	~[bind:EXPRESSION]
+	```
 	
-	``` "Users name is ~[bind: name +'!']"```
+	```mask
+	"Users name is ~[bind: name +'!']"
+	```
 	
 	Can be used in literals and attribute values. Usually you would use this util for binding view with a model,
 	but sometimes you may also need some special bindings. For that cases you can use ":bind" tag and define some custom binding provider
 	for [setting/getting] [to/from] [DOM/Model]
 
 - Binded Statements
-	- ```mask
-	+if (expression) {}
-	```
-	- ```mask
-	+for (value of ARRAY) {}
-	```
-	- ```mask
-	+for ((value, index) of ARRAY) {}
-	```
-	- ```mask
-	+for (key in object) {}
-	```
-	- ```mask
-	+for ((key, value) in object) {}
-	```
-	- ```mask
-	+each (expression) {}
-	```
-	- ```mask +with (expression) {}
-	```
-
+	- `if`
+	
+		```mask
+		+if (expression) {}
+		```
+	- `+for..of`
+	
+		```mask
+		+for (value of ARRAY) {}
+		+for ((value, index) of ARRAY) {}
+		```
+	- `+for..in`
+	
+		```mask
+		+for (key in object) {}
+		+for ((key, value) in object) {}
+		```
+	- `+each`
+	
+		```mask
+		+each (expression) {}
+		```
+	- `+with`
+	
+		```mask
+		+with (expression) {}
+		```
+	- `+visible`
+	
+		```mask
+		+visible (expression) {}
+		```
+		
 - Custom Tag: fox complex binders, e.g. with setters/getters support for the component.
+
 	**`:bind ...;`**
+	
 	```mask
-		:datepicker >
-			:bind value='date' getter='getDate' setter='setDate';
+	:datepicker >
+		:bind value='date' getter='getDate' setter='setDate';
 	```
 		
 	Attributes
@@ -73,7 +92,7 @@ rebind listener and will trigger the 'name' listener callback.
 
 Binds Model to the parent node.
 
-```sass
+```mask
 input type=text >
 	:dualbind value='currentUser.name';
 ```
@@ -150,7 +169,7 @@ input type=text >
 ```javascript
 // Default Binding Provider Properties
 
-	this.node // mask DOM Node
+	this.ctr // :dualbind component
 	this.model // model object
 	this.element // HTMLElement
 	this.value // property PATH in a MODEL to BIND
@@ -197,4 +216,4 @@ mask.registerBinding('bindingName', {
 
 
 ----
-:copyright: MIT — 2014 — Atma Project
+:copyright: MIT — 2014-2015 — Atma Project
