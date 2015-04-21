@@ -12,7 +12,7 @@ include
 		
 		include
 			.instance()
-			.js('/lib/binding.node.js::Binding')
+			.js('/lib/binding_node.js::Binding')
 			.done(function(){
 				resume();
 			});

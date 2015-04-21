@@ -28,13 +28,26 @@ rebind listener and will trigger the 'name' listener callback.
 	for [setting/getting] [to/from] [DOM/Model]
 
 - Binded Statements
-	- ``` +if (expression) {} ```
-	- ``` +for (value of ARRAY) {} ```
-	- ``` +for ((value, index) of ARRAY) {} ```
-	- ``` +for (key in object) {} ```
-	- ``` +for ((key, value) in object) {} ```
-	- ``` +each (expression) {} ```
-	- ``` +with (expression) {} ```
+	- ```mask
+	+if (expression) {}
+	```
+	- ```mask
+	+for (value of ARRAY) {}
+	```
+	- ```mask
+	+for ((value, index) of ARRAY) {}
+	```
+	- ```mask
+	+for (key in object) {}
+	```
+	- ```mask
+	+for ((key, value) in object) {}
+	```
+	- ```mask
+	+each (expression) {}
+	```
+	- ```mask +with (expression) {}
+	```
 
 - Custom Tag: fox complex binders, e.g. with setters/getters support for the component.
 	**`:bind ...;`**
@@ -84,7 +97,7 @@ Support HTML elements:
 
 Usually you want to validate user inputs **before** setting them to the model and this custom tag is used in dualbind control to keep the model valid.
 	
-```sass
+```mask
 div > input type=text > :dualbind value='currentUser.name' {
 	:validate validatorName='validatorProperties' message='some message on invalid';
 	:validate maxLength=20 message='Max Length is 20 Characters'
@@ -115,7 +128,7 @@ mask.registerValidator('mycustom', {
 })
 ```
 
-```sass
+```mask
 input type=text >
 	:dualbind value='user.username' {
 	

@@ -58,6 +58,7 @@ UTest({
 		
 		
 		function checkDates() {
+			console.log('> Input', input.value, 'Object', model.foo.toString());
 			var date = new Date(input.value);
 			eq_(date.getFullYear(), model.foo.getFullYear());
 			eq_(date.getMonth(), model.foo.getMonth());
