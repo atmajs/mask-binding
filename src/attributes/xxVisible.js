@@ -1,6 +1,6 @@
 
 
-__mask_registerAttrHandler('xx-visible', function(node, attrValue, model, cntx, element, controller) {
+__registerAttr('xx-visible', function(node, attrValue, model, cntx, element, controller) {
 	
 	var binder = expression_createBinder(attrValue, model, cntx, controller, function(value){
 		element.style.display = value ? '' : 'none';

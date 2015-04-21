@@ -4,7 +4,7 @@
  *	button x-toggle='click: selected'
  */
 
-__mask_registerAttrHandler('x-class-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
+__registerAttr('x-class-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
     
     
     var event = attrValue.substring(0, attrValue.indexOf(':')),

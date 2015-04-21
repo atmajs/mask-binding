@@ -17,7 +17,7 @@
 
 function DualbindHandler() {}
 
-__mask_registerHandler(':dualbind', DualbindHandler);
+__registerHandler(':dualbind', DualbindHandler);
 
 
 

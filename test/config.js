@@ -17,7 +17,7 @@ module.exports = {
 		node: {
 			exec: 'node',
 			env: [
-				"lib/binding.node.js",
+				"lib/binding_node.js",
 			],
 			tests: [
 				"test/**node.test"

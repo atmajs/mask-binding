@@ -9,7 +9,7 @@
 		;
 		
 	
-	mask.registerHandler('+for', {
+	__registerHandler('+for', {
 		meta: {
 			serializeNodes: true
 		},

@@ -4,7 +4,7 @@
  *	button x-toggle='click: foo === "bar" ? "zet" : "bar" > 'Toggle'
  */
 
-__mask_registerAttrHandler('x-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
+__registerAttr('x-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
     
     
     var event = attrValue.substring(0, attrValue.indexOf(':')),

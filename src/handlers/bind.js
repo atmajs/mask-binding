@@ -12,7 +12,7 @@
 
 	function Bind() {}
 
-	__mask_registerHandler(':bind', Bind);
+	__registerHandler(':bind', Bind);
 
 	Bind.prototype = {
 		constructor: Bind,

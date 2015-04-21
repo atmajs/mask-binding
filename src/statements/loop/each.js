@@ -1,8 +1,7 @@
 (function(){
 	
 	var Each = custom_Statements['each'];
-	
-	mask.registerHandler('+each', {
+	var EachBinded =  {
 		meta: {
 			serializeNodes: true
 		},
@@ -36,8 +35,67 @@
 			return compo;
 		}
 		
+	};
+	
+	var EachItem = class_create({
+		compoName: 'each::item',
+		scope: null,
+		model: null,
+		modelRef: null,
+		parent: null,
+		// if NODE
+		renderStart: function(){
+			var expr = this.parent.expression;
+			this.modelRef = ''
+				+ (expr === '.' ? '' : ('(' + expr + ')'))
+				+ '."'
+				+ this.scope.index
+				+ '"';
+		},
+		// endif
+		// if BROWSER
+		renderStart: null,
+		// endif
+		renderEnd: function(els) {
+			this.elements = els;
+		},
+		dispose: function(){
+			if (this.elements != null) {
+				this.elements.length = 0;
+				this.elements = null;
+			}
+		}
 	});
-	mask.registerHandler('each::item', EachItem);
+	
+	var EachStatement = class_create({
+		constructor: function EachStatement(node, attr) {
+			this.expression = node.expression;
+			this.nodes = node.nodes;
+			
+			if (node.components == null) 
+				node.components = [];
+			
+			this.node = node;
+			this.components = node.components;
+		},
+		compoName: '+each',
+		refresh: LoopStatementProto.refresh,
+		dispose: LoopStatementProto.dispose,
+		
+		_getModel: function(compo) {
+			return compo.model;
+		},
+		
+		_build: function(node, model, ctx, component) {
+			var fragment = document.createDocumentFragment();
+			
+			build(node.nodes, model, ctx, fragment, component);
+			
+			return fragment;
+		}
+	});
+	
+	// METHODS
 	
 	function build(nodes, array, ctx, container, ctr, elements) {
 		var imax = array.length,
@@ -64,61 +122,8 @@
 		};
 	}
 	
-	function EachItem() {}
-	EachItem.prototype = {
-		compoName: 'each::item',
-		scope: null,
-		model: null,
-		modelRef: null,
-		parent: null,
-		renderStart: IS_NODE === true
-			?  function(){
-				var expr = this.parent.expression;
-				this.modelRef = ''
-					+ (expr === '.' ? '' : ('(' + expr + ')'))
-					+ '."'
-					+ this.scope.index
-					+ '"';
-			}
-			: null,
-		renderEnd: function(els) {
-			this.elements = els;
-		},
-		dispose: function(){
-			if (this.elements != null) {
-				this.elements.length = 0;
-				this.elements = null;
-			}
-		}
-	};
+	// EXPORTS
 	
-	function EachStatement(node, attr) {
-		this.expression = node.expression;
-		this.nodes = node.nodes;
-		
-		if (node.components == null) 
-			node.components = [];
-		
-		this.node = node;
-		this.components = node.components;
-	}
-	
-	EachStatement.prototype = {
-		compoName: '+each',
-		refresh: LoopStatementProto.refresh,
-		dispose: LoopStatementProto.dispose,
-		
-		_getModel: function(compo) {
-			return compo.model;
-		},
-		
-		_build: function(node, model, ctx, component) {
-			var fragment = document.createDocumentFragment();
-			
-			build(node.nodes, model, ctx, fragment, component);
-			
-			return fragment;
-		}
-	};
-	
+	__registerHandler('each::item', EachItem);
+	__registerHandler('+each', EachBinded);
 }());

@@ -1,7 +1,7 @@
 (function(){
 	var $Visible = custom_Statements['visible'];
 		
-	mask.registerHandler('+visible', {
+	__registerHandler('+visible', {
 		meta: {
 			serializeNodes: true
 		},

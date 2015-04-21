@@ -2,7 +2,7 @@
 	
 	var $With = custom_Statements['with'];
 		
-	mask.registerHandler('+with', {
+	__registerHandler('+with', {
 		meta: {
 			serializeNodes: true
 		},

@@ -1,6 +1,6 @@
 (function(){
 	
-	mask.registerHandler('+if', {
+	__registerHandler('+if', {
 		placeholder: null,
 		meta: {
 			serializeNodes: true

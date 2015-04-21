@@ -1,40 +1,29 @@
 /* jshint -W053 */
 
+// import:base /src/
+// import:extension js
+
 (function(global, mask) {
 	"use strict";
 
-	var IS_BROWSER = true,
-		IS_NODE = false;
-	
 	var builder_build = mask.build,
 		Dom = mask.Dom;
 	
+	var log_warn  = console.warn.bind(console),
+		log_error = console.error.bind(console);
+		
 	// import /ref-utils/lib/utils.embed.js
 	
-	// import /src/vars.js
+	// import vars
+	// import utils/
+	
+	// import DomObjectTransport
+	// import ValidatorProvider
+	// import BindingProvider
+	
+	// import handlers/
+	// import utilities/
+	// import attributes/
+	// import statements/
 
-	// import /src/util/object.js
-	// import /src/util/object.observe.js
-	// import /src/util/date.js
-	// import /src/util/dom.js
-	// import /src/util/compo.js
-	// import /src/util/expression.js
-	// import /src/util/signal.js
-
-	// import /src/bindingProvider.js
-
-	// import /src/mask-handler/visible.js
-	// import /src/mask-handler/bind.js
-	// import /src/mask-handler/dualbind.js
-	// import /src/mask-handler/validate.js
-	// import /src/mask-handler/validate.group.js
-
-	// import /src/mask-util/bind.js
-	// import /src/mask-attr/xxVisible.js
-    // import /src/mask-attr/xToggle.js
-	// import /src/mask-attr/xClassToggle.js
-
-	// import /src/statements/exports.js
-
-}(window, mask));
-
+}(typeof window !== 'undefined' && window.navigator ? window : global, mask));

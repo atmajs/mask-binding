@@ -7,7 +7,7 @@
 	var _nodes,
 		_index;
 	
-	mask.registerHandler('+switch', {
+	__registerHandler('+switch', {
 		meta: {
 			serializeNodes: true
 		},

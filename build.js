@@ -13,16 +13,27 @@ module.exports = {
 			}
 		}
 	},
-	'import': {
+	'build_browser_version': {
+		action: 'import',
 		files: 'builds/**',
-		output: 'lib/'
+		output: 'lib/',
+		defines: {
+			NODE: false,
+			BROWSER: true
+		}
+	},
+	'build_node_version': {
+		action: 'import',
+		files: 'builds/**',
+		output: 'lib/{filename}_node.{extension}',
+		defines: {
+			NODE: true,
+			BROWSER: false
+		}
 	},
 	'jshint': {
-		files: ['lib/binding.js'],
+		files: [ 'lib/binding.js' ],
 		jshint: JSHint()
-	},
-	'uglify': {
-		files: 'lib/binding.js'
 	},
 
 	'import.libs': {
@@ -37,10 +48,10 @@ module.exports = {
 
 	'watch': {
 		files: 'src/**',
-		config: '#[import]'
+		config: [ '#[build_browser_version]', '#[build_node_version]' ]
 	},
 
-	'defaults': ['import', 'jshint', 'uglify', 'export.embed']
+	'defaults': ['build_browser_version', 'build_node_version', 'jshint']
 };
 
 
@@ -67,7 +78,7 @@ function JSHint() {
 			"quotmark": false,
 			"undef": true,
 			"unused": false,
-			"strict": false,
+			"strict": true,
 			"trailing": false,
 			"maxparams": false,
 			"maxdepth": false,
@@ -75,7 +86,7 @@ function JSHint() {
 			"maxcomplexity": false,
 			"maxlen": false,
 			"asi": true,
-			"boss": true,
+			"boss": false,
 			"debug": true,
 			"eqnull": true,
 			"esnext": true,

@@ -162,7 +162,7 @@ var DomObjectTransport;
 	
 	function isValidFn_(obj, prop, name) {
 		if (obj== null || typeof obj[prop] !== 'function') {
-			log_error('BindingProvider.', name, 'should be a function. Property:', prop);
+			log_error('BindingProvider. Controllers accessor.', name, 'should be a function. Property:', prop);
 			return false;
 		}
 		return true;

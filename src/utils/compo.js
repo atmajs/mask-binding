@@ -2,7 +2,8 @@ var compo_fragmentInsert,
 	compo_render,
 	compo_dispose,
 	compo_inserted,
-	compo_attachDisposer
+	compo_attachDisposer,
+	compo_trav_children
 	;
 (function(){
 	
@@ -89,4 +90,17 @@ var compo_fragmentInsert,
 		ctr.dispose = disposer;
 	};
 
+	compo_trav_children = function(compo, compoName){
+		var out = [],
+			arr = compo.components || [],
+			imax = arr.length,
+			i = -1;
+		
+		while ( ++i < imax ){
+			if (arr[i].compoName === compoName) {
+				out.push(arr[i]);
+			}
+		}
+		return out;
+	};
 }());

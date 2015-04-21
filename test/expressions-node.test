@@ -2,11 +2,11 @@ global.window = global;
 
 include
 	.routes({
-		util: '/src/util/{0}.js'
+		util: '/src/utils/{0}.js'
 	})
 	.inject({
 		_: [ '/.import/utils.embed.js'],
-		util: ['object.observe', 'expression']
+		util: ['object_observe', 'expression']
 	})
 	.done(function() {
 	
@@ -23,7 +23,7 @@ include
 							eq(fn, _fn);
 							deepEq(args, _args);
 						});
-	
+
 					};
 	
 				obj_addMutatorObserver(array, callback = function() {

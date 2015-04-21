@@ -77,7 +77,7 @@
 		});
 	}
 
-	__mask_registerUtil('bind', {
+	__registerUtil('bind', {
 		mode: 'partial',
 		current: null,
 		element: null,
