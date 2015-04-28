@@ -156,6 +156,18 @@ var DomObjectTransport;
 					a.setSeconds(b.getSeconds());
 				})
 			}
+		},
+		RADIO: {
+			domWay: {
+				get: function(provider){
+					var el = provider.element;
+					return el.checked ? el.value : null;
+				},
+				set: function(provider, value){
+					var el = provider.element;
+					el.checked = el.value === value;
+				}
+			},
 		}
 		
 	};

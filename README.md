@@ -33,7 +33,7 @@ rebind listener and will trigger the 'name' listener callback.
 	for [setting/getting] [to/from] [DOM/Model]
 
 - Binded Statements
-	- `if`
+	- `+if`
 	
 		```mask
 		+if (expression) {}

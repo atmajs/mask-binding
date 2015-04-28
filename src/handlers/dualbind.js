@@ -15,7 +15,7 @@
  *
  */
 
-__registerHandler(':dualbind', class_create({
+var DualbindCompo = class_create({
 
 	renderEnd: function(elements, model, ctx, container) {
 		this.provider = BindingProvider.create(model, container, this);
@@ -53,4 +53,7 @@ __registerHandler(':dualbind', class_create({
 			'x-signal': function() {}
 		}
 	}
-}));
+});
+
+__registerHandler(':dualbind', DualbindCompo);
+__registerHandler( 'dualbind', DualbindCompo);

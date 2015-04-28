@@ -6,8 +6,14 @@ var CustomProviders,
 	BindingProvider = class_create({
 		validations: null,
 		constructor: function BindingProvider(model, element, ctr, bindingType) {
-			if (bindingType == null) 
-				bindingType = ctr.compoName === ':bind' ? 'single' : 'dual';
+			if (bindingType == null) {
+				bindingType = 'dual';
+				
+				var name = ctr.compoName;
+				if (name === ':bind' || name === 'bind') {
+					bindingType = 'single';
+				}
+			}
 			
 			var attr = ctr.attr,
 				type;
@@ -45,13 +51,19 @@ var CustomProviders,
 							this.property = 'element.checked';
 							break;
 						}
-						if ('date' === type) {
+						else if ('date' === type) {
 							var x = DomObjectTransport.DATE;
 							this.domWay = x.domWay;
 							this.objectWay = x.objectWay;
 						}
-						if ('number' === type) 
+						else if ('number' === type) {
 							this['typeof'] = 'Number';
+						}
+						else if ('radio' === type) {
+							var x = DomObjectTransport.RADIO;
+							this.domWay = x.domWay;
+							break;
+						}
 						
 						this.property = 'element.value';
 						break;

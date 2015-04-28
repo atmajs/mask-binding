@@ -18,6 +18,7 @@
 function DualbindHandler() {}
 
 __registerHandler(':dualbind', DualbindHandler);
+__registerHandler( 'dualbind', DualbindHandler);
 
 
 
