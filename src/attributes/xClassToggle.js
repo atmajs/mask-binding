@@ -4,14 +4,13 @@
  *	button x-toggle='click: selected'
  */
 
-__registerAttr('x-class-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
+__registerAttr('x-class-toggle', 'client', function(node, attrVal, model, ctx, element){
     
-    
-    var event = attrValue.substring(0, attrValue.indexOf(':')),
-        $class = attrValue.substring(event.length + 1).trim();
+    var event = attrVal.substring(0, attrVal.indexOf(':')),
+        klass = attrVal.substring(event.length + 1).trim();
     
 	
     __dom_addEventListener(element, event, function(){
-         domLib(element).toggleClass($class);
+         domLib(element).toggleClass(klass);
     });
 });

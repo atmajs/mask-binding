@@ -150,13 +150,24 @@ var expression_eval,
 		
 		if (imax > 1) {
 			var first = parts[0];
-			if (first === '$c') {
+			if (first === '$c' || first === '$') {
+				if (parts[1] === 'attr') {
+					return;
+				}
 				// Controller Observer
-				ctr = _getObservable_Controller(ctr, parts.slice(1), imax - 1);
-				mutatorFn(ctr, property.substring(3), callback);
+				var owner  = _getObservable_Controller(ctr, parts.slice(1), imax - 1);
+				var cutIdx = first.length + 1;
+				mutatorFn(owner, property.substring(cutIdx), callback);
 				return;
 			}
-			if ('$a' === first || '$ctx' === first) 
+			if (first === '$scope') {
+				// Controller Observer
+				var scope = _getObservable_Scope(ctr, parts[1]);
+				var cutIdx = 6 + 1;
+				mutatorFn(scope, property.substring(cutIdx), callback);
+				return;
+			}
+			if ('$a' === first || '$ctx' === first || '_' === first || '$u' === first) 
 				return;
 		}
 		
@@ -165,7 +176,7 @@ var expression_eval,
 			obj = model;
 		}
 		if (obj == null) {
-			obj = _getObservable_Scope(ctr, parts, imax);
+			obj = _getObservable_Scope(ctr, parts[0], imax);
 		}
 		if (obj == null) {
 			obj = model;
@@ -174,7 +185,7 @@ var expression_eval,
 		mutatorFn(obj, property, callback);
 	}
 	
-	function _getObservable_Scope(ctr, parts, imax){
+	function _getObservable_Scope_(ctr, parts, imax){
 		var scope;
 		while(ctr != null){
 			scope = ctr.scope;
@@ -185,13 +196,25 @@ var expression_eval,
 		}
 		return null;
 	}
-	function _getObservable_Controller(ctr, parts, imax) {
+	function _getObservable_Controller(ctr_, parts, imax) {
+		var ctr = ctr_;
 		while(ctr != null){
 			if (_isDefined(ctr, parts, imax)) 
 				return ctr;
 			ctr = ctr.parent;
 		}
 		return ctr;
+	}
+	function _getObservable_Scope(ctr_, property, imax) {
+		var ctr = ctr_, scope;
+		while(ctr != null){
+			scope = ctr.scope;
+			if (scope != null && scope[property] != null) {
+				return scope;
+			}
+			ctr = ctr.parent;
+		}
+		return null;
 	}
 	function _isDefined(obj, parts, imax){
 		if (obj == null) 

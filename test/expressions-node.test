@@ -72,51 +72,52 @@ include
 			},
 	
 			'object - observer': function() {
-				var obj = {
+				var model = {
 					value: 0,
 					sub: {
 						value: 0
 					}
-				},
-					check, callback
+				};
+				var check,
+					callback;
 	
-					function createAssertion(prop, expect) {
-	
-						return assert.callback(function(currentValue) {
-							var value = obj_getProperty(obj, prop);
-	
-							deepEq(value, currentValue);
-							deepEq(value, expect);
-						});
-	
-					};
+				function createAssertion(prop, expect) {
+
+					return assert.callback(function(currentValue) {
+						var value = obj_getProperty(model, prop);
+
+						deepEq(value, currentValue);
+						deepEq(value, expect);
+					});
+
+				};
 	
 				// add
-				obj_addObserver(obj, 'value', callback = function(currentValue) {
+				obj_addObserver(model, 'value', callback = function(currentValue) {
 					check.call(this, currentValue);
 				});
-				eq(obj.__observers['value'][0], callback);
+				eq(model.__observers['value'][0], callback);
 	
 				// change
 				check = createAssertion('value', 2);
-				obj.value = 2;
+				model.value = 2;
 	
 				// remove
-				obj_removeObserver(obj, 'value', callback);
-				eq(obj.__observers['value'].length, 0);
+				obj_removeObserver(model, 'value', callback);
+				eq(model.__observers['value'].length, 0);
 	
 	
 				// add
-				obj_addObserver(obj, 'sub.value', callback = function(currentValue) {
+				obj_addObserver(model, 'sub.value', callback = function(currentValue) {
 					check.call(this, currentValue);
 				});
 	
 				check = createAssertion('sub.value', 8);
-				obj.sub.value = 8;
+				model.sub.value = 8;
 	
 	
 				check = createAssertion('sub.value', 10);
-				obj.sub = {
+				model.sub = {
 					value: 10
 				};
 	
@@ -286,53 +287,100 @@ include
 	
 			},
 			
-			'expression with scope accessor': function(){
-				var expr = "foo + quxScope.qux";
-				var model = {
-					foo: 2
-				};
-				var ref;
-				var ctr = {
-					parent: {
-						scope: ref = ({
-							quxScope: {
-								qux: 2
-							}
-						})
+			'scope accessor': {
+				'indirect scope accessor': function(){
+					var expr = "foo + quxScope.qux";
+					var model = {
+						foo: 2
+					};
+					var ref;
+					var ctr = {
+						parent: {
+							scope: ref = ({
+								quxScope: {
+									qux: 2
+								}
+							})
+						}
+					};
+					function checkExpr(expect) {
+						eq_(expression_eval(expr, model, null, ctr), expect);
 					}
-				};
-				function checkExpr(expect) {
-					eq_(expression_eval(expr, model, null, ctr), expect);
-				}
-				checkExpr(4);
-				
-				var expect = null;
-				var listener = assert.await(function(val){
-					eq_(expect, val);
-				});
-				
-				expression_bind(expr, model, null, ctr, listener);
-				
-				is_(model.__observers.foo, 'Array');
-				eq_(model.__observers.foo.length, 1);
-				is_(ref.__observers['quxScope.qux'], 'Array');
-				eq_(ref.__observers['quxScope.qux'].length, 1);
-				
-				expect = 3;
-				model.foo = 3;
-				checkExpr(5);
-				
-				expect = 4;
-				ref.quxScope.qux = 4;
-				checkExpr(7);
-				
-				expression_unbind(expr, model, ctr, listener);
-				is_(model.__observers.foo, 'Array');
-				eq_(model.__observers.foo.length, 0);
-				is_(ref.__observers['quxScope.qux'], 'Array');
-				eq_(ref.__observers['quxScope.qux'].length, 0);
+					checkExpr(4);
+					
+					var expect = null;
+					var listener = assert.await(function(val){
+						eq_(expect, val);
+					});
+					
+					expression_bind(expr, model, null, ctr, listener);
+					
+					is_(model.__observers.foo, 'Array');
+					eq_(model.__observers.foo.length, 1);
+					is_(ref.__observers['quxScope.qux'], 'Array');
+					eq_(ref.__observers['quxScope.qux'].length, 1);
+					
+					expect = 3;
+					model.foo = 3;
+					checkExpr(5);
+					
+					expect = 4;
+					ref.quxScope.qux = 4;
+					checkExpr(7);
+					
+					expression_unbind(expr, model, ctr, listener);
+					is_(model.__observers.foo, 'Array');
+					eq_(model.__observers.foo.length, 0);
+					is_(ref.__observers['quxScope.qux'], 'Array');
+					eq_(ref.__observers['quxScope.qux'].length, 0);
+				},
+				'direct scope accessor': function(){
+					var expr = "foo + $scope.quxScope.qux";
+					var model = {
+						foo: 2
+					};
+					var ref;
+					var ctr = {
+						parent: {
+							scope: ref = ({
+								quxScope: {
+									qux: 2
+								}
+							})
+						}
+					};
+					function checkExpr(expect) {
+						eq_(expression_eval(expr, model, null, ctr), expect);
+					}
+					checkExpr(4);
+					
+					var expect = null;
+					var listener = assert.await(function(val){
+						eq_(expect, val);
+					});
+					
+					expression_bind(expr, model, null, ctr, listener);
+					
+					is_(model.__observers.foo, 'Array');
+					eq_(model.__observers.foo.length, 1);
+					is_(ref.__observers['quxScope.qux'], 'Array');
+					eq_(ref.__observers['quxScope.qux'].length, 1);
+					
+					expect = 3;
+					model.foo = 3;
+					checkExpr(5);
+					
+					expect = 4;
+					ref.quxScope.qux = 4;
+					checkExpr(7);
+					
+					expression_unbind(expr, model, ctr, listener);
+					is_(model.__observers.foo, 'Array');
+					eq_(model.__observers.foo.length, 0);
+					is_(ref.__observers['quxScope.qux'], 'Array');
+					eq_(ref.__observers['quxScope.qux'].length, 0);
+				},
 			},
-			
 			'date observers': {
 				'single': function(done){
 					var date = new Date,

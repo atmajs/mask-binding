@@ -36,7 +36,7 @@ module.exports = {
 		jshint: JSHint()
 	},
 
-	'import.libs': {
+	'import_libs': {
 		action: 'copy',
 		files: {
 			'../mask/lib/mask.js': '.import/mask.js',

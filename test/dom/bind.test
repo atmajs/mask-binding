@@ -105,7 +105,7 @@ UTest({
 			},
 			dom;
 		
-		dom = mask.render('div > "~[bind: name + $c.someFn().age]"', model, null, null, ctr);
+		dom = mask.render('div > "~[bind: name + $.someFn().age]"', model, null, null, ctr);
 		eq_(dom.textContent, 'A10');
 		
 		model.name = 'B'
@@ -114,14 +114,14 @@ UTest({
 		ctr.x.age = 5;
 		eq_(dom.textContent, 'B5');
 		
-		dom = mask.render('div > "~[bind: $c.someFn().age]"', model, null, null, ctr);
+		dom = mask.render('div > "~[bind: $.someFn().age]"', model, null, null, ctr);
 		ctr.x.age = 7;
 		eq_(dom.textContent, '7');
 	},
 	
 	'controller binder': function(){
 		var Ctor = mask.Compo({
-			template: 'div > "~[bind: $c.age]"',
+			template: 'div > "~[bind: $.age]"',
 			age: 10,
 		})
 		var app = Compo.initialize(Ctor);
