@@ -36,7 +36,9 @@ DualbindHandler.prototype = {
 			dispose.call(provider);
 		}
 	},
-	
+	validate: function(){
+		return this.provider && this.provider.validate();
+	},	
 	handlers: {
 		attr: {
 			'x-signal' : function(){}

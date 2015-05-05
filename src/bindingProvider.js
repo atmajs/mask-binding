@@ -253,9 +253,13 @@ var CustomProviders,
 			var fns = this.validations,
 				ctr = this.ctr,
 				el = this.element;
-				
+			
+			var val_ = arguments.length !== 0
+				? val
+				: this.objectWay.get(this, this.expression);
+			
 			return ValidatorProvider.validateUi(
-				fns, val, ctr, el, this.objectChanged.bind(this)
+				fns, val_, ctr, el, this.objectChanged.bind(this)
 			);
 		},
 		objectWay: DomObjectTransport.objectWay,

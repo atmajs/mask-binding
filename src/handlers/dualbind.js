@@ -47,7 +47,11 @@ var DualbindCompo = class_create({
 			dispose.call(this.provider);
 		}
 	},
-
+	
+	validate: function(){
+		return this.provider && this.provider.validate();
+	},
+	
 	handlers: {
 		attr: {
 			'x-signal': function() {}
