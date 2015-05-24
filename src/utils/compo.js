@@ -3,7 +3,8 @@ var compo_fragmentInsert,
 	compo_dispose,
 	compo_inserted,
 	compo_attachDisposer,
-	compo_trav_children
+	compo_trav_children,
+	compo_getScopeFor
 	;
 (function(){
 	
@@ -102,5 +103,20 @@ var compo_fragmentInsert,
 			}
 		}
 		return out;
+	};
+	
+	compo_getScopeFor = function(ctr, path){
+		var key = path;
+		var i = path.indexOf('.');
+		if (i !== -1) {
+			key = path.substring(0, i);
+		}
+		while (ctr != null) {
+			if (ctr.scope != null && ctr.scope.hasOwnProperty(key)) {
+				return ctr.scope;
+			}
+			ctr = ctr.parent;
+		}
+		return null;
 	};
 }());

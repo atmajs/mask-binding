@@ -141,5 +141,46 @@ UTest({
 		
 		// changed value
 		eq_(model.foo, 'john');
+	},
+	
+	'should bind to scope' () {
+		var template = `
+			define Foo {
+				var letter = 'A';
+				
+				input > dualbind value='$scope.letter';
+			};
+			
+			Foo;
+		`;
+		
+		var app = Compo.initialize(template, { letter: 'X' } );
+		
+		var foo = app.find('Foo');
+		is_(foo, 'Object');
+		is_(foo.scope.__observers.letter, 'Array');
+		eq_(foo.scope.__observers.letter.length, 1);
+		
+		eq_(foo.scope.letter, 'A');
+		foo
+			.$
+			.eq_('val', 'A');
+			
+		foo.scope.letter = 'B';
+		foo
+			.$
+			.eq_('val', 'B');
+			
+		foo.$.val('C');
+		foo
+			.$
+			.eq_('val', 'C')
+			.trigger('change');
+		
+		is_(app.model.$scope, null);
+		eq_(foo.scope.letter, 'C');
+		
+		app.remove();
+		eq_(foo.scope.__observers.letter.length, 0);
 	}
 })
