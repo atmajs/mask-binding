@@ -1,0 +1,30 @@
+UTest({
+	'observers' : {
+		'add + remove' () {
+			var obj = {};
+			var spy = sinon.spy();
+			
+			'> ADD'
+			mask.obj.addObserver(obj, 'foo', spy);
+			
+			is_(obj.__observers, 'Object');
+			is_(obj.__observers.foo, 'Array');
+			is_(obj.__observers.foo[0], 'Function');
+			obj.foo = 1;
+			obj.foo = 2;
+			
+			eq_(spy.withArgs(1).calledOnce, true);
+			eq_(spy.withArgs(2).calledOnce, true);
+			
+			'> REMOVE'
+			mask.obj.removeObserver(obj, 'foo', spy);
+			is_(obj.__observers, 'Object');
+			is_(obj.__observers.foo, 'Array');
+			eq_(obj.__observers.foo.length, 0);
+			
+			obj.foo = 3
+			eq_(spy.callCount, 2);
+		}
+		
+	}
+})
