@@ -269,7 +269,7 @@ var CustomProviders,
 			
 			var val_ = arguments.length !== 0
 				? val
-				: this.objectWay.get(this, this.expression);
+				: this.domWay.get(this);
 			
 			return ValidatorProvider.validateUi(
 				fns, val_, ctr, el, this.objectChanged.bind(this)
