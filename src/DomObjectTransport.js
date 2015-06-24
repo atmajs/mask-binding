@@ -76,9 +76,15 @@ var DomObjectTransport;
 				if (date == null) 
 					return;
 				
-				var target = date_ensure(obj_getProperty(obj, prop));
+				var target = obj_getProperty(obj, prop);
 				if (target == null) {
 					obj_setProperty(obj, prop, date);
+					return;
+				}
+				if (target.getFullYear == null || isNaN(target)) {
+					target = date_ensure(target) || date;
+					extend(target, date);
+					obj_setProperty(obj, prop, target);
 					return;
 				}
 				extend(target, date);
