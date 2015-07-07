@@ -26,7 +26,9 @@ var expression_eval,
 		
 	expression_bind = function(expr, model, ctx, ctr, callback) {
 		if (expr === '.') {
-			obj_addMutatorObserver(model, callback);
+			if (model != null) {
+				obj_addMutatorObserver(model, callback);
+			}
 			return;
 		}
 		
