@@ -132,6 +132,34 @@ var DomObjectTransport;
 				log_warn('Value is not an option', val);
 			}
 		},
+		SELECT_MULT: {
+			get: function(provider) {
+				return coll_map(provider.element.selectedOptions, function(x){
+					return x.value;
+				});
+			},
+			set: function(provider, mix) {
+				coll_each(provider.element.options, function(el){
+					el.selected = false;
+				});
+				if (mix == null) {
+					return;
+				}
+				var arr = is_ArrayLike(mix) ? mix : [ mix ];
+				coll_each(arr, function(val){
+					var els = provider.element.options,
+						imax = els.length,
+						i = -1;
+					while (++i < imax) {
+						/* jshint eqeqeq: false */
+						if (els[i].value == val) {
+							els[i].selected = true;
+						}
+					}
+					log_warn('Value is not an option', val);
+				});
+			}
+		},
 		DATE: {
 			domWay: {
 				get: domWay.get,

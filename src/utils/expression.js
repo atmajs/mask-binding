@@ -61,7 +61,9 @@ var expression_eval,
 			log_warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
 		
 		if (expr === '.') {
-			obj_removeMutatorObserver(model, callback);
+			if (model != null) {
+				obj_removeMutatorObserver(model, callback);
+			}
 			return;
 		}
 		

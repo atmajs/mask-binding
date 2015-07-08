@@ -71,7 +71,9 @@ var CustomProviders,
 						this.property = 'element.value';
 						break;
 					case 'SELECT':
-						this.domWay = DomObjectTransport.SELECT;
+						this.domWay = element.multiple
+							? DomObjectTransport.SELECT_MULT
+							: DomObjectTransport.SELECT;
 						break;
 					default:
 						this.property = 'element.innerHTML';
@@ -86,9 +88,7 @@ var CustomProviders,
 				}
 			}
 	
-			/**
-			 *	Send signal on OBJECT or DOM change
-			 */
+			// Send signal on OBJECT or DOM change
 			if (attr['x-signal']) {
 				var signal = signal_parse(attr['x-signal'], null, 'dom')[0],
 					signalType = signal && signal.type;
@@ -102,10 +102,9 @@ var CustomProviders,
 						log_error('Signal typs is not supported', signal);
 						break;
 				}
-				
-				
 			}
 			
+			// Send PIPED signal on OBJECT or DOM change
 			if (attr['x-pipe-signal']) {
 				var signal = signal_parse(attr['x-pipe-signal'], true, 'dom')[0],
 					signalType = signal && signal.type;
@@ -121,8 +120,8 @@ var CustomProviders,
 				}
 			}
 			
-			
-			if (attr['dom-slot']) {
+			var domSlot = attr['dom-slot'];
+			if (domSlot != null) {
 				this.slots = {};
 				// @hack - place dualb. provider on the way of a signal
 				// 
@@ -130,11 +129,10 @@ var CustomProviders,
 					newparent = parent.parent;
 					
 				parent.parent = this;
-				this.parent = newparent;
-				
-				this.slots[attr['dom-slot']] = function(sender, value){
+				this.parent = newparent;				
+				this.slots[domSlot] = function(sender, value){
 					this.domChanged(sender, value);
-				}
+				};
 			}
 			
 			/*
