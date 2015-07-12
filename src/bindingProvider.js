@@ -263,8 +263,11 @@ var CustomProviders,
 		validate: function (val) {
 			var fns = this.validations,
 				ctr = this.ctr,
-				el = this.element;
-			
+				el = this.element
+				;
+			if (fns == null || fns.length === 0) {
+				return null;
+			}
 			var val_ = arguments.length !== 0
 				? val
 				: this.domWay.get(this);
