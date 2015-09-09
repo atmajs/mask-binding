@@ -4,26 +4,26 @@ var expression_eval,
 	expression_unbind,
 	expression_createBinder,
 	expression_createListener,
-	
+
 	expression_parse,
 	expression_varRefs
 	;
-	
+
 (function(){
 	var Expression = mask.Utils.Expression;
 
 	expression_eval_strict = Expression.eval;
 	expression_parse = Expression.parse;
 	expression_varRefs = Expression.varRefs;
-	
+
 	expression_eval = function(expr, model, ctx, ctr){
-		if (expr === '.') 
+		if (expr === '.')
 			return model;
-		
+
 		var x = expression_eval_strict(expr, model, ctx, ctr);
 		return x == null ? '' : x;
 	};
-		
+
 	expression_bind = function(expr, model, ctx, ctr, callback) {
 		if (expr === '.') {
 			if (model != null) {
@@ -31,65 +31,65 @@ var expression_eval,
 			}
 			return;
 		}
-		
+
 		var ast = expression_parse(expr),
 			vars = expression_varRefs(ast, model, ctx, ctr),
 			obj, ref;
-	
-		if (vars == null) 
+
+		if (vars == null)
 			return;
-		
+
 		if (typeof vars === 'string') {
 			_toggleObserver(obj_addObserver, model, ctr, vars, callback);
 			return;
 		}
-	
+
 		var isArray = vars.length != null && typeof vars.splice === 'function',
 			imax = isArray === true ? vars.length : 1,
 			i = 0,
 			x, prop;
-		
+
 		for (; i < imax; i++) {
 			x = isArray === true ? vars[i] : vars;
 			_toggleObserver(obj_addObserver, model, ctr, x, callback);
 		}
 	};
-	
+
 	expression_unbind = function(expr, model, ctr, callback) {
-		
-		if (typeof ctr === 'function') 
+
+		if (typeof ctr === 'function')
 			log_warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
-		
+
 		if (expr === '.') {
 			if (model != null) {
 				obj_removeMutatorObserver(model, callback);
 			}
 			return;
 		}
-		
+
 		var vars = expression_varRefs(expr, model, null, ctr),
 			x, ref;
-	
-		if (vars == null) 
+
+		if (vars == null)
 			return;
-		
+
 		if (typeof vars === 'string') {
 			_toggleObserver(obj_removeObserver, model, ctr, vars, callback);
 			return;
 		}
-		
+
 		var isArray = vars.length != null && typeof vars.splice === 'function',
 			imax = isArray === true ? vars.length : 1,
 			i = 0,
 			x;
-		
+
 		for (; i < imax; i++) {
 			x = isArray === true ? vars[i] : vars;
 			_toggleObserver(obj_removeObserver, model, ctr, x, callback);
 		}
-	
+
 	}
-	
+
 	/**
 	 * expression_bind only fires callback, if some of refs were changed,
 	 * but doesnt supply new expression value
@@ -102,23 +102,23 @@ var expression_eval,
 				log_warn('<mask:bind:expression> Concurent binder detected', expr);
 				return;
 			}
-			
+
 			var value = expression_eval(expr, model, cntx, controller);
 			if (arguments.length > 1) {
 				var args = _Array_slice.call(arguments);
-				
+
 				args[0] = value;
 				callback.apply(this, args);
-				
+
 			} else {
-				
+
 				callback(value);
 			}
-			
+
 			locks--;
 		};
 	};
-	
+
 	expression_createListener = function(callback){
 		var locks = 0;
 		return function(){
@@ -127,16 +127,16 @@ var expression_eval,
 				log_warn('<listener:expression> concurent binder');
 				return;
 			}
-			
+
 			callback();
 			locks--;
 		}
 	};
-	
+
 	function _toggleObserver(mutatorFn, model, ctr, accessor, callback) {
-		if (accessor == null) 
+		if (accessor == null)
 			return;
-		
+
 		if (typeof accessor === 'object') {
 			var obj = expression_eval_strict(accessor.accessor, model, null, ctr);
 			if (obj == null || typeof obj !== 'object') {
@@ -146,12 +146,12 @@ var expression_eval,
 			mutatorFn(obj, accessor.ref, callback);
 			return;
 		}
-		
+
 		// string;
 		var property = accessor,
 			parts = property.split('.'),
 			imax = parts.length;
-		
+
 		if (imax > 1) {
 			var first = parts[0];
 			if (first === '$c' || first === '$') {
@@ -171,10 +171,10 @@ var expression_eval,
 				mutatorFn(scope, property.substring(cutIdx), callback);
 				return;
 			}
-			if ('$a' === first || '$ctx' === first || '_' === first || '$u' === first) 
+			if ('$a' === first || '$ctx' === first || '_' === first || '$u' === first)
 				return;
 		}
-		
+
 		var obj = null;
 		if (_isDefined(model, parts, imax)) {
 			obj = model;
@@ -185,17 +185,17 @@ var expression_eval,
 		if (obj == null) {
 			obj = model;
 		}
-		
+
 		mutatorFn(obj, property, callback);
 	}
-	
+
 	function _getObservable_Scope_(ctr, parts, imax){
 		var scope;
 		while(ctr != null){
 			scope = ctr.scope;
-			if (scope != null && _isDefined(scope, parts, imax)) 
+			if (scope != null && _isDefined(scope, parts, imax))
 				return scope;
-			
+
 			ctr = ctr.parent;
 		}
 		return null;
@@ -203,7 +203,7 @@ var expression_eval,
 	function _getObservable_Controller(ctr_, parts, imax) {
 		var ctr = ctr_;
 		while(ctr != null){
-			if (_isDefined(ctr, parts, imax)) 
+			if (_isDefined(ctr, parts, imax))
 				return ctr;
 			ctr = ctr.parent;
 		}
@@ -213,7 +213,7 @@ var expression_eval,
 		var ctr = ctr_, scope;
 		while(ctr != null){
 			scope = ctr.scope;
-			if (scope != null && scope[property] != null) {
+			if (scope != null && scope[property] !== void 0) {
 				return scope;
 			}
 			ctr = ctr.parent;
@@ -221,19 +221,17 @@ var expression_eval,
 		return null;
 	}
 	function _isDefined(obj, parts, imax){
-		if (obj == null) 
+		if (obj == null)
 			return false;
-			
+
 		var i = 0, val;
 		for(; i < imax; i++) {
 			obj = obj[parts[i]];
-			if (obj == null) 
+			if (obj == null)
 				return false;
 		}
 		return true;
 	}
-	
-	
+
+
 }());
-
-
