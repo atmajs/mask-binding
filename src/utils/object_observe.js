@@ -10,6 +10,10 @@ var obj_addObserver,
 
 (function(){
 	obj_addObserver = function(obj, property, cb) {
+		if (obj == null) {
+			log_error('Not possible to add the observer for "' + property + '" as current model is undefined.');
+			return;
+		}
 		// closest observer
 		var parts = property.split('.'),
 			imax  = parts.length,
@@ -17,32 +21,32 @@ var obj_addObserver,
 			x = obj;
 		while ( ++i < imax ) {
 			x = x[parts[i]];
-			
-			if (x == null) 
+
+			if (x == null)
 				break;
-			
+
 			if (x[prop_OBS] != null) {
-				
+
 				var prop = parts.slice(i + 1).join('.');
 				if (x[prop_OBS][prop] != null) {
-					
+
 					pushListener_(x, prop, cb);
-					
+
 					var cbs = pushListener_(obj, property, cb);
 					if (cbs.length === 1) {
 						var arr = parts.splice(0, i);
-						if (arr.length !== 0) 
+						if (arr.length !== 0)
 							attachProxy_(obj, property, cbs, arr, true);
 					}
 					return;
 				}
 			}
 		}
-		
+
 		var cbs = pushListener_(obj, property, cb);
-		if (cbs.length === 1) 
+		if (cbs.length === 1)
 			attachProxy_(obj, property, cbs, parts, true);
-		
+
 		var val = obj_getProperty(obj, property),
 			mutators = getSelfMutators(val);
 		if (mutators != null) {
@@ -51,7 +55,7 @@ var obj_addObserver,
 			);
 		}
 	};
-	
+
 	obj_hasObserver = function(obj, property, callback){
 		// nested observer
 		var parts = property.split('.'),
@@ -60,25 +64,29 @@ var obj_addObserver,
 			x = obj;
 		while ( ++i < imax ) {
 			x = x[parts[i]];
-			if (x == null) 
+			if (x == null)
 				break;
-			
+
 			if (x[prop_OBS] != null) {
 				if (obj_hasObserver(x, parts.slice(i).join('.'), callback))
 					return true;
-				
+
 				break;
 			}
 		}
-		
+
 		var obs = obj[prop_OBS];
-		if (obs == null || obs[property] == null) 
+		if (obs == null || obs[property] == null)
 			return false;
-		
+
 		return arr_contains(obs[property], callback);
 	};
-	
+
 	obj_removeObserver = function(obj, property, callback) {
+		if (obj == null) {
+			log_error('Not possible to remove the observer for "' + property + '" as current model is undefined.');
+			return;
+		}
 		// nested observer
 		var parts = property.split('.'),
 			imax  = parts.length,
@@ -86,50 +94,50 @@ var obj_addObserver,
 			x = obj;
 		while ( ++i < imax ) {
 			x = x[parts[i]];
-			if (x == null) 
+			if (x == null)
 				break;
-			
+
 			if (x[prop_OBS] != null) {
 				obj_removeObserver(x, parts.slice(i).join('.'), callback);
 				break;
 			}
 		}
-		
-		
+
+
 		var obs = obj_ensureObserversProperty(obj, property),
 			val = obj_getProperty(obj, property);
 		if (callback === void 0) {
-			// callback not provided -> remove all observers	
+			// callback not provided -> remove all observers
 			obs.length = 0;
 		} else {
 			arr_remove(obs, callback);
 		}
-	
+
 		var mutators = getSelfMutators(val);
-		if (mutators != null) 
+		if (mutators != null)
 			objMutator_removeObserver(val, mutators, callback)
-		
+
 	};
 	obj_lockObservers = function(obj) {
 		var obs = obj[prop_OBS];
-		if (obs != null) 
+		if (obs != null)
 			obs[prop_DIRTY] = {};
-	};	
+	};
 	obj_unlockObservers = function(obj) {
 		var obs = obj[prop_OBS],
 			dirties = obs == null ? null : obs[prop_DIRTY];
 		if (dirties == null)
 			return;
-		
+
 		obs[prop_DIRTY] = null;
-		
+
 		var prop, cbs, val, imax, i;
 		for(prop in dirties) {
 			cbs = obj[prop_OBS][prop];
 			imax = cbs == null ? 0 : cbs.length;
-			if (imax === 0) 
+			if (imax === 0)
 				continue;
-			
+
 			i = -1;
 			val = prop === prop_MUTATORS
 					? obj
@@ -154,34 +162,34 @@ var obj_addObserver,
 				enumerable: false
 			});
 		}
-		if (type == null) 
+		if (type == null)
 			return obs;
-		
+
 		var arr = obs[type];
 		return arr == null
 			? (obs[type] = [])
 			: arr
 			;
 	};
-	
+
 	obj_addMutatorObserver = function(obj, cb){
 		var mutators = getSelfMutators(obj);
-		if (mutators != null) 
+		if (mutators != null)
 			objMutator_addObserver(obj,  mutators, cb);
 	};
 	obj_removeMutatorObserver = function(obj, cb){
 		objMutator_removeObserver(obj, null, cb);
 	};
-	
+
 	// PRIVATE
 	var prop_OBS = '__observers',
 		prop_MUTATORS = '__mutators',
 		prop_TIMEOUT = '__dfrTimeout',
 		prop_DIRTY = '__dirty';
-		
+
 	var defineProp_ = Object.defineProperty;
-		
-	
+
+
 	//Resolve object, or if property do not exists - create
 	function ensureProperty_(obj, chain) {
 		var i = -1,
@@ -190,23 +198,23 @@ var obj_addObserver,
 			;
 		while ( ++i < imax ) {
 			key = chain[i];
-	
-			if (obj[key] == null) 
+
+			if (obj[key] == null)
 				obj[key] = {};
-			
+
 			obj = obj[key];
 		}
 		return obj;
 	}
 	function getSelfMutators(obj) {
-		if (obj == null || typeof obj !== 'object') 
+		if (obj == null || typeof obj !== 'object')
 			return null;
-		
-		if (typeof obj.length === 'number' && typeof obj.slice === 'function') 
+
+		if (typeof obj.length === 'number' && typeof obj.slice === 'function')
 			return MUTATORS_.Array;
-		if (typeof obj.toUTCString === 'function') 
+		if (typeof obj.toUTCString === 'function')
 			return MUTATORS_.Date;
-		
+
 		return null;
 	}
 	var MUTATORS_ = {
@@ -253,12 +261,12 @@ var obj_addObserver,
 				: obj,
 			key = chain[length - 1],
 			currentVal = parent[key];
-			
+
 		if (length > 1) {
 			obj_defineCrumbs(obj, chain);
 		}
-		
-		
+
+
 		if ('length' === key) {
 			var mutators = getSelfMutators(parent);
 			if (mutators != null) {
@@ -273,24 +281,24 @@ var obj_addObserver,
 					});
 				return currentVal;
 			}
-			
+
 		}
-		
+
 		defineProp_(parent, key, {
 			get: function() {
 				return currentVal;
 			},
 			set: function(x) {
-				if (x === currentVal) 
+				if (x === currentVal)
 					return;
 				var oldVal = currentVal;
-				
+
 				currentVal = x;
 				var i = 0,
 					imax = cbs.length,
 					mutators = getSelfMutators(x);
-					
-				
+
+
 				if (mutators != null) {
 					for(; i < imax; i++) {
 						objMutator_addObserver(
@@ -298,54 +306,54 @@ var obj_addObserver,
 						);
 					}
 				}
-				
+
 				if (obj[prop_OBS][prop_DIRTY] != null) {
 					obj[prop_OBS][prop_DIRTY][property] = 1;
 					return;
 				}
-	
+
 				for (i = 0; i < imax; i++) {
 					cbs[i](x);
 				}
-				
+
 				obj_sub_notifyListeners(obj, property, oldVal)
 			},
 			configurable: true,
 			enumerable : true
 		});
-		
+
 		return currentVal;
 	}
-	
+
 	function obj_defineCrumbs(obj, chain) {
 		var rebinder = obj_crumbRebindDelegate(obj),
 			path = '',
 			key;
-		
+
 		var imax = chain.length - 1,
 			i = 0;
 		for(; i < imax; i++) {
 			key = chain[i];
 			path += key + '.';
-			
+
 			obj_defineCrumb(path, obj, key, rebinder);
 			obj = obj[key];
 		}
 	}
-	
+
 	function obj_defineCrumb(path, obj, key, rebinder) {
-			
+
 		var value = obj[key],
 			old;
-		
+
 		defineProp_(obj, key, {
 			get: function() {
 				return value;
 			},
 			set: function(x) {
-				if (x === value) 
+				if (x === value)
 					return;
-				
+
 				old = value;
 				value = x;
 				rebinder(path, old);
@@ -356,23 +364,23 @@ var obj_addObserver,
 	}
 	function obj_sub_notifyListeners(obj, path, oldVal) {
 		var obs = obj[prop_OBS];
-		if (obs == null) 
+		if (obs == null)
 			return;
 		for(var prop in obs) {
-			if (prop.indexOf(path + '.') !== 0) 
+			if (prop.indexOf(path + '.') !== 0)
 				continue;
-			
+
 			var cbs = obs[prop].slice(0),
 				imax = cbs.length,
 				i = 0, oldProp, cb;
-			if (imax === 0) 
+			if (imax === 0)
 				continue;
-			
+
 			var val = obj_getProperty(obj, prop);
 			for (i = 0; i < imax; i++) {
 				cb = cbs[i];
 				obj_removeObserver(obj, prop, cb);
-				
+
 				if (oldVal != null && typeof oldVal === 'object') {
 					oldProp = prop.substring(path.length + 1);
 					obj_removeObserver(oldVal, oldProp, cb);
@@ -386,7 +394,7 @@ var obj_addObserver,
 			}
 		}
 	}
-	
+
 	function obj_crumbRebindDelegate(obj) {
 		return function(path, oldValue){
 			obj_crumbRebind(obj, path, oldValue);
@@ -394,27 +402,27 @@ var obj_addObserver,
 	}
 	function obj_crumbRebind(obj, path, oldValue) {
 		var obs = obj[prop_OBS];
-		if (obs == null) 
+		if (obs == null)
 			return;
-		
+
 		for (var prop in obs) {
-			if (prop.indexOf(path) !== 0) 
+			if (prop.indexOf(path) !== 0)
 				continue;
-			
+
 			var cbs = obs[prop].slice(0),
 				imax = cbs.length,
 				i = 0;
-			
-			if (imax === 0) 
+
+			if (imax === 0)
 				continue;
-			
+
 			var val = obj_getProperty(obj, prop),
 				cb, oldProp;
-			
+
 			for (i = 0; i < imax; i++) {
 				cb = cbs[i];
 				obj_removeObserver(obj, prop, cb);
-				
+
 				if (oldValue != null && typeof oldValue === 'object') {
 					oldProp = prop.substring(path.length);
 					obj_removeObserver(oldValue, oldProp, cb);
@@ -423,21 +431,21 @@ var obj_addObserver,
 			for (i = 0; i < imax; i++){
 				cbs[i](val);
 			}
-			
+
 			for (i = 0; i < imax; i++){
 				obj_addObserver(obj, prop, cbs[i]);
 			}
 		}
 	}
-	
+
 	// Create Collection - Check If Exists - Add Listener
 	function pushListener_(obj, property, cb) {
 		var obs = obj_ensureObserversProperty(obj, property);
-		if (arr_contains(obs, cb) === false) 
+		if (arr_contains(obs, cb) === false)
 			obs.push(cb);
 		return obs;
 	}
-	
+
 	var objMutator_addObserver,
 		objMutator_removeObserver;
 	(function(){
@@ -452,9 +460,9 @@ var obj_addObserver,
 				while( ++i < imax ){
 					method = methods[i];
 					fn = obj[method];
-					if (fn == null) 
+					if (fn == null)
 						continue;
-					
+
 					obj[method] = objMutator_createWrapper_(
 						obj
 						, fn
@@ -473,7 +481,7 @@ var obj_addObserver,
 			}
 			arr_remove(obs, cb);
 		};
-		
+
 		function objMutator_createWrapper_(obj, originalFn, method, throttle) {
 			var fn = throttle === true ? callDelayed : call;
 			return function() {
@@ -488,29 +496,29 @@ var obj_addObserver,
 		function call(obj, original, method, args) {
 			var cbs = obj_ensureObserversProperty(obj, prop_MUTATORS),
 				result = original.apply(obj, args);
-			
+
 			tryNotify(obj, cbs, method, args, result);
 			return result;
 		}
 		function callDelayed(obj, original, method, args) {
 			var cbs = obj_ensureObserversProperty(obj, prop_MUTATORS),
 				result = original.apply(obj, args);
-			
+
 			var obs = obj[prop_OBS];
-			if (obs[prop_TIMEOUT] != null) 
+			if (obs[prop_TIMEOUT] != null)
 				return result;
-			
+
 			obs[prop_TIMEOUT] = setTimeout(function(){
 				obs[prop_TIMEOUT] = null;
 				tryNotify(obj, cbs, method, args, result);
 			});
 			return result;
 		}
-		
+
 		function tryNotify(obj, cbs, method, args, result){
-			if (cbs.length === 0) 
+			if (cbs.length === 0)
 				return;
-			
+
 			var obs = obj[prop_OBS];
 			if (obs[prop_DIRTY] != null) {
 				obs[prop_DIRTY][prop_MUTATORS] = 1;
@@ -527,5 +535,5 @@ var obj_addObserver,
 			}
 		}
 	}());
-	
+
 }());
