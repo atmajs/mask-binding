@@ -9,68 +9,66 @@ include
 		util: ['object_observe', 'expression']
 	})
 	.done(function() {
-	
+
 		UTest({
-	
+
 			'array - observer': function() {
 				var array = [],
 					check, callback
-	
-					function createAssertion(current, fn, args) {
-	
-						return assert.callback(function(_current, _fn, _args) {
-							eq(_current.join(''), current.join(''));
-							eq(fn, _fn);
-							deepEq(args, _args);
-						});
 
-					};
-	
+				function createAssertion(current, fn, args) {
+					return assert.callback(function(_current, _fn, _args) {
+						eq(_current.join(''), current.join(''));
+						eq(fn, _fn);
+						deepEq(args, _args);
+					});
+				};
+
 				obj_addMutatorObserver(array, callback = function() {
 					check.apply(this, arguments);
 				});
-	
+
 				eq(array.__observers.__mutators.length, 1);
 				eq(array.__observers.__mutators[0], callback);
-	
+
 				check = createAssertion([1], 'push', [1]);
 				array.push(1);
-	
+
 				check = createAssertion([], 'pop', []);
 				array.pop();
-	
+
 				check = createAssertion([1, 2, 3], 'splice', [0, 0, 1, 2, 3]);
 				array.splice(0, 0, 1, 2, 3);
-	
+
 				check = createAssertion([5, 1, 2, 3], 'unshift', [5]);
 				array.unshift(5);
-	
+
 				check = createAssertion([1, 2, 3], 'shift', []);
 				array.shift();
-	
+
 				check = createAssertion([3, 2, 1], 'reverse', []);
 				array.reverse();
-	
+
 				check = createAssertion([1, 2, 3], 'sort', []);
 				array.sort();
-	
+
 				// locking >>
 				obj_lockObservers(array);
-	
+
 				deepEq_(array.__observers.__dirty, {});
 				check = assert.avoid('locked observer');
 				array.push('4');
-	
+
 				check = createAssertion([1, 2, 3, 4]);
 				obj_unlockObservers(array);
 				eq_(array.__observers.__dirty, null);
 				// <<
-	
-				
+
+
 				obj_removeMutatorObserver(array, callback);
 				eq(array.__observers.__mutators.length, 0);
 			},
-	
+
 			'object - observer': function() {
 				var model = {
 					value: 0,
@@ -80,7 +78,7 @@ include
 				};
 				var check,
 					callback;
-	
+
 				function createAssertion(prop, expect) {
 
 					return assert.callback(function(currentValue) {
@@ -91,52 +89,52 @@ include
 					});
 
 				};
-	
+
 				// add
 				obj_addObserver(model, 'value', callback = function(currentValue) {
 					check.call(this, currentValue);
 				});
 				eq(model.__observers['value'][0], callback);
-	
+
 				// change
 				check = createAssertion('value', 2);
 				model.value = 2;
-	
+
 				// remove
 				obj_removeObserver(model, 'value', callback);
 				eq(model.__observers['value'].length, 0);
-	
-	
+
+
 				// add
 				obj_addObserver(model, 'sub.value', callback = function(currentValue) {
 					check.call(this, currentValue);
 				});
-	
+
 				check = createAssertion('sub.value', 8);
 				model.sub.value = 8;
-	
-	
+
+
 				check = createAssertion('sub.value', 10);
 				model.sub = {
 					value: 10
 				};
-	
-	
+
+
 			},
-			
+
 			'object - observer - calls': function(){
 				var obj = { title: 'xx' },
 					CALLS = 2;
-					
+
 				obj_addObserver(obj, 'title', function(){
 					CALLS--;
 				});
-				
+
 				obj.title = 'foo';
 				obj.title = 'baz';
 				eq(CALLS, 0);
 			},
-	
+
 			'object - observers - merge': function() {
 				// playing around with nested objects
 				var obj = {
@@ -147,109 +145,109 @@ include
 							title: 'M0'
 						}
 					};
-	
+
 				var obj_Count = 2,
 					obj_Expect;
 				obj_addObserver(obj, 'title', function(value) {
-					
+
 					obj_Count--;
 					deepEq(obj_Expect, value);
 				});
-				
+
 				eq(obj.__observers.title.length, 1);
-	
+
 				var model_Count = 4,
 					model_Expect;
 				obj_addObserver(model, 'sub.title', function(value) {
-					
+
 					model_Count--;
 					deepEq(model_Expect, value);
 				});
-	
-				
+
+
 				model.sub.title = model_Expect = 'M1';
 				eq(model_Count, 3);
-				
+
 				obj.title = obj_Expect = 'O1';
 				eq(obj_Count, 1);
-				
+
 				// MERGE !
 				model_Expect = obj_Expect;
 				model.sub = obj;
-				
+
 				obj.title = model_Expect = obj_Expect = 'O3';
-				
+
 				eq(obj_Count, 0);
 				eq(model_Count, 1);
 				eq(model.sub.title, 'O3');
-				
-				
+
+
 				model_Expect = 'M2';
 				model.sub = {
 					title: 'M2'
 				};
-				
+
 				eq(model_Count, 0);
 				model.sub.title = model_Expect = 'M3';
 				eq(model_Count, -1);
-				
+
 				obj_Expect = 'O4';
 				obj.title = 'O4';
 				eq(model_Count, -1);
 				eq(obj_Count, -1);
 			},
-			
+
 			'object - observer - bind once': function(){
-				
+
 				function listener() {
 					--count;
 				}
-				
+
 				var count = 1,
 					obj = { name: 'foo' },
 					root = { sub: { child: obj } }
 					;
-				
+
 				obj_addObserver(obj, 'name', listener);
 				obj_addObserver(root, 'sub.child.name', listener);
-				
+
 				obj.name = 'baz';
 				eq_(count, 0);
-				
+
 				obj_removeObserver(obj, 'name', listener);
 				obj.name = 'qux';
 				eq_(count, 0);
-				
+
 				root.sub = { child: { name: 'bic' } };
 				eq_(count, -1);
-				
-				
+
+
 				obj_removeObserver(root, 'sub.child.name', listener);
 				eq_(root.__observers['sub.child.name'].length, 0);
 			},
-	
+
 			'expression': function() {
-	
-	
+
+
 				var model, check, callback, expression;
-	
+
 				function createAssertion(expect, assertFn) {
 					return assert.callback(function(value) {
 						(assertFn || eq)(expect, value);
 					});
 				}
-	
+
 				function createBinder(expression, model, cb) {
 					return (callback = expression_createBinder(expression, model, null, null, cb));
 				}
-	
+
 				function bind(expression, model) {
 					expression_bind(expression, model, null, null, createBinder(expression, model, function() {
 						check.apply(this, arguments);
 					}));
 				}
-	
-	
+
+
 				model = {
 					x: 1,
 					y: {
@@ -258,35 +256,35 @@ include
 				};
 				expression = 'x + y.sub';
 				bind(expression, model);
-	
+
 				eq(model.__observers['x'].length, 1);
 				eq(model.__observers['y.sub'].length, 1);
-	
-	
+
+
 				check = createAssertion(5);
 				model.x = 3;
-	
+
 				check = createAssertion(0);
 				model.y.sub -= 5;
-	
-	
+
+
 				expression_unbind(expression, model, null, callback);
 				eq(model.__observers['x'].length, 0);
 				eq(model.__observers['y.sub'].length, 0);
-	
-	
+
+
 				expression = '.';
 				model = [1];
 				bind(expression, model);
-	
+
 				check = createAssertion([1, 2], function(a, b) {
 					eq(a.join(''), b.join(''));
 				});
-	
+
 				model.push(2);
-	
+
 			},
-			
+
 			'scope accessor': {
 				'indirect scope accessor': function(){
 					var expr = "foo + quxScope.qux";
@@ -307,27 +305,27 @@ include
 						eq_(expression_eval(expr, model, null, ctr), expect);
 					}
 					checkExpr(4);
-					
+
 					var expect = null;
 					var listener = assert.await(function(val){
 						eq_(expect, val);
 					});
-					
+
 					expression_bind(expr, model, null, ctr, listener);
-					
+
 					is_(model.__observers.foo, 'Array');
 					eq_(model.__observers.foo.length, 1);
 					is_(ref.__observers['quxScope.qux'], 'Array');
 					eq_(ref.__observers['quxScope.qux'].length, 1);
-					
+
 					expect = 3;
 					model.foo = 3;
 					checkExpr(5);
-					
+
 					expect = 4;
 					ref.quxScope.qux = 4;
 					checkExpr(7);
-					
+
 					expression_unbind(expr, model, ctr, listener);
 					is_(model.__observers.foo, 'Array');
 					eq_(model.__observers.foo.length, 0);
@@ -353,27 +351,27 @@ include
 						eq_(expression_eval(expr, model, null, ctr), expect);
 					}
 					checkExpr(4);
-					
+
 					var expect = null;
 					var listener = assert.await(function(val){
 						eq_(expect, val);
 					});
-					
+
 					expression_bind(expr, model, null, ctr, listener);
-					
+
 					is_(model.__observers.foo, 'Array');
 					eq_(model.__observers.foo.length, 1);
 					is_(ref.__observers['quxScope.qux'], 'Array');
 					eq_(ref.__observers['quxScope.qux'].length, 1);
-					
+
 					expect = 3;
 					model.foo = 3;
 					checkExpr(5);
-					
+
 					expect = 4;
 					ref.quxScope.qux = 4;
 					checkExpr(7);
-					
+
 					expression_unbind(expr, model, ctr, listener);
 					is_(model.__observers.foo, 'Array');
 					eq_(model.__observers.foo.length, 0);
@@ -385,16 +383,16 @@ include
 				'single': function(done){
 					var date = new Date,
 						callback;
-		
+
 					obj_addMutatorObserver(date, callback = assert.await(function(value, method, args) {
 						eq_(value, date);
 						eq_(method, 'setFullYear');
 						eq_(value.getFullYear(), 2017)
 					}));
-		
+
 					eq(date.__observers.__mutators.length, 1);
 					eq(date.__observers.__mutators[0], callback);
-		
+
 					date.setFullYear(2017);
 					setTimeout(function(){
 						obj_removeMutatorObserver(date, callback);
@@ -406,26 +404,26 @@ include
 				'debounce': function(done){
 					var date = new Date,
 						callback;
-		
+
 					obj_addMutatorObserver(date, callback = assert.await(1, function(value, method, args) {
 						eq_(value, date);
 						eq_(method, 'setFullYear');
-						
+
 						eq_(date.getMinutes(), 20)
 						eq_(date.getHours(), 14)
 						eq_(date.getFullYear(), 2015)
 					}));
-		
+
 					eq(date.__observers.__mutators.length, 1);
 					eq(date.__observers.__mutators[0], callback);
-		
+
 					date.setFullYear(2015);
 					date.setMinutes(20);
 					date.setHours(14);
 					setTimeout(done, 50);
 					return;
 				},
-				
+
 				'deep property': function(done){
 					var obj = {
 						foo: {
@@ -436,14 +434,14 @@ include
 					obj_addObserver(obj, 'foo.date', cb = assert.await(1, function(value, method, args) {
 						eq_(value, date);
 						eq_(method, 'setFullYear');
-						
+
 						eq_(obj.foo.date.getMinutes(), 20)
 						eq_(obj.foo.date.getHours(), 14)
 						eq_(obj.foo.date.getFullYear(), 2015)
 					}));
-					
+
 					obj.foo.date.setFullYear(2015);
-					
+
 					var date = obj.foo.date;
 					date.setMinutes(20);
 					date.setHours(14);
@@ -454,9 +452,9 @@ include
 							eq_(obj.foo.date.getDate(), 1)
 							eq_(obj.foo.date.getFullYear(), 2014)
 						}));
-						
+
 						obj.foo.date = new Date(2014, 1, 1);
-						
+
 						setTimeout(done, 50);
 					}, 50);
 				},
@@ -468,7 +466,7 @@ include
 							qux: new Date(2014, 1, 1)
 						}
 					};
-					
+
 					function check(expect) {
 						eq_(expression_eval(expr, model, null, null), expect);
 					}
@@ -477,11 +475,11 @@ include
 						is_(val, 'Date');
 						check('2017');
 					}));
-					
+
 					model.baz.qux.setFullYear(2015);
 					setTimeout(done, 50);
 				}
 			}
 		})
-	
+
 	})
