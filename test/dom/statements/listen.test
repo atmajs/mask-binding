@@ -82,6 +82,22 @@ UTest({
 				eq_(compo.model.__observers['qux'].length, 0);
 				done(compo);
 			}
+		},
+		'should dispose child component' () {
+			var disposer = sinon.stub();
+			mask.define('Foo', mask.Compo({
+				dispose: disposer,
+				template: `
+					span > '~letter'
+				`
+			}));
+			var template = `
+				listen (letter) > Foo;
+			`;
+			Compo
+				.initialize(template, {letter: 'A'})
+				.remove();
+			eq_(disposer.calledOnce, true);
 		}
 	},
 	'Server': {
