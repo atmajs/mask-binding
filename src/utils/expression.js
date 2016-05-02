@@ -94,29 +94,32 @@ var expression_eval,
 	 * expression_bind only fires callback, if some of refs were changed,
 	 * but doesnt supply new expression value
 	 **/
-	expression_createBinder = function(expr, model, cntx, controller, callback) {
-		var locks = 0;
-		return function binder() {
-			if (++locks > 1) {
-				locks = 0;
-				log_warn('<mask:bind:expression> Concurent binder detected', expr);
-				return;
-			}
-
-			var value = expression_eval(expr, model, cntx, controller);
-			if (arguments.length > 1) {
-				var args = _Array_slice.call(arguments);
-
-				args[0] = value;
-				callback.apply(this, args);
-
-			} else {
-
-				callback(value);
-			}
-
-			locks--;
-		};
+	expression_createBinder = function(expr, model, ctx, ctr, fn) {
+		return expression_createListener(function(){
+			fn(expression_eval(expr, model, ctx, ctr));
+		});
+		////var locks = 0;
+		////return function binder() {
+		////	if (++locks > 1) {
+		////		locks = 0;
+		////		log_warn('<mask:bind:expression> Concurent binder detected', expr);
+		////		return;
+		////	}
+		////
+		////	var value = expression_eval(expr, model, cntx, controller);
+		////	if (arguments.length > 1) {
+		////		var args = _Array_slice.call(arguments);
+		////
+		////		args[0] = value;
+		////		callback.apply(this, args);
+		////
+		////	} else {
+		////
+		////		callback(value);
+		////	}
+		////
+		////	locks--;
+		////};
 	};
 
 	expression_createListener = function(callback){

@@ -1,7 +1,4 @@
 (function(){
-	
-	var $With = custom_Statements['with'];
-		
 	__registerHandler('+with', {
 		meta: {
 			serializeNodes: true
@@ -15,21 +12,18 @@
 				)
 				;
 			this.rootModel = model;
-			return build(nodes, val, ctx, container, ctr);
+			return _renderElements(nodes, val, ctx, container, ctr);
 		},
-		
 		onRenderStartClient: function(model, ctx){
 			this.rootModel = model;
 			this.model = expression_eval_strict(
 				this.expression, model, ctx, this
 			);
 		},
-		
-		renderEnd: function(els, model, ctx, container, ctr){
-			model = this.rootModel || model;
-			
-			var compo = new WithStatement(this);
-		
+		renderEnd: function(els, model_, ctx, container, ctr){
+			var model = this.rootModel || model_,
+				compo = new WithStatement(this);
+
 			compo.elements = els;
 			compo.model = model;
 			compo.parent = ctr;
@@ -41,47 +35,37 @@
 				ctr,
 				compo.refresh
 			);
-			
-			expression_bind(compo.expr, model, ctx, ctr, compo.binder);
-			
+			expression_bind(
+				compo.expr,
+				model,
+				ctx,
+				ctr,
+				compo.binder
+			);
 			_renderPlaceholder(this, compo, container);
 			return compo;
 		}
 	});
-	
-	
+
 	function WithStatement(node){
 		this.expr = node.expression;
 		this.nodes = node.nodes;
 	}
-	
 	WithStatement.prototype = {
 		compoName: '+with',
 		elements: null,
 		binder: null,
 		model: null,
 		parent: null,
-		refresh: function(val){
-			dom_removeAll(this.elements);
-			
-			if (this.components) {
-				var imax = this.components.length,
-					i = -1;
-				while ( ++i < imax ){
-					Compo.dispose(this.components[i]);
-				}
-				this.components.length = 0;
-			}
-			
-			
+		refresh: function(model){
+			_compo_disposeChildren(this);
+
 			var fragment = document.createDocumentFragment();
-			this.elements = build(this.nodes, val, null, fragment, this);
-			
+			this.elements = _renderElements(this.nodes, model, null, fragment, this);
+
 			dom_insertBefore(fragment, this.placeholder);
 			compo_inserted(this);
 		},
-		
-		
 		dispose: function(){
 			expression_unbind(
 				this.expr,
@@ -89,17 +73,9 @@
 				this.parent,
 				this.binder
 			);
-		
 			this.parent = null;
 			this.model = null;
 			this.ctx = null;
 		}
-		
 	};
-	
-	function build(nodes, model, ctx, container, controller){
-		var els = [];
-		builder_build(nodes, model, ctx, container, controller, els);
-		return els;
-	}
 }());

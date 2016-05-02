@@ -3,26 +3,26 @@ var compo_fragmentInsert,
 	compo_dispose,
 	compo_inserted,
 	compo_attachDisposer,
-	compo_trav_children,
+	compo_hasChild,
 	compo_getScopeFor
 	;
 (function(){
-	
+
 	compo_fragmentInsert = function(compo, index, fragment, placeholder) {
-		if (compo.components == null) 
+		if (compo.components == null)
 			return dom_insertAfter(fragment, placeholder || compo.placeholder);
-		
+
 		var compos = compo.components,
 			anchor = null,
 			insertBefore = true,
 			imax = compos.length,
 			i = index - 1,
 			elements;
-		
+
 		if (anchor == null) {
 			while (++i < imax) {
 				elements = compos[i].elements;
-		
+
 				if (elements && elements.length) {
 					anchor = elements[0];
 					break;
@@ -43,29 +43,29 @@ var compo_fragmentInsert,
 				}
 			}
 		}
-		if (anchor == null) 
+		if (anchor == null)
 			anchor = placeholder || compo.placeholder;
-		
-		if (insertBefore) 
+
+		if (insertBefore)
 			return dom_insertBefore(fragment, anchor);
-		
+
 		return dom_insertAfter(fragment, anchor);
 	};
-	
+
 	compo_render = function(parentCtr, template, model, ctx, container) {
 		return mask.render(template, model, ctx, container, parentCtr);
 	};
-	
+
 	compo_dispose = function(compo, parent) {
-		if (compo == null) 
+		if (compo == null)
 			return false;
-		
+
 		if (compo.elements != null) {
 			dom_removeAll(compo.elements);
 			compo.elements = null;
 		}
 		__Compo.dispose(compo);
-		
+
 		var compos = (parent && parent.components) || (compo.parent && compo.parent.components);
 		if (compos == null) {
 			log_error('Parent Components Collection is undefined');
@@ -73,11 +73,11 @@ var compo_fragmentInsert,
 		}
 		return arr_remove(compos, compo);
 	};
-	
+
 	compo_inserted = function(compo) {
 		__Compo.signal.emitIn(compo, 'domInsert');
 	};
-	
+
 	compo_attachDisposer = function(ctr, disposer) {
 		if (typeof ctr.dispose === 'function') {
 			var previous = ctr.dispose;
@@ -85,26 +85,27 @@ var compo_fragmentInsert,
 				disposer.call(this);
 				previous.call(this);
 			};
-	
+
 			return;
 		}
 		ctr.dispose = disposer;
 	};
 
-	compo_trav_children = function(compo, compoName){
-		var out = [],
-			arr = compo.components || [],
-			imax = arr.length,
+	compo_hasChild = function(compo, compoName){
+		var arr = compo.components;
+		if (arr == null || arr.length === 0) {
+			return false;
+		}
+		var imax = arr.length,
 			i = -1;
-		
-		while ( ++i < imax ){
+		while (++i < imax) {
 			if (arr[i].compoName === compoName) {
-				out.push(arr[i]);
+				return true;
 			}
 		}
-		return out;
+		return false;
 	};
-	
+
 	compo_getScopeFor = function(ctr, path){
 		var key = path;
 		var i = path.indexOf('.');
