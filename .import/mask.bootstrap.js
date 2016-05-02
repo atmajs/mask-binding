@@ -1,5 +1,5 @@
 (function(){
-	
+
 	// source /ref-utils/lib/utils.embed.js
 	// source /src/refs.js
 	var _Array_slice = Array.prototype.slice,
@@ -267,8 +267,13 @@
 				return obj_create(b);
 	
 			for(var key in b) {
-				if (a[key] == null)
+				if (a[key] == null) {
 					a[key] = b[key];
+					continue;
+				}
+				if (key === 'toString' && a[key] === Object.prototype.toString) {
+					a[key] = b[key];
+				}
 			}
 			return a;
 		}
@@ -377,7 +382,11 @@
 	(function(){
 		fn_proxy = function(fn, ctx) {
 			return function(){
-				return fn_apply(fn, ctx, arguments);
+				var imax = arguments.length,
+					args = new Array(imax),
+					i = 0;
+				for(; i<imax; i++) args[i] = arguments[i];
+				return fn_apply(fn, ctx, args);
 			};
 		};
 	
@@ -433,7 +442,8 @@
 	
 	// end:source /src/fn.js
 	// source /src/str.js
-	var str_format;
+	var str_format,
+		str_dedent;
 	(function(){
 		str_format = function(str_){
 			var str = str_,
@@ -449,7 +459,25 @@
 	
 			return str_;
 		};
+		str_dedent = function(str) {
+			var rgx = /^[\t ]*\S/gm,
+				match = rgx.exec(str),
+				count = -1;
+			while(match != null) {			
+				var x = match[0].length;
+				if (count === -1 || x < count) count = x;
+				match = rgx.exec(str);
+			}		
+			if (--count < 1)
+				return str;
 	
+			var replacer = new RegExp('^[\\t ]{1,' + count + '}', 'gm');		
+			return str
+				.replace(replacer, '')
+				.replace(/^[\t ]*\r?\n/,'')
+				.replace(/\r?\n[\t ]*$/,'')
+				;
+		};
 		var rgxNum;
 		(function(){
 			rgxNum = function(num){
@@ -1259,170 +1287,129 @@ var class_Uri;
 //# sourceMappingURL=Uri.es6.map
 	// end:source /src/class/Uri.es6
 	// end:source /ref-utils/lib/utils.embed.js
-	// source /src/mock/Meta.js
+	// source /src/helper/Meta.js
+	var Meta;
 	(function(){
 		Meta = {
 			stringify: function(json, info){
-				
 				switch (info.mode) {
-					case 'server':
-					case 'server:all':
+					case mode_SERVER:
+					case mode_SERVER_ALL:
 						return '';
 				}
-				
-				
 				var	type = info.type,
 					isSingle = info.single,
-				
-					string = tag_OPEN + type;
-					
-					if (json.ID) 
-						string += '#' + json.ID;
-					
-					string += seperator_CHAR + ' ';
-				
-				for (var key in json) {
-					if (key === 'ID') 
-						continue;
-					
-					if (json[key] == null) 
-						continue;
-					
-					
-					string += key
-						+ ':'
-						+ val_stringify(json[key])
-						+ seperator_CHAR
-						+ ' ';
+					string = type;
+	
+				if (json.ID) {
+					string += '#' + json.ID;
 				}
-				
-				if (isSingle)
+				string += seperator_CHAR + ' ';
+				string += Serializer.resolve(info).serialize(json);
+				if (isSingle) {
 					string += '/';
-					
-				string += tag_CLOSE;
-				
-				return string;
+				}
+				return new HtmlDom.Comment(string).toString();
 			},
-			
 			close: function(json, info){
+				if (info.single === true) {
+					return '';
+				}
 				switch (info.mode) {
-					case 'server':
-					case 'server:all':
+					case mode_SERVER:
+					case mode_SERVER_ALL:
 						return '';
 				}
-				
-				
-				return tag_OPEN
-					+'/'
-					+ info.type
-					+ (json.ID ? '#' + json.ID : '')
-					+ tag_CLOSE;
+				var string = '/' + info.type + (json.ID ? '#' + json.ID : '');
+				return new HtmlDom.Comment(string).toString();
 			},
-			
-			parse: function (string){
-				parser_Index = 0;
-				parser_String = string;
-				parser_Length = string.length;
-				
-				
-				var json = {},
-					c = string[parser_Index];
-					
-				if (c === '/') {
-					json.end = true;
-					parser_Index++;
-				}
-				
-				json.type = string[parser_Index++];
-				parse_ID(json);
-				
-				while (parse_property(json));
-				
-				if (parser_Index === -1) 
-					return {};
-				
-				if (string[parser_Length - 1] === '/') 
-					json.single = true;
-				if (json.scope !== void 0) 
-					json.scope = JSON.parse(json.scope);
-				
-				return json;
+	
+			parse: function(str) {
+				return parser_parse(str);
 			}
 		};
-		
+	
 		var seperator_CODE = 30,
 			seperator_CHAR = String.fromCharCode(seperator_CODE);
-		
-		function val_stringify(mix) {
-			if (mix == null) 
+	
+		function JSON_stringify(mix) {
+			if (mix == null)
 				return 'null';
 			if (typeof mix !== 'object') {
 				// string | number
 				return mix;
 			}
-			
+	
 			if (is_Array(mix) === false) {
 				// JSON.stringify does not handle the prototype chain
 				mix = _obj_flatten(mix);
 			}
-			
+	
 			return JSON.stringify(mix);
 		}
-		
-		var parser_Index,
-			parser_Length,
-			parser_String;
-			
-		var tag_OPEN = '<!--',
-			tag_CLOSE = '-->';
-				
-			
-		function parse_ID(json){
-			
-			if (parser_String[parser_Index] !== '#') {
-				return;
+	
+		var parser_parse;
+		(function(){
+			var _i, _imax, _str;
+			parser_parse = function(string){
+				_i = 0;
+				_str = string;
+				_imax = string.length;
+	
+				var json = {},
+					c = string.charCodeAt(_i),
+					isEnd = false,
+					isSingle = false,
+					type;
+	
+				if (c === 47 /* / */) {
+					isEnd = true;
+					c = string.charCodeAt(++_i);
+				}
+				if (string.charCodeAt(_imax - 1) === 47 /* / */) {
+					isSingle = true;
+					_imax--;
+				}
+				var json = {
+					ID: null,
+					end: isEnd,
+					single: isSingle,
+					type: string[_i]
+				}
+				c = string.charCodeAt(++_i);
+				if (c === 35 /*#*/) {
+					++_i;
+					json.ID = parseInt(consumeNext(), 10);
+				}
+				var serializer = Serializer.resolve(json),
+					propertyParserFn = serializer.deserializeSingleProp,
+					propertyDefaultsFn = serializer.defaultProperties,
+					index = 0;
+				while (_i < _imax) {
+					var part = consumeNext();
+					propertyParserFn(json, part, index++);
+				}
+				if (propertyDefaultsFn != null) {
+					propertyDefaultsFn(json, index);
+				}
+				return json;
+			};
+	
+	
+			var seperator = seperator_CHAR + ' ',
+				seperatorLength = seperator.length;
+			function consumeNext() {
+				var start = _i,
+					end = _str.indexOf(seperator, start);
+				if (end === -1) {
+					end = _imax;
+				}
+				_i = end + seperatorLength;
+				return _str.substring(start, end);
 			}
-			parser_Index++;
-			
-			var end = parser_String.indexOf(seperator_CHAR);
-			
-			if (end === -1) {
-				end = parser_String.length;
-			}
-			
-			json.ID = parseInt(parser_String.substring(parser_Index, end), 10);
-			parser_Index = end;
-		}
-		
-		function parse_property(json) {
-			if (parser_Index > parser_Length - 5) 
-				return false;
-			
-			
-			if (parser_String[parser_Index++] !== seperator_CHAR || parser_String[parser_Index++] !== ' '){
-				parser_Index = -1;
-				return false;
-			}
-			
-			var index = parser_Index,
-				str = parser_String;
-			
-			var colon = str.indexOf(':', index),
-				key = str.substring(index, colon);
-				
-			var end = str.indexOf(seperator_CHAR + ' ', colon),
-				value = str.substring(colon + 1, end);
-				
-			
-			if (key === 'attr') {
-				value = JSON.parse(value);
-			}
-			
-			json[key] = value;
-			
-			parser_Index = end;
-			return true;
-		}
+	
+		}());
+	
 		function _obj_flatten(obj) {
 			var result = Object.create(obj);
 			for(var key in result) {
@@ -1430,15 +1417,208 @@ var class_Uri;
 			}
 			return result;
 		}
-		
+	
+	
+		var Serializer;
+		(function() {
+			Serializer = {
+				resolve: function(info){
+					switch (info.type) {
+						case 't':
+							return ComponentSerializer;
+						case 'a':
+							return AttributeSerializer;
+						default:
+							return Serializer;
+					}
+				},
+				serialize: function(json){
+					var string = '';
+					for(var key in json) {
+						if (key === 'ID') {
+							continue;
+						}
+						var val = json[key];
+						if (val == null) {
+							continue;
+						}
+	
+						string += key
+							+ ':'
+							+ JSON_stringify(json[key])
+							+ seperator_CHAR
+							+ ' ';
+					}
+					return string;
+				},
+				deserializeSingleProp: function(json, str, i){
+					var colon = str.indexOf(':'),
+						key = str.substring(0, colon),
+						value = str.substring(colon + 1);
+	
+					if (key === 'attr' || key === 'scope') {
+						value = JSON.parse(value);
+					}
+					json[key] = value;
+				},
+	
+				serializeProps_: function(props, json) {
+					var arr = new Array(props.count),
+						keys = props.keys;
+					for(var key in json) {
+						if (key === 'ID') {
+							continue;
+						}
+						var keyInfo = keys[key];
+						if (keyInfo === void 0) {
+							log_error('Unsupported Meta key:', key);
+							continue;
+						}
+						var val = json[key];
+						arr[keyInfo.index] = stringifyValueByKeyInfo(val, keyInfo);
+					}
+					var imax = arr.length,
+						i = -1, lastPos = 0;
+					while (++i < imax) {
+						var val = arr[i];
+						if (val == null) {
+							val = arr[i] = '';
+						}
+						if (val !== '') {
+							 lastPos = i;
+						}
+					}
+					if (lastPos < arr.length - 1) {
+						arr = arr.slice(0, lastPos + 1);
+					}
+					return arr.join(seperator_CHAR + ' ');
+				},
+				deserializeSingleProp_: function(json, props, str, i) {
+					var arr = props.keysArr;
+					if (i >= arr.length) {
+						log_error('Keys count missmatch');
+						return;
+					}
+					var keyInfo = arr[i];
+					var value = parseValueByKeyInfo(str, keyInfo);
+					json[keyInfo.name] = value;
+				},
+	
+				prepairProps_: function(keys){
+					var props = {
+						count: keys.length,
+						keys: {},
+						keysArr: keys,
+					},
+					imax = keys.length,
+					i = -1;
+					while (++i < imax) {
+						var keyInfo = keys[i];
+						keyInfo.index = i;
+						props.keys[keyInfo.name] = keyInfo;
+					};
+					return props;
+				}
+			};
+	
+			function parseValueByKeyInfo(str, keyInfo) {
+				if (str == null || str === '') {
+					if (keyInfo.default) {
+						return keyInfo.default();
+					}
+					return null;
+				}
+				switch (keyInfo.type) {
+					case 'string':
+					case 'mask':
+						return str;
+					case 'number':
+						return +str;
+					default:
+						return JSON.parse(str);
+				}
+			}
+	
+			function stringifyValueByKeyInfo(val, keyInfo) {
+				if (val == null) {
+					return '';
+				}
+				var result = JSON_stringify(val);
+				if (keyInfo.type === 'object' && result === '{}') {
+					return '';
+				}
+				if (keyInfo.type === 'array' && result === '[]') {
+					return '';
+				}
+				return result;
+			}
+	
+		}());
+	
+		var ComponentSerializer;
+		(function () {
+			var keys = [
+				{name: 'compoName', type: 'string' },
+				{name: 'attr', type: 'object', 'default': function(){ return {}; } },
+				{name: 'expression', type: 'string' },
+				{name: 'nodes', type: 'mask' },
+				{name: 'scope', type: 'object' },
+				{name: 'modelID', type: 'string' }
+			];
+			var props = Serializer.prepairProps_(keys);
+			ComponentSerializer = {
+				serialize: function(json, info) {
+					return Serializer.serializeProps_(props, json);
+				},
+				deserialize: function(str){
+					return Serializer.deserializeProps_(props, str);
+				},
+				deserializeSingleProp: function(json, str, i){
+					return Serializer.deserializeSingleProp_(json, props, str, i);
+				},
+				defaultProperties: function(json, index) {
+					var arr = props.keysArr,
+						imax = arr.length,
+						i = index - 1;
+					while (++i < imax) {
+						var keyInfo = arr[i];
+						if (keyInfo.default) {
+							json[keyInfo.name] = keyInfo.default();
+						}
+					}
+				}
+			}
+		}());
+	
+		var AttributeSerializer;
+		(function () {
+			var keys = [
+				{name: 'name', type: 'string' },
+				{name: 'value', type: 'string' }
+			];
+			var props = Serializer.prepairProps_(keys);
+			AttributeSerializer = {
+				serialize: function(json, info) {
+					return Serializer.serializeProps_(props, json);
+				},
+				deserialize: function(str){
+					return Serializer.deserializeProps_(props, str);
+				},
+				deserializeSingleProp: function(json, str, i){
+					return Serializer.deserializeSingleProp_(json, props, str, i);
+				}
+			};
+		}());
+	
+	
 	}());
-	// end:source /src/mock/Meta.js
+	// end:source /src/helper/Meta.js
 	// source /src/client/bootstrap.js
 	var atma = typeof atma === 'undefined'
 		? window
 		: atma
 		;
-		
+	
 	var mask = atma.mask,
 		Compo = mask.Compo,
 		Dom = mask.Dom,
@@ -1711,13 +1891,13 @@ var class_Uri;
 				console.error('Custom Utility Handler was not defined', meta.name);
 				return node;
 			}
-			
+		
 			util = handler.util;
 			el =  meta.utilType === 'attr'
 				? trav_getElement(node)
 				: node.nextSibling
 				;
-			
+		
 			if (util === void 0 || util.mode !== 'partial') {
 				handler(
 					meta.value
@@ -1730,8 +1910,8 @@ var class_Uri;
 				);
 				return node;
 			}
-			
-				
+		
+		
 			util.element = el;
 			util.current = meta.utilType === 'attr'
 				? meta.current
@@ -1744,12 +1924,13 @@ var class_Uri;
 				, el
 				, ctr
 				, meta.attrName
+				, meta.utilType
 			);
-			
+		
 			if (meta.utilType === 'node') {
 				node = el.nextSibling;
 			}
-			
+		
 			return node;
 		}
 		
@@ -1758,7 +1939,7 @@ var class_Uri;
 		var setup_compo,
 			setup_renderClient;
 		(function(){
-			
+		
 			setup_compo = function(meta, node, model, ctx, container, ctr, children){
 				if (meta.mask != null) {
 					setupClientMask(meta, Handler, node, model, ctx, ctr);
@@ -1768,22 +1949,22 @@ var class_Uri;
 					setupClientTemplate(meta.template, node, model, ctx, ctr);
 					return node;
 				}
-				
+		
 				var compoName = meta.compoName,
 					Handler   = getHandler_(compoName, ctr),
 					maskNode = getMaskNode_(meta),
 					isStatic  = is_Function(Handler) === false,
 					compo = getCompo_(Handler, maskNode, model, ctx, container, ctr);
-				
+		
 				resolveScope_(meta, compo, model, ctr);
-				
+		
 				compo.ID = meta.ID;
 				compo.attr = meta.attr;
 				compo.model = model;
 				compo.parent = ctr;
 				compo.compoName = compoName;
 				compo.expression = meta.expression;
-				
+		
 				if (compo.nodes == null) {
 					compo.nodes = maskNode.nodes;
 				}
@@ -1791,20 +1972,34 @@ var class_Uri;
 					ctr.components = [];
 				}
 				ctr.components.push(compo);
-				
-				var handleAttr = compo.meta && compo.meta.handleAttributes;
-				if (handleAttr != null && handleAttr(compo, model) === false) {
-					return node;
+		
+				var readAttributes = compo.meta && compo.meta.readAttributes;
+				if (readAttributes != null) {
+					readAttributes.call(compo, compo, compo.attr, model, container);
 				}
-				
-				var renderStart = compo.renderStartClient || compo.onRenderStartClient /* deprecated */;
+		
+				var renderStart = compo.renderStartClient;
 				if (is_Function(renderStart)) {
 					renderStart.call(compo, model, ctx, container, ctr);
+		
+					if (compo.async === true) {
+						compo.await(resumeDelegate(
+							node
+							, meta
+							, isStatic
+							, compo
+							, model
+							, ctx
+							, container
+							, ctr
+							, children));
+						return trav_CompoEnd(meta.ID, node);
+					}
 					model = compo.model || model;
 				}
-				
+		
 				var elements;
-				if (meta.single !== false) {
+				if (meta.single !== true) {
 					elements = [];
 					node = setupChildNodes(
 						meta
@@ -1816,11 +2011,11 @@ var class_Uri;
 						, elements
 					);
 				}
-				
+		
 				if (is_Function(compo.renderEnd)) {
 					// save reference to the last element in a container relative to the current component
 					compo.placeholder = node;
-					
+		
 					var overridenCompo = compo.renderEnd(
 						elements,
 						model,
@@ -1834,19 +2029,19 @@ var class_Uri;
 						compos[i] = overridenCompo;
 					}
 				}
-				
+		
 				arr_pushMany(children, elements);
 				return node;
 			};
-			
+		
 			setup_renderClient = function (template, el, model, ctx, ctr, children) {
 				var fragment = document.createDocumentFragment(),
 					container = el.parentNode;
-				
+		
 				container.appendChild = mock_appendChildDelegate(fragment);
-				
+		
 				mask.render(template, model, ctx, container, ctr, children);
-				
+		
 				container.insertBefore(fragment, el);
 				container.appendChild = Node.prototype.appendChild;
 			};
@@ -1863,7 +2058,7 @@ var class_Uri;
 					expression: meta.expression,
 					scope: meta.scope
 				};
-				
+		
 				/* Dangerous:
 				 *
 				 * Hack with mocking `appendChild`
@@ -1879,53 +2074,53 @@ var class_Uri;
 				 * Info: Appending to detached fragment has also perf. boost,
 				 * so it is not so bad idea.
 				 */
-				
+		
 				var fragment = document.createDocumentFragment(),
 					container = el.parentNode;
-				
+		
 				container.appendChild = mock_appendChildDelegate(fragment);
-				
+		
 				mask.render(node, model, ctx, container, ctr);
-				
+		
 				container.insertBefore(fragment, el);
 				container.appendChild = Node.prototype.appendChild;
 			}
-			
+		
 			function setupClientTemplate(template, el, model, ctx, ctr) {
 				var fragment = document.createDocumentFragment(),
 					container = el.parentNode;
-				
+		
 				container.appendChild = mock_appendChildDelegate(fragment);
-				
+		
 				mask.render(template, model, ctx, container, ctr);
-				
+		
 				container.insertBefore(fragment, el);
 				container.appendChild = Node.prototype.appendChild;
 			}
-			
+		
 			function setupChildNodes(meta, nextSibling, model, ctx, container, ctr, elements) {
 				var textContent;
 				while(nextSibling != null){
-					
+		
 					if (nextSibling.nodeType === Node.COMMENT_NODE) {
 						textContent = nextSibling.textContent;
-						
-						if (textContent === '/t#' + meta.ID) 
+		
+						if (textContent === '/t#' + meta.ID)
 							break;
-						
+		
 						if (textContent === '~') {
 							container   = nextSibling.previousSibling;
 							nextSibling = nextSibling.nextSibling;
 							continue;
 						}
-						
+		
 						if (textContent === '/~') {
 							container   = container.parentNode;
 							nextSibling = nextSibling.nextSibling;
 							continue;
 						}
 					}
-					
+		
 					var endRef = setup(
 						nextSibling
 						, model
@@ -1934,21 +2129,35 @@ var class_Uri;
 						, ctr
 						, elements
 					);
-					
-					if (endRef == null) 
+		
+					if (endRef == null)
 						throw new Error('Unexpected end of the reference');
-					
+		
 					nextSibling = endRef.nextSibling;
 				}
-				
+		
 				return nextSibling;
 			}
-			
+		
+			function trav_CompoEnd(id, el_) {
+				var el = el_.nextSibling;
+				while(el != null){
+					if (el.nodeType === Node.COMMENT_NODE)
+					{
+						var str = el.textContent;
+						if (str === '/t#' + id)
+							break;
+					}
+					el = el.nextSibling;
+				}
+				return el;
+			}
+		
 			function getHandler_(compoName, ctr) {
 				var Handler = custom_Tags[compoName];
-				if (Handler != null) 
+				if (Handler != null)
 					return Handler;
-				
+		
 				while(ctr != null) {
 					if (ctr.getHandler) {
 						Handler = ctr.getHandler(compoName);
@@ -1958,7 +2167,7 @@ var class_Uri;
 					}
 					ctr = ctr.parent;
 				}
-				
+		
 				console.error('Client bootstrap. Component is not loaded', compoName);
 				return function() {};
 			}
@@ -1966,7 +2175,7 @@ var class_Uri;
 				var node;
 				if (meta.nodes) {
 					node = mask.parse(meta.nodes);
-					
+		
 					if (node.type === mask.Dom.FRAGMENT) {
 						node = node.nodes[0];
 					}
@@ -1989,10 +2198,10 @@ var class_Uri;
 				if (Ctor != null) {
 					return new Ctor(node, model, ctx, container, ctr)
 				}
-				
+		
 				return obj_create(Handler);
 			}
-			
+		
 			function resolveScope_(meta, compo, model, ctr) {
 				var scope = meta.scope;
 				if (scope == null) {
@@ -2004,6 +2213,47 @@ var class_Uri;
 					return;
 				}
 				compo.scope = scope;
+			}
+		
+			function resumeDelegate(node, meta, isStatic, compo, model, ctx, container, ctr, children) {
+				return function () {
+					model = compo.model || model;
+		
+					var elements;
+					if (meta.single !== true) {
+						elements = [];
+						node = setupChildNodes(
+							meta
+							, node.nextSibling
+							, model
+							, ctx
+							, container
+							, compo
+							, elements
+						);
+					}
+		
+					if (is_Function(compo.renderEnd)) {
+						// save reference to the last element in a container relative to the current component
+						compo.placeholder = node;
+		
+						var overridenCompo = compo.renderEnd(
+							elements,
+							model,
+							ctx,
+							container,
+							ctr
+						);
+						if (isStatic === true && overridenCompo != null) {
+							var compos = ctr.components,
+								i = compos.indexOf(compo);
+							compos[i] = overridenCompo;
+						}
+					}
+		
+					arr_pushMany(children, elements);
+					return node;
+				}
 			}
 		}());
 		
@@ -2080,9 +2330,9 @@ var class_Uri;
 	// end:source ./setup.js
 	
 	function bootstrap(container, Mix) {
-		if (container == null) 
+		if (container == null)
 			container = document.body;
-		
+	
 		var compo, fragmentCompo;
 		if (Mix == null) {
 			fragmentCompo = compo = new mask.Compo();
@@ -2094,22 +2344,22 @@ var class_Uri;
 			fragmentCompo = new mask.Compo();
 			fragmentCompo.parent = compo
 		}
-		
+	
 		var metaNode = trav_getMeta(container.firstChild),
 			metaContent = metaNode && metaNode.textContent,
 			meta = metaContent && Meta.parse(metaContent);
-			
-			
+	
+	
 		if (meta == null || meta.type !== 'm') {
 			console.error('Mask.Bootstrap: meta information not found', container);
 			return;
 		}
-		
-		if (meta.ID != null) 
+	
+		if (meta.ID != null)
 			mask.setCompoIndex(__ID = meta.ID);
-		
+	
 		__models = model_parse(meta.model);
-		
+	
 		var model = compo.model = __models.m1,
 			el = metaNode.nextSibling,
 			ctx = meta.ctx;
@@ -2118,18 +2368,25 @@ var class_Uri;
 		} else {
 			ctx = {};
 		}
-		
+	
 		setup(el, model, ctx, el.parentNode, fragmentCompo);
-		
+	
 		if (fragmentCompo !== compo) {
 			util_pushComponents_(compo, fragmentCompo);
 		}
-		
-		Compo.signal.emitIn(fragmentCompo, 'domInsert');
+	
+		if (ctx.async === true) {
+			ctx.done(emitDomInsert);
+		} else {
+			emitDomInsert();
+		}
+		function emitDomInsert(args) {
+			Compo.signal.emitIn(fragmentCompo, 'domInsert');
+		}
 		return fragmentCompo;
 	}
 	
 	// end:source /src/client/bootstrap.js
-	
+
 	mask.Compo.bootstrap = bootstrap;
 }());

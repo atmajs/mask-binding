@@ -264,8 +264,13 @@ var obj_getProperty,
 			return obj_create(b);
 
 		for(var key in b) {
-			if (a[key] == null)
+			if (a[key] == null) {
 				a[key] = b[key];
+				continue;
+			}
+			if (key === 'toString' && a[key] === Object.prototype.toString) {
+				a[key] = b[key];
+			}
 		}
 		return a;
 	}
@@ -374,7 +379,11 @@ var fn_proxy,
 (function(){
 	fn_proxy = function(fn, ctx) {
 		return function(){
-			return fn_apply(fn, ctx, arguments);
+			var imax = arguments.length,
+				args = new Array(imax),
+				i = 0;
+			for(; i<imax; i++) args[i] = arguments[i];
+			return fn_apply(fn, ctx, args);
 		};
 	};
 
@@ -430,7 +439,8 @@ var fn_proxy,
 
 // end:source /src/fn.js
 // source /src/str.js
-var str_format;
+var str_format,
+	str_dedent;
 (function(){
 	str_format = function(str_){
 		var str = str_,
@@ -446,7 +456,25 @@ var str_format;
 
 		return str_;
 	};
+	str_dedent = function(str) {
+		var rgx = /^[\t ]*\S/gm,
+			match = rgx.exec(str),
+			count = -1;
+		while(match != null) {			
+			var x = match[0].length;
+			if (count === -1 || x < count) count = x;
+			match = rgx.exec(str);
+		}		
+		if (--count < 1)
+			return str;
 
+		var replacer = new RegExp('^[\\t ]{1,' + count + '}', 'gm');		
+		return str
+			.replace(replacer, '')
+			.replace(/^[\t ]*\r?\n/,'')
+			.replace(/\r?\n[\t ]*$/,'')
+			;
+	};
 	var rgxNum;
 	(function(){
 		rgxNum = function(num){
@@ -481,9 +509,22 @@ var class_create,
 			if (Proto == null)
 				Proto = {};
 
-			var Ctor = Proto.hasOwnProperty('constructor')
-				? Proto.constructor
-				: function ClassCtor () {};
+			var Ctor;
+
+			if (Proto.hasOwnProperty('constructor')) {
+				Ctor = Proto.constructor;
+				if (Ctor.prototype === void 0) {
+					var es6Method = Ctor;
+					Ctor = function ClassCtor () {
+						var imax = arguments.length, i = -1, args = new Array(imax);
+						while (++i < imax) args[i] = arguments[i];
+						return es6Method.apply(this, args);
+					};
+				}
+			}
+			else {
+				Ctor = function ClassCtor () {};
+			}
 
 			var i = args.length,
 				BaseCtor, x;

@@ -84,8 +84,7 @@ UTest({
 			}
 		}
 	},
-	'//Server': {
-		// Backend
+	'Server': {
 		'$config': {
 			'http.include': [ '/test/node.libraries.js' ]
 		},
