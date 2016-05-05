@@ -1,28 +1,13 @@
 var _getNodes,
-	_renderElements,
 	_renderPlaceholder,
 	_compo_initAndBind,
-	_compo_disposeChildren,
-
 	els_toggleVisibility
-
 	;
 
 (function(){
-
 	_getNodes = function(name, node, model, ctx, controller){
 		return custom_Statements[name].getNodes(node, model, ctx, controller);
 	};
-
-	_renderElements = function(nodes, model, ctx, container, ctr){
-		if (nodes == null)
-			return null;
-
-		var elements = [];
-		builder_build(nodes, model, ctx, container, ctr, elements);
-		return elements;
-	};
-
 	_renderPlaceholder = function(staticCompo, compo, container){
 		var placeholder = staticCompo.placeholder;
 		if (placeholder == null) {
@@ -48,23 +33,6 @@ var _getNodes,
 
 
 		expression_bind(compo.expr || compo.expression, model, ctx, controller, compo.binder);
-	};
-
-	_compo_disposeChildren = function(compo) {
-		var els = compo.elements;
-		if (els != null) {
-			dom_removeAll(els);
-			compo.elements = null;
-		}
-
-		var compos = compo.components;
-		if (compos != null) {
-			var imax = compos.length, i = -1;
-			while (++i < imax){
-				Compo.dispose(compos[i]);
-			}
-			compos.length = 0;
-		}
 	};
 
 	(function(){

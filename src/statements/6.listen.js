@@ -4,6 +4,7 @@
 		compoName: 'listen',
 		show: null,
 		hide: null,
+		disposed: false,
 		meta: {
 			serializeNodes: true,
 			attributes: {
@@ -43,18 +44,30 @@
 			throw new Error('Should be defined');
 		},
 		refreshSync: function(){
-			_compo_disposeChildren(this);
+			this.destroy();
+			this.create();
+		},
+		create: function(){
+			compo_renderChildren(this, this.placeholder);
+		},
+		destroy: function(){
+			compo_disposeChildren(this);
+		},
+		refreshAni: function(){
+			var x = _compo_transferChildren(this);
+			this.create();
+			return this.ani.run('hide', 'show', function(){
+				compo_disposeChildren(x);
+			});
 
-			var fragment = document.createDocumentFragment();
-			this.elements = _renderElements(
-				this.nodes,
-				this.model,
-				null,
-				fragment,
-				this
-			);
-			dom_insertBefore(fragment, this.placeholder);
-			compo_inserted(this);
-		}
+			return this.ani.run('hide', this.destroy, this.create, 'show');
+		},
+		refreshAniPar: function(){
+
+		},
+		getAni: function (name) {
+
+		},
+
 	}));
 }());

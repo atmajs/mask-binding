@@ -28,7 +28,7 @@
 
 			this.attr['switch-index'] = index;
 
-			return _renderElements(nodes, model, ctx, container, ctr, children);
+			return compo_renderElements(nodes, model, ctx, container, ctr, children);
 		},
 
 		renderEnd: function(els, model, ctx, container, ctr){

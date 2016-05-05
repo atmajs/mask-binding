@@ -1,30 +1,32 @@
 var compo_fragmentInsert,
 	compo_render,
+	compo_renderChildren,
+	compo_renderElements,
 	compo_dispose,
+	compo_disposeChildren,
 	compo_inserted,
 	compo_attachDisposer,
 	compo_hasChild,
-	compo_getScopeFor
+	compo_getScopeFor,
+	compo_transferChildren
 	;
 (function(){
 
 	compo_fragmentInsert = function(compo, index, fragment, placeholder) {
-		if (compo.components == null)
+		if (compo.components == null) {
 			return dom_insertAfter(fragment, placeholder || compo.placeholder);
-
+		}
 		var compos = compo.components,
 			anchor = null,
 			insertBefore = true,
 			imax = compos.length,
-			i = index - 1,
-			elements;
+			i = index - 1;
 
 		if (anchor == null) {
 			while (++i < imax) {
-				elements = compos[i].elements;
-
-				if (elements && elements.length) {
-					anchor = elements[0];
+				var arr = compos[i].elements;
+				if (arr != null && arr.length !== 0) {
+					anchor = arr[0];
 					break;
 				}
 			}
@@ -36,26 +38,44 @@ var compo_fragmentInsert,
 				: imax
 				;
 			while (--i > -1) {
-				elements = compos[i].elements;
-				if (elements && elements.length) {
-					anchor = elements[elements.length - 1];
+				var arr = compos[i].elements;
+				if (arr != null && arr.length !== 0) {
+					anchor = arr[arr.length - 1];
 					break;
 				}
 			}
 		}
-		if (anchor == null)
+		if (anchor == null) {
 			anchor = placeholder || compo.placeholder;
-
-		if (insertBefore)
+		}
+		if (insertBefore) {
 			return dom_insertBefore(fragment, anchor);
-
+		}
 		return dom_insertAfter(fragment, anchor);
 	};
-
 	compo_render = function(parentCtr, template, model, ctx, container) {
 		return mask.render(template, model, ctx, container, parentCtr);
 	};
-
+	compo_renderChildren = function(compo, anchor, model){
+		var fragment = document.createDocumentFragment();
+		compo.elements = compo_renderElements(
+			compo.nodes,
+			model || compo.model,
+			compo.ctx,
+			fragment,
+			compo
+		);
+		dom_insertBefore(fragment, anchor);
+		compo_inserted(compo);
+	};
+	compo_renderElements = function(nodes, model, ctx, el, ctr){
+		if (nodes == null){
+			return null;
+		}
+		var arr = [];
+		builder_build(nodes, model, ctx, el, ctr, arr);
+		return arr;
+	};
 	compo_dispose = function(compo, parent) {
 		if (compo == null)
 			return false;
@@ -72,6 +92,22 @@ var compo_fragmentInsert,
 			return false;
 		}
 		return arr_remove(compos, compo);
+	};
+
+	compo_disposeChildren = function(compo){
+		var els = compo.elements;
+		if (els != null) {
+			dom_removeAll(els);
+			compo.elements = null;
+		}
+		var compos = compo.components;
+		if (compos != null) {
+			var imax = compos.length, i = -1;
+			while (++i < imax){
+				Compo.dispose(compos[i]);
+			}
+			compos.length = 0;
+		}
 	};
 
 	compo_inserted = function(compo) {
@@ -120,4 +156,13 @@ var compo_fragmentInsert,
 		}
 		return null;
 	};
+	compo_transferChildren = function(compo){
+		var x = {
+			elements: compo.elements,
+			components: compo.components
+		};
+		compo.elements = compo.components = null;
+		return x;
+	};
+
 }());

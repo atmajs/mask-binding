@@ -12,7 +12,7 @@
 				)
 				;
 			this.rootModel = model;
-			return _renderElements(nodes, val, ctx, container, ctr);
+			return compo_renderElements(nodes, val, ctx, container, ctr);
 		},
 		onRenderStartClient: function(model, ctx){
 			this.rootModel = model;
@@ -58,13 +58,8 @@
 		model: null,
 		parent: null,
 		refresh: function(model){
-			_compo_disposeChildren(this);
-
-			var fragment = document.createDocumentFragment();
-			this.elements = _renderElements(this.nodes, model, null, fragment, this);
-
-			dom_insertBefore(fragment, this.placeholder);
-			compo_inserted(this);
+			compo_disposeChildren(this);
+			compo_renderChildren(this, this.placeholder, model);
 		},
 		dispose: function(){
 			expression_unbind(

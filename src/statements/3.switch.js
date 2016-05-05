@@ -26,7 +26,7 @@
 
 			this.attr[attr_SWITCH] = _index;
 
-			return _renderElements(_nodes, model, ctx, container, ctr, children);
+			return compo_renderElements(_nodes, model, ctx, container, ctr, children);
 		},
 
 		renderEnd: function(els, model, ctx, container, ctr){
