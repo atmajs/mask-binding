@@ -29,5 +29,4 @@ var dom_removeElement,
 	dom_insertBefore = function(el, anchor) {
 		return anchor.parentNode.insertBefore(el, anchor);
 	};
-
 }());
