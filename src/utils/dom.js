@@ -1,30 +1,33 @@
 var dom_removeElement,
 	dom_removeAll,
 	dom_insertAfter,
-	dom_insertBefore;
+	dom_insertBefore,
+	dom_hideElement,
+	dom_hideAll;
 (function(){
-
-	dom_removeElement = function(node) {
-		var parent = node.parentNode;
-		if (parent == null)
-			return node;
-
-		return parent.removeChild(node);
+	dom_removeElement = function(el) {
+		var parent = el.parentNode;
+		if (parent == null) {
+			return el;
+		}
+		return parent.removeChild(el);
 	};
-	dom_removeAll = function(array) {
-		if (array == null) 
-			return;
-		
-		var imax = array.length,
-			i = -1;
-		while ( ++i < imax ) {
-			dom_removeElement(array[i]);
+	dom_removeAll = function(arr) {
+		arr_each(arr, dom_removeElement);
+	};
+	dom_hideElement = function(el){
+		if (el != null) {
+			el.style.display = 'none';
 		}
 	};
-	dom_insertAfter = function(element, anchor) {
-		return anchor.parentNode.insertBefore(element, anchor.nextSibling);
+	dom_hideAll = function(arr) {
+		arr_each(arr, dom_hideElement);
 	};
-	dom_insertBefore = function(element, anchor) {
-		return anchor.parentNode.insertBefore(element, anchor);
+	dom_insertAfter = function(el, anchor) {
+		return anchor.parentNode.insertBefore(el, anchor.nextSibling);
 	};
+	dom_insertBefore = function(el, anchor) {
+		return anchor.parentNode.insertBefore(el, anchor);
+	};
+
 }());
