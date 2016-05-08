@@ -1,10 +1,10 @@
 (function(){
 	__registerHandler('listen', class_create({
+		disposed: false,
 		placeholder: null,
 		compoName: 'listen',
 		show: null,
 		hide: null,
-		disposed: false,
 		meta: {
 			serializeNodes: true,
 			attributes: {
@@ -35,6 +35,7 @@
 				this,
 				this.refresh
 			);
+			this.disposed = true;
 			this.elements = null;
 			this.parent = null;
 			this.model = null;
@@ -44,28 +45,41 @@
 			throw new Error('Should be defined');
 		},
 		refreshSync: function(){
-			this.destroy();
+			compo_disposeChildren(this);
 			this.create();
 		},
 		create: function(){
 			compo_renderChildren(this, this.placeholder);
 		},
-		destroy: function(){
-			compo_disposeChildren(this);
-		},
 		refreshAni: function(){
-			var x = _compo_transferChildren(this);
-			this.create();
-			return this.ani.run('hide', 'show', function(){
-				compo_disposeChildren(x);
+			var x = compo_transferChildren(this);
+			var me = this;
+			var show = me.getAni('show');
+			var hide = me.getAni('hide');
+			if (this.attr.animatable === 'parallel') {
+				show.start(me.create());
+				hide.start(x.elements, function(){
+					compo_dispose(x);
+				});
+				return;
+			}
+			hide.start(x.elements, function(){
+				if (me.disposed === true) {
+					return;
+				}
+				compo_dispose(x);
+				show.start(me.create());
 			});
-
-			return this.ani.run('hide', this.destroy, this.create, 'show');
-		},
-		refreshAniPar: function(){
-
 		},
 		getAni: function (name) {
+			var x = this[name];
+			if (x != null) {
+				return x;
+			}
+			var ani = Compo.child('Animation#' + name);
+			if (ani != null) {
+				return (this[name] = ani.start.bind(ani));
+			}
 
 		},
 
