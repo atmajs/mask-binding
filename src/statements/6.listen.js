@@ -25,7 +25,7 @@
 			this.elements = els;
 
 			var Ctor = this.getBinder();
-			this.binder = new Ctor(this.expression, model, ctx, this);
+			this.binder = new Ctor(this.expression, model, this);
 			this.binder.bind(this.refresh);
 		},
 		getBinder: function(){

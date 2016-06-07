@@ -10,7 +10,7 @@ Binders.RxBinder = class_create(IBinder, {
 
 		var stream = arr.shift();
 		if (stream == null || stream.subscribe == null) {
-			error_withCompo('Method is undefined on RxObservable: ' + method, ctr);
+			error_withCompo('Subscribe method is undefined on RxObservable', ctr);
 			return;
 		}
 		arr.push(cb);

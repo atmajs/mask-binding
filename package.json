@@ -1,44 +1,44 @@
 {
-    "name": "mask.binding",
-    "description": "Binding Library for MaskJS",
-    "version": "0.5.0",
-    "contributors": [],
-    "main": "./lib/mask.binding.js",
-    "author": "Alexander Kit <alex.kit@atmajs.com>",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/atmajs/mask-binding.git"
-    },
-    "bugs": {
-        "url": "https://github.com/atmajs/mask-binding/issues"
-    },
-    "licenses": [
-        "MIT"
+  "name": "mask.binding",
+  "description": "Binding Library for MaskJS",
+  "version": "0.5.0",
+  "contributors": [],
+  "main": "./lib/mask.binding.js",
+  "author": "Alexander Kit <alex.kit@atmajs.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atmajs/mask-binding.git"
+  },
+  "bugs": {
+    "url": "https://github.com/atmajs/mask-binding/issues"
+  },
+  "licenses": [
+    "MIT"
+  ],
+  "devDependencies": {
+    "atma": ">0.9.26",
+    "atma-loader-babel": "^1.0.21"
+  },
+  "scripts": {
+    "test": "atma test",
+    "build": "atma",
+    "server": "atma server"
+  },
+  "keywords": [],
+  "engines": {
+    "node": "~0.8.9"
+  },
+  "atma": {
+    "plugins": [
+      "atma-loader-babel"
     ],
-    "dependencies": {
-        "atma-loader-traceur": ">0.0.0"
-    },
-    "devDependencies": {
-        "atma": ">0.9.26"
-    },
-    "scripts": {
-        "test": "atma test",
-        "build": "atma",
-        "server": "atma server"
-    },
-    "keywords": [],
-    "engines": {
-        "node": "~0.8.9"
-    },
-    "atma": {
-        "plugins": [
-            "atma-loader-traceur"
-        ],
-        "settings": {
-            "atma-loader-traceur": {
-                "extensions": ["es6", "test"],
-                "deferredFunctions": true
-            }
-        }
+    "settings": {
+      "atma-loader-babel": {
+        "extensions": [
+          "es6",
+          "test"
+        ]        
+      }
     }
+  }  
 }
