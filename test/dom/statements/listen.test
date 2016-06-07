@@ -24,6 +24,7 @@ UTest({
 			'should modify letter' (done, compo) {
 				compo.model.letter = { name: 'B'};
 				eq_(compo.model.letter.name, 'B');
+				eq_(compo.model.__observers.letter.length, 1);
 				compo.$.eq_('text', 'B');
 				done(compo);
 			},
@@ -35,69 +36,50 @@ UTest({
 				done(compo);
 			}
 		},
-		'expression with multiple statements': {
-			$before (done) {
+		'simple event emitter': {
+			'should render and re-render on event' () {
 				var template = `
 					section {
-						listen (letter, letter.name, qux) {
-							span.test > '~letter.name ~qux';
+						listen on (MyEmitter, 'my-event') {
+							span.test > '~letter.name';
 						}
 					}
 				`;
-				var model = { letter: { name: 'A' }, qux: 'Qux' };
+				var TestEmitter = mask.class.create({
+					cb: null,
+					on: sinon.spy(function(event, cb){
+						this.cb = cb;
+						eq_(event, 'my-event');
+					}),
+					off: sinon.spy(function(event, cb){
+						eq_(this.cb, cb);
+						eq_(event, 'my-event');
+					}),
+				});
+				var model = {
+					letter: { name: 'A' },
+					MyEmitter: new TestEmitter
+				};
 				var compo = Compo.initialize(template, model);
-				done(compo);
-			},
-			'should be rendered' (done, compo) {
-				eq_(compo.model.letter.name, 'A');
-				is_(compo.model.__observers['letter'], 'Array');
-				eq_(compo.model.__observers['letter'].length, 1);
-				is_(compo.model.__observers['letter.name'], 'Array');
-				eq_(compo.model.__observers['letter.name'].length, 1);
-				is_(compo.model.__observers['qux'], 'Array');
-				eq_(compo.model.__observers['qux'].length, 1);
 
+				'> should be rendered'
+				compo.$.eq_('text', 'A');
 
-				compo.$.eq_('text', 'A Qux');
-				done(compo);
-			},
-			'should modify letter object and qux' (done, compo) {
-				compo.model.letter = { name: 'B'};
-				compo.model.qux = 'Bar';
-				compo.$.eq_('text', 'B Bar');
-				done(compo);
-			},
-			'should modify letter property' (done, compo) {
-				compo.model.letter.name = 'C';
-				compo.$.eq_('text', 'C Bar');
-				done(compo);
-			},
-			'should remove observers' (done, compo) {
+				'> should have been attached'
+				eq_(model.MyEmitter.on.callCount, 1);
+
+				'> should not change the dom until the event'
+				model.letter.name = 'B';
+				compo.$.eq_('text', 'A');
+
+				'> should re-render'
+				model.MyEmitter.cb();
+				compo.$.eq_('text', 'B');
+
+				'> should remove listener'
 				compo.remove();
-				is_(compo.model.__observers['letter'], 'Array');
-				eq_(compo.model.__observers['letter'].length, 0);
-				is_(compo.model.__observers['letter.name'], 'Array');
-				eq_(compo.model.__observers['letter.name'].length, 0);
-				is_(compo.model.__observers['qux'], 'Array');
-				eq_(compo.model.__observers['qux'].length, 0);
-				done(compo);
+				eq_(model.MyEmitter.off.callCount, 1);
 			}
-		},
-		'should dispose child component' () {
-			var disposer = sinon.stub();
-			mask.define('Foo', mask.Compo({
-				dispose: disposer,
-				template: `
-					span > '~letter'
-				`
-			}));
-			var template = `
-				listen (letter) > Foo;
-			`;
-			Compo
-				.initialize(template, {letter: 'A'})
-				.remove();
-			eq_(disposer.calledOnce, true);
 		}
 	},
 	'Server': {

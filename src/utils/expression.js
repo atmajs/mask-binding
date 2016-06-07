@@ -1,5 +1,6 @@
 var expression_eval,
 	expression_eval_strict,
+	expression_evalStatements,
 	expression_bind,
 	expression_unbind,
 	expression_createBinder,
@@ -15,6 +16,7 @@ var expression_eval,
 	expression_eval_strict = Expression.eval;
 	expression_parse = Expression.parse;
 	expression_varRefs = Expression.varRefs;
+	expression_evalStatements = Expression.evalStatements;
 
 	expression_eval = function(expr, model, ctx, ctr){
 		if (expr === '.')

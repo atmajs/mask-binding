@@ -5,10 +5,13 @@
 		compoName: 'listen',
 		show: null,
 		hide: null,
+		binder: null,
 		meta: {
 			serializeNodes: true,
 			attributes: {
-				animatable: false
+				animatable: false,
+				on: false,
+				rx: false,
 			}
 		},
 		renderEnd: function(els, model, ctx, container, ctr){
@@ -20,21 +23,23 @@
 
 			this.refresh = fn_proxy(fn, this);
 			this.elements = els;
-			expression_bind(
-				this.expression,
-				model,
-				ctx,
-				this,
-				this.refresh
-			);
+
+			var Ctor = this.getBinder();
+			this.binder = new Ctor(this.expression, model, ctx, this);
+			this.binder.bind(this.refresh);
+		},
+		getBinder: function(){
+			if (this.attr.on) {
+				return Binders.EventEmitterBinder;
+			}
+			if (this.attr.rx) {
+				return Binders.RxBinder;
+			}
+			return Binders.ExpressionBinder;
 		},
 		dispose: function(){
-			expression_unbind(
-				this.expression,
-				this.model,
-				this,
-				this.refresh
-			);
+			this.binder.dispose();
+
 			this.disposed = true;
 			this.elements = null;
 			this.parent = null;
@@ -82,6 +87,5 @@
 			}
 
 		},
-
 	}));
 }());
