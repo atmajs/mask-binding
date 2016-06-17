@@ -1,43 +1,31 @@
 (function(){
-
 	__registerHandler('+if', {
 		placeholder: null,
 		meta: {
 			serializeNodes: true
 		},
 		render: function(model, ctx, container, ctr, children){
-
 			var node = this,
 				nodes = _getNodes('if', node, model, ctx, ctr),
-				index = 0;
-
-			var next = node;
-			while(true){
-
-				if (next.nodes === nodes)
-					break;
-
+				index = 0,
+				next = node;
+			while(next.nodes !== nodes){
 				index++;
 				next = node.nextSibling;
-
 				if (next == null || next.tagName !== 'else') {
 					index = null;
 					break;
 				}
 			}
-
 			this.attr['switch-index'] = index;
-
 			return compo_renderElements(nodes, model, ctx, container, ctr, children);
 		},
 
 		renderEnd: function(els, model, ctx, container, ctr){
-
 			var compo = new IFStatement(),
 				index = this.attr['switch-index'];
 
 			_renderPlaceholder(this, compo, container);
-
 			return initialize(
 				compo
 				, this
@@ -51,16 +39,14 @@
 		},
 
 		serializeNodes: function(current){
-
 			var nodes = [ current ];
 			while (true) {
 				current = current.nextSibling;
-				if (current == null || current.tagName !== 'else')
+				if (current == null || current.tagName !== 'else') {
 					break;
-
+				}
 				nodes.push(current);
 			}
-
 			return mask.stringify(nodes);
 		}
 
@@ -80,22 +66,15 @@
 		binder : null,
 
 		refresh: function() {
-			var compo = this,
-				switch_ = compo.Switch,
-
+			var currentIndex = this.index,
+				model = this.model,
+				ctx = this.ctx,
+				ctr = this.controller,
+				switch_ = this.Switch,
 				imax = switch_.length,
-				i = -1,
-				expr,
-				item, index = 0;
-
-			var currentIndex = compo.index,
-				model = compo.model,
-				ctx = compo.ctx,
-				ctr = compo.controller
-				;
-
+				i = -1;
 			while ( ++i < imax ){
-				expr = switch_[i].node.expression;
+				var expr = switch_[i].node.expression;
 				if (expr == null)
 					break;
 
@@ -110,7 +89,7 @@
 				els_toggleVisibility(switch_[currentIndex].elements, false);
 
 			if (i === imax) {
-				compo.index = null;
+				this.index = null;
 				return;
 			}
 
@@ -122,17 +101,19 @@
 				return;
 			}
 
-			var frag = mask.render(current.node.nodes, model, ctx, null, ctr);
-			var els = frag.nodeType === Node.DOCUMENT_FRAGMENT_NODE
-				? _Array_slice.call(frag.childNodes)
-				: frag
-				;
+			var nodes = current.node.nodes,
+				frag = document.createDocumentFragment(),
+				owner = { components: [] },
+				els = compo_renderElements(nodes, model, ctx, frag, owner);
 
-
-			dom_insertBefore(frag, compo.placeholder);
-
+			dom_insertBefore(frag, this.placeholder);
 			current.elements = els;
 
+			compo_inserted(owner);
+			if (ctr.components == null) {
+				ctr.components = [];
+			}
+			ctr.components.push.apply(ctr.components, owner.components);
 		},
 		dispose: function(){
 			var switch_ = this.Switch,

@@ -37,8 +37,8 @@
         "extensions": [
           "es6",
           "test"
-        ]        
+        ]
       }
     }
-  }  
+  }
 }
