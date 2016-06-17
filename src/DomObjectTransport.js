@@ -1,6 +1,6 @@
 var DomObjectTransport;
 (function(){
-	
+
 	var objectWay = {
 		get: function(provider, expression) {
 			var getter = provider.objGetter;
@@ -12,11 +12,11 @@ var DomObjectTransport;
 					, provider.ctr
 				);
 			}
-			
+
 			var obj = getAccessorObject_(provider, getter);
-			if (obj == null) 
+			if (obj == null)
 				return null;
-			
+
 			return obj[getter](expression, provider.model, provider.ctr.parent);
 		},
 		set: function(obj, property, value, provider) {
@@ -26,9 +26,9 @@ var DomObjectTransport;
 				return;
 			}
 			var ctx = getAccessorObject_(provider, setter);
-			if (ctx == null) 
+			if (ctx == null)
 				return;
-			
+
 			ctx[setter](
 				property
 				, value
@@ -71,11 +71,11 @@ var DomObjectTransport;
 		},
 		objSet: function(extend){
 			return function(obj, prop, val){
-				
+
 				var date = date_ensure(val);
-				if (date == null) 
+				if (date == null)
 					return;
-				
+
 				var target = obj_getProperty(obj, prop);
 				if (target == null) {
 					obj_setProperty(obj, prop, date);
@@ -91,19 +91,19 @@ var DomObjectTransport;
 			}
 		}
 	};
-	
+
 	DomObjectTransport = {
 		// generic
 		objectWay: objectWay,
 		domWay: domWay,
-		
+
 		SELECT: {
 			get: function(provider) {
 				var el = provider.element,
 					i = el.selectedIndex;
-				if (i === -1) 
+				if (i === -1)
 					return '';
-				
+
 				var opt = el.options[i],
 					val = opt.getAttribute('value');
 				return val == null
@@ -119,9 +119,9 @@ var DomObjectTransport;
 				for(i = 0; i < imax; i++){
 					opt = options[i];
 					x = opt.getAttribute('value');
-					if (x == null) 
+					if (x == null)
 						x = opt.getAttribute('name');
-					
+
 					/* jshint eqeqeq: false */
 					if (x == val) {
 						/* jshint eqeqeq: true */
@@ -185,9 +185,22 @@ var DomObjectTransport;
 			objectWay: {
 				get: objectWay.get,
 				set: DateTimeDelegate.objSet(function(a, b){
-					a.setHours(b.getHours())
+					a.setHours(b.getHours());
 					a.setMinutes(b.getMinutes());
 					a.setSeconds(b.getSeconds());
+				})
+			}
+		},
+		MONTH: {
+			domWay: {
+				get: domWay.get,
+				set: DateTimeDelegate.domSet(formatMonth)
+			},
+			objectWay: {
+				get: objectWay.get,
+				set: DateTimeDelegate.objSet(function(a, b){
+					a.setFullYear(b.getFullYear());
+					a.setMonth(b.getMonth());
 				})
 			}
 		},
@@ -203,9 +216,9 @@ var DomObjectTransport;
 				}
 			},
 		}
-		
+
 	};
-	
+
 	function isValidFn_(obj, prop, name) {
 		if (obj== null || typeof obj[prop] !== 'function') {
 			log_error('BindingProvider. Controllers accessor.', name, 'should be a function. Property:', prop);
@@ -215,12 +228,12 @@ var DomObjectTransport;
 	}
 	function getAccessorObject_(provider, accessor) {
 		var ctr = provider.ctr.parent;
-		if (ctr[accessor] != null) 
+		if (ctr[accessor] != null)
 			return ctr;
 		var model = provider.model;
-		if (model[accessor] != null) 
+		if (model[accessor] != null)
 			return model;
-		
+
 		log_error('BindingProvider. Accessor `', accessor, '`should be a function');
 		return null;
 	}
@@ -245,5 +258,13 @@ var DomObjectTransport;
 			+ (M < 10 ? '0' : '')
 			+ (M)
 			;
+	}
+	function formatMonth(date) {
+		var YYYY = date.getFullYear(),
+			MM = date.getMonth() + 1;
+		return YYYY
+			+ '-'
+			+ (MM < 10 ? '0' : '')
+			+ (MM);
 	}
 }());

@@ -2,26 +2,26 @@ var CustomProviders,
 	BindingProvider;
 (function() {
 	CustomProviders = {};
-	
+
 	BindingProvider = class_create({
 		validations: null,
 		constructor: function BindingProvider(model, element, ctr, bindingType) {
 			if (bindingType == null) {
 				bindingType = 'dual';
-				
+
 				var name = ctr.compoName;
 				if (name === ':bind' || name === 'bind') {
 					bindingType = 'single';
 				}
 			}
-			
+
 			var attr = ctr.attr,
 				type;
-	
+
 			this.node = ctr; // backwards compat.
 			this.ctr = ctr;
 			this.ctx = null;
-	
+
 			this.model = model;
 			this.element = element;
 			this.value = attr.value;
@@ -30,29 +30,29 @@ var CustomProviders,
 			this.domGetter = attr.getter || attr['dom-getter'];
 			this.objSetter = attr['obj-setter'];
 			this.objGetter = attr['obj-getter'];
-			
+
 			/* Convert to an instance, e.g. Number, on domchange event */
 			this['typeof'] = attr['typeof'] || null;
-			
+
 			this.dismiss = 0;
 			this.bindingType = bindingType;
 			this.log = false;
 			this.signal_domChanged = null;
 			this.signal_objectChanged = null;
 			this.locked = false;
-			
-			
+
+
 			if (this.property == null && this.domGetter == null) {
-	
+
 				switch (element.tagName) {
 					case 'INPUT':
-						type = element.getAttribute('type');
+						type = element.type;
 						if ('checkbox' === type) {
 							this.property = 'element.checked';
 							break;
 						}
-						else if ('date' === type) {
-							var x = DomObjectTransport.DATE;
+						else if ('date' === type || 'time' === type || 'month' === type) {
+							var x = DomObjectTransport[type.toUpperCase()];
 							this.domWay = x.domWay;
 							this.objectWay = x.objectWay;
 						}
@@ -64,7 +64,7 @@ var CustomProviders,
 							this.domWay = x.domWay;
 							break;
 						}
-						
+
 						this.property = 'element.value';
 						break;
 					case 'TEXTAREA':
@@ -80,19 +80,19 @@ var CustomProviders,
 						break;
 				}
 			}
-	
+
 			if (attr['log']) {
 				this.log = true;
 				if (attr.log !== 'log') {
 					this.logExpression = attr.log;
 				}
 			}
-	
+
 			// Send signal on OBJECT or DOM change
 			if (attr['x-signal']) {
 				var signal = signal_parse(attr['x-signal'], null, 'dom')[0],
 					signalType = signal && signal.type;
-				
+
 				switch(signalType){
 					case 'dom':
 					case 'object':
@@ -103,12 +103,12 @@ var CustomProviders,
 						break;
 				}
 			}
-			
+
 			// Send PIPED signal on OBJECT or DOM change
 			if (attr['x-pipe-signal']) {
 				var signal = signal_parse(attr['x-pipe-signal'], true, 'dom')[0],
 					signalType = signal && signal.type;
-					
+
 				switch(signalType){
 					case 'dom':
 					case 'object':
@@ -119,22 +119,22 @@ var CustomProviders,
 						break;
 				}
 			}
-			
+
 			var domSlot = attr['dom-slot'];
 			if (domSlot != null) {
 				this.slots = {};
 				// @hack - place dualb. provider on the way of a signal
-				// 
+				//
 				var parent = ctr.parent,
 					newparent = parent.parent;
-					
+
 				parent.parent = this;
-				this.parent = newparent;				
+				this.parent = newparent;
 				this.slots[domSlot] = function(sender, value){
 					this.domChanged(sender, value);
 				};
 			}
-			
+
 			/*
 			 *  @obsolete: attr name : 'x-pipe-slot'
 			 */
@@ -144,17 +144,17 @@ var CustomProviders,
 					index = str.indexOf('.'),
 					pipeName = str.substring(0, index),
 					signal = str.substring(index + 1);
-				
+
 				this.pipes = {};
 				this.pipes[pipeName] = {};
 				this.pipes[pipeName][signal] = function(){
 					this.objectChanged();
 				};
-				
+
 				__Compo.pipe.addController(this);
 			}
-	
-	
+
+
 			if (attr.expression) {
 				this.expression = attr.expression;
 				if (this.value == null && bindingType !== 'single') {
@@ -167,7 +167,7 @@ var CustomProviders,
 				}
 				return;
 			}
-			
+
 			this.expression = this.value;
 		},
 		dispose: function() {
@@ -194,7 +194,7 @@ var CustomProviders,
 			}
 			if (this.signal_objectChanged) {
 				signal_emitOut(this.ctr, this.signal_objectChanged, [x]);
-			}			
+			}
 			if (this.pipe_objectChanged) {
 				var pipe = this.pipe_objectChanged;
 				__Compo.pipe(pipe.pipe).emit(pipe.signal);
@@ -209,15 +209,15 @@ var CustomProviders,
 			}
 			this.locked = true;
 
-			if (value == null) 
+			if (value == null)
 				value = this.domWay.get(this);
-			
+
 			var typeof_ = this['typeof'];
 			if (typeof_ != null) {
 				var Converter = window[typeof_];
 				value = Converter(value);
 			}
-			
+
 			var error = this.validate(value);
 			if (error == null) {
 				this.dismiss = 1;
@@ -233,7 +233,7 @@ var CustomProviders,
 						}
 					}
 				}
-				
+
 				this.objectWay.set(obj, prop, value, this);
 				this.dismiss = 0;
 
@@ -246,7 +246,7 @@ var CustomProviders,
 				if (this.pipe_domChanged != null) {
 					var pipe = this.pipe_domChanged;
 					__Compo.pipe(pipe.pipe).emit(pipe.signal);
-				}	
+				}
 			}
 			this.locked = false;
 		},
@@ -271,7 +271,7 @@ var CustomProviders,
 			var val_ = arguments.length !== 0
 				? val
 				: this.domWay.get(this);
-			
+
 			return ValidatorProvider.validateUi(
 				fns, val_, ctr, el, this.objectChanged.bind(this)
 			);
@@ -279,33 +279,33 @@ var CustomProviders,
 		objectWay: DomObjectTransport.objectWay,
 		domWay: DomObjectTransport.domWay,
 	});
-		
-	
+
+
 	obj_extend(BindingProvider, {
 		create: function (model, el, ctr, bindingType) {
-	
+
 			/* Initialize custom provider */
 			var type = ctr.attr.bindingProvider,
 				CustomProvider = type == null ? null : CustomProviders[type],
 				provider;
-	
+
 			if (typeof CustomProvider === 'function') {
 				return new CustomProvider(model, el, ctr, bindingType);
 			}
-	
+
 			provider = new BindingProvider(model, el, ctr, bindingType);
-	
+
 			if (CustomProvider != null) {
 				obj_extend(provider, CustomProvider);
 			}
 			return provider;
 		},
-		
+
 		bind: function (provider){
 			return apply_bind(provider);
 		}
 	});
-	
+
 	function apply_bind(provider) {
 
 		var expr = provider.expression,
@@ -318,7 +318,7 @@ var CustomProviders,
 
 		if (provider.bindingType === 'dual') {
 			var attr = provider.ctr.attr;
-			
+
 			if (!attr['change-slot'] && !attr['change-pipe-event']) {
 				var element = provider.element,
 					/*
@@ -326,17 +326,17 @@ var CustomProviders,
 					 */
 					eventType = attr['change-event'] || attr.changeEvent || 'change',
 					onDomChange = provider.domChanged.bind(provider);
-	
+
 				__dom_addEventListener(element, eventType, onDomChange);
 			}
-			
-				
+
+
 			if (!provider.objectWay.get(provider, provider.expression)) {
 				// object has no value, so check the dom
 				setTimeout(function(){
 					if (provider.domWay.get(provider))
 						// and apply when exists
-						provider.domChanged();	
+						provider.domChanged();
 				});
 				return provider;
 			}
@@ -348,19 +348,19 @@ var CustomProviders,
 	}
 
 	function signal_emitOut(ctr, signal, args) {
-		if (ctr == null) 
+		if (ctr == null)
 			return;
-		
+
 		var slots = ctr.slots;
 		if (slots != null && typeof slots[signal] === 'function') {
-			if (slots[signal].apply(ctr, args) === false) 
+			if (slots[signal].apply(ctr, args) === false)
 				return;
 		}
-		
+
 		signal_emitOut(ctr.parent, signal, args);
 	}
-	
-	
+
+
 	obj_extend(BindingProvider, {
 		addObserver: obj_addObserver,
 		removeObserver: obj_removeObserver
