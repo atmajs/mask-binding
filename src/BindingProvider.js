@@ -331,7 +331,7 @@ var CustomProviders,
 			}
 
 
-			if (!provider.objectWay.get(provider, provider.expression)) {
+			if (provider.objectWay.get(provider, provider.expression) == null) {
 				// object has no value, so check the dom
 				setTimeout(function(){
 					if (provider.domWay.get(provider))
