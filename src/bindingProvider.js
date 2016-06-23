@@ -46,7 +46,8 @@ var CustomProviders,
 
 				switch (element.tagName) {
 					case 'INPUT':
-						type = element.type;
+						// Do not use .type accessor, as some browsers do not support e.g. date
+						type = element.getAttribute('type');
 						if ('checkbox' === type) {
 							this.property = 'element.checked';
 							break;

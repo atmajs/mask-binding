@@ -58,6 +58,7 @@ UTest({
 		
 		
 		function checkDates() {
+			debugger;
 			var date = new Date(input.value);
 			date.setMinutes(date.getTimezoneOffset());
 			
