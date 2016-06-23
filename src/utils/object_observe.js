@@ -68,7 +68,7 @@ var obj_addObserver,
 				break;
 
 			if (x[prop_OBS] != null) {
-				if (obj_hasObserver(x, parts.slice(i).join('.'), callback))
+				if (obj_hasObserver(x, parts.slice(i + 1).join('.'), callback))
 					return true;
 
 				break;
@@ -98,7 +98,7 @@ var obj_addObserver,
 				break;
 
 			if (x[prop_OBS] != null) {
-				obj_removeObserver(x, parts.slice(i).join('.'), callback);
+				obj_removeObserver(x, parts.slice(i + 1).join('.'), callback);
 				break;
 			}
 		}
@@ -342,6 +342,10 @@ var obj_addObserver,
 	}
 
 	function obj_defineCrumb(path, obj, key, rebinder) {
+		var cbs = obj[prop_OBS] && obj[prop_OBS][key];
+		if (cbs != null) {
+			return;
+		}
 
 		var value = obj[key],
 			old;
@@ -417,20 +421,23 @@ var obj_addObserver,
 				continue;
 
 			var val = obj_getProperty(obj, prop),
-				cb, oldProp;
+				oldProp = prop.substring(path.length),
+				oldVal = obj_getProperty(oldValue, oldProp);
 
 			for (i = 0; i < imax; i++) {
-				cb = cbs[i];
+				var cb = cbs[i];
 				obj_removeObserver(obj, prop, cb);
 
 				if (oldValue != null && typeof oldValue === 'object') {
-					oldProp = prop.substring(path.length);
 					obj_removeObserver(oldValue, oldProp, cb);
 				}
 			}
-			for (i = 0; i < imax; i++){
-				cbs[i](val);
+			if (oldVal !== val) {
+				for (i = 0; i < imax; i++){
+					cbs[i](val);
+				}
 			}
+
 
 			for (i = 0; i < imax; i++){
 				obj_addObserver(obj, prop, cbs[i]);

@@ -226,6 +226,40 @@ include
 				eq_(root.__observers['sub.child.name'].length, 0);
 			},
 
+			'!object - observer - different depth' () {
+				var obj = {
+					foo: {
+						base: {
+							name: '0'
+						}
+					}
+				};
+				var rootFn = sinon.spy();
+				var deepFn = sinon.spy();
+				obj_addObserver(obj, 'foo', rootFn);
+				obj_addObserver(obj, 'foo.base.name', deepFn);
+
+				obj.foo = {
+					base: { name: '1' }
+				};
+
+				obj.foo.base = { name: '2' };
+				obj.foo.base.name = '3';
+				obj.foo.base = { name: '3' };
+
+				eq_(rootFn.callCount, 1);
+				eq_(deepFn.callCount, 3);
+				deepEq_(deepFn.args, [ ['1'], ['2'], ['3']]);
+
+				obj_removeObserver(obj, 'foo.base.name', deepFn);
+				obj.foo.base.name = '4';
+				obj.foo.base = { name: '5' };
+				obj.foo = {
+					base: { name: '6' }
+				};
+				eq_(deepFn.callCount, 3);
+			},
+
 			'expression': function() {
 
 
