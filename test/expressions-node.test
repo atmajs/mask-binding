@@ -226,7 +226,7 @@ include
 				eq_(root.__observers['sub.child.name'].length, 0);
 			},
 
-			'!object - observer - different depth' () {
+			'object - observer - different depth' () {
 				var obj = {
 					foo: {
 						base: {
