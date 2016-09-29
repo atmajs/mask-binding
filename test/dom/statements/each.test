@@ -14,8 +14,18 @@ var TestData = {
 		check ($container, model, ctr) {
 			$container.eq_('text', 'AB');
 			
+			var elements = $container.find('span').toArray();
+			eq_(elements.length, 2);
+
 			eq_(model.__observers.letters.length, 1);
 			model.letters.push('C');
+
+			var elementsNow = $container.find('span').toArray();
+			eq_(elementsNow.length, 3);
+			eq_(elementsNow[0], elements[0]);
+			eq_(elementsNow[1], elements[1]);
+
+
 			model.letters.unshift('0');
 			$container.eq_('text', '0ABC');
 			

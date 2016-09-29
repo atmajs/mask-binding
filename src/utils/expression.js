@@ -98,7 +98,11 @@ var expression_eval,
 	 **/
 	expression_createBinder = function(expr, model, ctx, ctr, fn) {
 		return expression_createListener(function(){
-			fn(expression_eval(expr, model, ctx, ctr));
+			var value = expression_eval(expr, model, ctx, ctr);
+			var args =  _Array_slice.call(arguments);
+			args[0] = value;
+
+			fn.apply(this, args);
 		});
 		////var locks = 0;
 		////return function binder() {
@@ -132,8 +136,7 @@ var expression_eval,
 				log_warn('<listener:expression> concurent binder');
 				return;
 			}
-
-			callback();
+			callback.apply(this, _Array_slice.call(arguments));
 			locks--;
 		}
 	};
