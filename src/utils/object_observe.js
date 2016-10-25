@@ -155,7 +155,8 @@ var obj_addObserver,
 			obs = {
 				__dirty: null,
 				__dfrTimeout: null,
-				__mutators: null
+				__mutators: null,
+				__rebinders: null
 			};
 			defineProp_(obj, '__observers', {
 				value: obs,
@@ -185,7 +186,8 @@ var obj_addObserver,
 	var prop_OBS = '__observers',
 		prop_MUTATORS = '__mutators',
 		prop_TIMEOUT = '__dfrTimeout',
-		prop_DIRTY = '__dirty';
+		prop_DIRTY = '__dirty',
+		prop_REBINDERS = '__rebinders';
 
 	var defineProp_ = Object.defineProperty;
 
@@ -350,6 +352,17 @@ var obj_addObserver,
 		var value = obj[key],
 			old;
 
+		var obs = obj[prop_OBS],
+			hash = obj[prop_REBINDERS];
+		if (hash == null)
+			hash = obj[prop_REBINDERS] = {};
+
+		var arr = hash[key];
+		if (arr == null)
+			arr = hash[key] = [];
+
+		arr.push([path, rebinder]);
+
 		defineProp_(obj, key, {
 			get: function() {
 				return value;
@@ -360,7 +373,15 @@ var obj_addObserver,
 
 				old = value;
 				value = x;
-				rebinder(path, old);
+
+				var i = -1, imax = arr.length;
+				while(++i < imax) {
+					var tuple = arr[i],
+						path_ = tuple[0],
+						fn_ = tuple[1];
+					fn_(path_, old);	
+				}
+				
 			},
 			configurable: true,
 			enumerable : true
