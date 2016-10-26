@@ -42,7 +42,6 @@ var obj_addObserver,
 				}
 			}
 		}
-
 		var cbs = pushListener_(obj, property, cb);
 		if (cbs.length === 1)
 			attachProxy_(obj, property, cbs, parts, true);
@@ -156,7 +155,8 @@ var obj_addObserver,
 				__dirty: null,
 				__dfrTimeout: null,
 				__mutators: null,
-				__rebinders: null
+				__rebinders: {},
+				__proxies: {}
 			};
 			defineProp_(obj, '__observers', {
 				value: obs,
@@ -187,7 +187,8 @@ var obj_addObserver,
 		prop_MUTATORS = '__mutators',
 		prop_TIMEOUT = '__dfrTimeout',
 		prop_DIRTY = '__dirty',
-		prop_REBINDERS = '__rebinders';
+		prop_REBINDERS = '__rebinders',
+		prop_PROXY = '__proxies';
 
 	var defineProp_ = Object.defineProperty;
 
@@ -268,7 +269,6 @@ var obj_addObserver,
 			obj_defineCrumbs(obj, chain);
 		}
 
-
 		if ('length' === key) {
 			var mutators = getSelfMutators(parent);
 			if (mutators != null) {
@@ -285,6 +285,12 @@ var obj_addObserver,
 			}
 
 		}
+
+		var obs = obj_ensureObserversProperty(parent);		
+		var hash = obs[prop_PROXY];
+		if (hash[key] === true) return;
+
+		hash[key] = true;
 
 		defineProp_(parent, key, {
 			get: function() {
@@ -318,7 +324,8 @@ var obj_addObserver,
 					cbs[i](x);
 				}
 
-				obj_sub_notifyListeners(obj, property, oldVal)
+				obj_sub_notifyListeners(obj, property, oldVal);
+				obj_deep_notifyListeners(obj, chain, oldVal, currentVal);
 			},
 			configurable: true,
 			enumerable : true
@@ -352,16 +359,16 @@ var obj_addObserver,
 		var value = obj[key],
 			old;
 
-		var obs = obj[prop_OBS],
-			hash = obj[prop_REBINDERS];
-		if (hash == null)
-			hash = obj[prop_REBINDERS] = {};
+		var obs = obj_ensureObserversProperty(obj),
+			hash = obs[prop_REBINDERS];
 
 		var arr = hash[key];
-		if (arr == null)
-			arr = hash[key] = [];
+		if (arr != null) {
+			arr.push([path, rebinder]);
+			return;
+		}
 
-		arr.push([path, rebinder]);
+		arr = hash[key] = [[path, rebinder]];
 
 		defineProp_(obj, key, {
 			get: function() {
@@ -419,6 +426,49 @@ var obj_addObserver,
 			}
 		}
 	}
+
+
+	var obj_deep_notifyListeners;
+	(function () {
+		obj_deep_notifyListeners = function (obj, chain, oldVal, currentVal) {
+			var i = 0,
+				imax = chain.length,
+				ctx = obj;
+			
+			do {
+				ctx = ctx[chain[i]];
+				if (ctx == null) {
+					return;
+				}
+
+				var obs = ctx[prop_OBS];
+				if (obs == null) {
+					continue;
+				}
+				var prop = toProp(chain, i + 1);
+				var cbs = obs[prop];
+				if (cbs == null) {
+					continue;
+				}
+
+				for (var j = 0; j < cbs.length; j++) {
+					cbs[j](currentVal);
+				}
+			}
+			while(++i < imax - 1);
+		};
+		function toProp(arr, start) {
+			var str = '',
+				imax = arr.length,
+				i = start - 1;
+			while(++i < imax){
+				if (i !== start) str += '.';
+				str += arr[i]; 
+			}
+			return str;
+		}
+	}());
+	
 
 	function obj_crumbRebindDelegate(obj) {
 		return function(path, oldValue){

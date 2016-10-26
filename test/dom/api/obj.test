@@ -24,6 +24,29 @@ UTest({
 			
 			obj.foo = 3
 			eq_(spy.callCount, 2);
+		},
+
+		'add observers with different deepness' () {
+			var foo = {
+				bar: {
+					qux: {
+						color: 'red'
+					}
+				}
+			};
+			var _1Fn = sinon.spy();
+			var _2Fn = sinon.spy();
+			var _3Fn = sinon.spy();
+
+			mask.obj.addObserver(foo, 'bar.qux.color', _1Fn);
+			mask.obj.addObserver(foo.bar, 'qux.color', _2Fn);
+			mask.obj.addObserver(foo.bar.qux, 'color', _3Fn);
+
+			foo.bar.qux.color = 'green';
+			
+			eq_(_1Fn.callCount, 1);
+			eq_(_2Fn.callCount, 1);
+			eq_(_3Fn.callCount, 1);
 		}
 		
 	}
