@@ -228,15 +228,21 @@ var expression_eval,
 		}
 		return null;
 	}
-	function _isDefined(obj, parts, imax){
-		if (obj == null)
+	function _isDefined(obj_, parts, imax){
+		var obj = obj_;
+		if (obj == null){
 			return false;
-
-		var i = 0, val;
+		}
+		var i = 0, val, key;
 		for(; i < imax; i++) {
-			obj = obj[parts[i]];
-			if (obj == null)
+			key = parts[i];
+			if (i === imax - 1) {
+				return key in obj
+			}
+			obj = obj[key];
+			if (obj == null) {
 				return false;
+			}
 		}
 		return true;
 	}
