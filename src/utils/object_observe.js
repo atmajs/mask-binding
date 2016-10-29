@@ -9,51 +9,64 @@ var obj_addObserver,
 	;
 
 (function(){
-	obj_addObserver = function(obj, property, cb) {
-		if (obj == null) {
-			log_error('Not possible to add the observer for "' + property + '" as current model is undefined.');
-			return;
-		}
-		// closest observer
-		var parts = property.split('.'),
-			imax  = parts.length,
-			i = -1,
-			x = obj;
-		while ( ++i < imax ) {
-			x = x[parts[i]];
-
-			if (x == null)
-				break;
-
-			if (x[prop_OBS] != null) {
-
-				var prop = parts.slice(i + 1).join('.');
-				if (x[prop_OBS][prop] != null) {
-
-					pushListener_(x, prop, cb);
-
-					var cbs = pushListener_(obj, property, cb);
-					if (cbs.length === 1) {
-						var arr = parts.splice(0, i);
-						if (arr.length !== 0)
-							attachProxy_(obj, property, cbs, arr, true);
-					}
-					return;
-				}
+	(function () {
+		obj_addObserver = function(obj, property, cb) {
+			if (obj == null) {
+				log_error('Not possible to add the observer for "' + property + '" as current model is undefined.');
+				return;
 			}
-		}
-		var cbs = pushListener_(obj, property, cb);
-		if (cbs.length === 1)
-			attachProxy_(obj, property, cbs, parts, true);
+			// closest observer
+			var parts = property.split('.'),
+				imax  = parts.length,
+				i = -1,
+				x = obj;
 
-		var val = obj_getProperty(obj, property),
-			mutators = getSelfMutators(val);
-		if (mutators != null) {
-			objMutator_addObserver(
-				val, mutators, cb
-			);
+			if (pushClosest(obj[parts[0]], parts, 1, cb)) {
+				var cbs = pushListener_(obj, property, cb);
+				if (cbs.length === 1) {
+					var arr = parts.splice(0, i);
+					if (arr.length !== 0)
+						attachProxy_(obj, property, cbs, arr, true);
+				}
+				if (parts.length > 1) {
+					obj_defineCrumbs(obj, parts);
+				}
+				return;
+			}
+			
+			var cbs = pushListener_(obj, property, cb);
+			if (cbs.length === 1)
+				attachProxy_(obj, property, cbs, parts, true);
+
+			var val = obj_getProperty(obj, property),
+				mutators = getSelfMutators(val);
+			if (mutators != null) {
+				objMutator_addObserver(
+					val, mutators, cb
+				);
+			}
+		};
+
+		function pushClosest(ctx, parts, i, cb) {
+			if (ctx == null) {
+				return false;
+			}
+			if (i < parts.length - 1 && pushClosest(ctx[parts[i]], parts, i + 1, cb)) {
+				return true;
+			}
+			if (ctx[prop_OBS] == null) {
+				return false;
+			}
+			var prop = toProp(parts, i);
+			var arr = ctx[prop_OBS][prop];
+			if (arr == null) {
+				return false;
+			}
+			pushListener_(ctx, prop, cb);
+			return true;
 		}
-	};
+	}());
+	
 
 	obj_hasObserver = function(obj, property, callback){
 		// nested observer
@@ -101,7 +114,6 @@ var obj_addObserver,
 				break;
 			}
 		}
-
 
 		var obs = obj_ensureObserversProperty(obj, property),
 			val = obj_getProperty(obj, property);
@@ -171,6 +183,17 @@ var obj_addObserver,
 			? (obs[type] = [])
 			: arr
 			;
+	};
+	var obj_ensureRebindersProperty = function(obj){
+		var hash = obj[prop_REBINDERS];
+		if (hash == null) {
+			hash = {};
+			defineProp_(obj, prop_REBINDERS, {
+				value: hash,
+				enumerable: false
+			});
+		}
+		return hash;
 	};
 
 	obj_addMutatorObserver = function(obj, cb){
@@ -359,16 +382,17 @@ var obj_addObserver,
 		var value = obj[key],
 			old;
 
-		var obs = obj_ensureObserversProperty(obj),
-			hash = obs[prop_REBINDERS];
-
-		var arr = hash[key];
-		if (arr != null) {
-			arr.push([path, rebinder]);
-			return;
+		var hash = obj_ensureRebindersProperty(obj);
+		var set = hash[key];
+		if (set != null) {
+			if (set[path] == null) {
+				set[path] = rebinder;
+			}
+			return;			
 		}
 
-		arr = hash[key] = [[path, rebinder]];
+		set = hash[key] = {}; 
+		set[path] = rebinder;
 
 		defineProp_(obj, key, {
 			get: function() {
@@ -381,14 +405,9 @@ var obj_addObserver,
 				old = value;
 				value = x;
 
-				var i = -1, imax = arr.length;
-				while(++i < imax) {
-					var tuple = arr[i],
-						path_ = tuple[0],
-						fn_ = tuple[1];
-					fn_(path_, old);	
+				for (var _path in set) {
+					set[_path](_path, old);
 				}
-				
 			},
 			configurable: true,
 			enumerable : true
@@ -456,18 +475,20 @@ var obj_addObserver,
 				}
 			}
 			while(++i < imax - 1);
-		};
-		function toProp(arr, start) {
-			var str = '',
-				imax = arr.length,
-				i = start - 1;
-			while(++i < imax){
-				if (i !== start) str += '.';
-				str += arr[i]; 
-			}
-			return str;
-		}
+		};		
 	}());
+
+
+	function toProp(arr, start) {
+		var str = '',
+			imax = arr.length,
+			i = start - 1;
+		while(++i < imax){
+			if (i !== start) str += '.';
+			str += arr[i]; 
+		}
+		return str;
+	}
 	
 
 	function obj_crumbRebindDelegate(obj) {

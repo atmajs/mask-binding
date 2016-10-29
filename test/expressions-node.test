@@ -174,6 +174,7 @@ include
 				// MERGE !
 				model_Expect = obj_Expect;
 				model.sub = obj;
+				eq(model_Count, 2);			
 
 				obj.title = model_Expect = obj_Expect = 'O3';
 
@@ -182,12 +183,14 @@ include
 				eq(model.sub.title, 'O3');
 
 
+
 				model_Expect = 'M2';
 				model.sub = {
 					title: 'M2'
 				};
 
 				eq(model_Count, 0);
+				
 				model.sub.title = model_Expect = 'M3';
 				eq(model_Count, -1);
 
@@ -199,30 +202,28 @@ include
 
 			'object - observer - bind once': function(){
 
-				function listener() {
-					--count;
-				}
+				var spy = sinon.spy();
 
 				var count = 1,
 					obj = { name: 'foo' },
 					root = { sub: { child: obj } }
 					;
 
-				obj_addObserver(obj, 'name', listener);
-				obj_addObserver(root, 'sub.child.name', listener);
+				obj_addObserver(obj, 'name', spy);
+				obj_addObserver(root, 'sub.child.name', spy);
 
 				obj.name = 'baz';
-				eq_(count, 0);
+				eq_(spy.callCount, 1);
 
-				obj_removeObserver(obj, 'name', listener);
+
+				obj_removeObserver(obj, 'name', spy);
 				obj.name = 'qux';
-				eq_(count, 0);
+				eq_(spy.callCount, 1);
 
 				root.sub = { child: { name: 'bic' } };
-				eq_(count, -1);
+				eq_(spy.callCount, 2);
 
-
-				obj_removeObserver(root, 'sub.child.name', listener);
+				obj_removeObserver(root, 'sub.child.name', spy);
 				eq_(root.__observers['sub.child.name'].length, 0);
 			},
 
