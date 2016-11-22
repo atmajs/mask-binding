@@ -15,9 +15,7 @@
 			return mask.stringify(current);
 		},
 		render: function(model, ctx, container, ctr, children){
-
 			var value = expression_eval(this.expression, model, ctx, ctr);
-
 
 			resolveNodes(value, this.nodes, model, ctx, ctr);
 
@@ -63,7 +61,6 @@
 		Switch: null,
 		binder: null,
 
-
 		refresh: function(value) {
 
 			var compo = this,
@@ -107,11 +104,9 @@
 				: frag
 				;
 
-
 			dom_insertBefore(frag, compo.placeholder);
 
 			switch_[_index] = els;
-
 		},
 		dispose: function(){
 			expression_unbind(
@@ -181,7 +176,6 @@
 			ctr,
 			compo.refresh
 		);
-
 
 		compo.Switch = new Array(node.nodes.length);
 

@@ -3,10 +3,7 @@
  *
  *	button x-toggle='click: foo === "bar" ? "zet" : "bar" > 'Toggle'
  */
-
-__registerAttr('x-toggle', 'client', function(node, attrValue, model, ctx, element, controller){
-    
-    
+__registerAttr('x-toggle', 'client', function(node, attrValue, model, ctx, el, ctr){
     var event = attrValue.substring(0, attrValue.indexOf(':')),
         expression = attrValue.substring(event.length + 1),
         ref = expression_varRefs(expression);
@@ -16,9 +13,8 @@ __registerAttr('x-toggle', 'client', function(node, attrValue, model, ctx, eleme
 		ref = ref[0];
 	}
 	
-    __dom_addEventListener(element, event, function(){
-        var value = expression_eval(expression, model, ctx, controller);
-        
-        obj_setProperty(model, ref, value);
+    __dom_addEventListener(el, event, function(){
+        var val = expression_eval(expression, model, ctx, ctr, node);
+        obj_setProperty(model, ref, val);
     });
 });

@@ -1,21 +1,16 @@
+__registerAttr('xx-visible', function(node, attrValue, model, ctx, el, ctr) {
 
+	var binder = expression_createBinder(attrValue, model, ctx, ctr, function(value){
+		el.style.display = value ? '' : 'none';
+	});
 
-__registerAttr('xx-visible', function(node, attrValue, model, cntx, element, controller) {
-	
-	var binder = expression_createBinder(attrValue, model, cntx, controller, function(value){
-		element.style.display = value ? '' : 'none';
+	expression_bind(attrValue, model, ctx, ctr, binder);
+
+	compo_attachDisposer(ctr, function(){
+		expression_unbind(attrValue, model, ctr, binder);
 	});
-	
-	expression_bind(attrValue, model, cntx, controller, binder);
-	
-	compo_attachDisposer(controller, function(){
-		expression_unbind(attrValue, model,  controller, binder);
-	});
-	
-	
-	
-	if (!expression_eval(attrValue, model, cntx, controller)) {
-		
-		element.style.display = 'none';
+
+	if (!expression_eval(attrValue, model, ctx, ctr, node)) {
+		el.style.display = 'none';
 	}
 });

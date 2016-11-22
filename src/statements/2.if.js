@@ -74,11 +74,11 @@
 				imax = switch_.length,
 				i = -1;
 			while ( ++i < imax ){
-				var expr = switch_[i].node.expression;
+				var node = switch_[i].node;
+				var expr = node.expression;
 				if (expr == null)
-					break;
-
-				if (expression_eval(expr, model, ctx, ctr))
+					break;				
+				if (expression_eval(expr, model, ctx, ctr, node))
 					break;
 			}
 

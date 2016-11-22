@@ -14,12 +14,10 @@
  *
  *
  */
-
 var DualbindCompo = class_create({
 
 	renderEnd: function(elements, model, ctx, container) {
-		this.provider = BindingProvider.create(model, container, this);
-		
+		this.provider = BindingProvider.create(model, container, this);		
 		var compos = this.components;
 		if (compos != null) {
 			var imax = compos.length,
@@ -31,8 +29,6 @@ var DualbindCompo = class_create({
 				}
 			}
 		}
-			
-		
 		if (this.attr['no-validation'] == null) {
 			var fn = ValidatorProvider.getFnFromModel(model, this.provider.value);
 			if (fn != null) {
@@ -46,12 +42,10 @@ var DualbindCompo = class_create({
 		if (dispose != null) {
 			dispose.call(this.provider);
 		}
-	},
-	
+	},	
 	validate: function(){
 		return this.provider && this.provider.validate();
-	},
-	
+	},	
 	handlers: {
 		attr: {
 			'x-signal': function() {}

@@ -14,7 +14,6 @@ var CustomProviders,
 					bindingType = 'single';
 				}
 			}
-
 			var attr = ctr.attr,
 				type;
 
@@ -280,7 +279,6 @@ var CustomProviders,
 		objectWay: DomObjectTransport.objectWay,
 		domWay: DomObjectTransport.domWay,
 	});
-
 
 	obj_extend(BindingProvider, {
 		create: function (model, el, ctr, bindingType) {

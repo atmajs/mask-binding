@@ -18,11 +18,8 @@ var expression_eval,
 	expression_varRefs = Expression.varRefs;
 	expression_evalStatements = Expression.evalStatements;
 
-	expression_eval = function(expr, model, ctx, ctr){
-		if (expr === '.')
-			return model;
-
-		var x = expression_eval_strict(expr, model, ctx, ctr);
+	expression_eval = function(expr, model, ctx, ctr, node){
+		var x = expression_eval_strict(expr, model, ctx, ctr, node);
 		return x == null ? '' : x;
 	};
 
@@ -34,7 +31,7 @@ var expression_eval,
 			return;
 		}
 
-		var ast = expression_parse(expr),
+		var ast = expression_parse(expr, false),
 			vars = expression_varRefs(ast, model, ctx, ctr),
 			obj, ref;
 
