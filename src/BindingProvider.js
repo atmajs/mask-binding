@@ -320,7 +320,7 @@ var CustomProviders,
 		if (provider.bindingType === 'dual') {
 			var attr = provider.ctr.attr;
 
-			if (!attr['change-slot'] && !attr['change-pipe-event']) {
+			if (!attr['dom-slot'] && !attr['change-pipe-event']) {
 				var element = provider.element,
 					/*
 					 * @obsolete: attr name : 'changeEvent'
