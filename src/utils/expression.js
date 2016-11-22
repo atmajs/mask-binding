@@ -159,7 +159,7 @@ var expression_eval,
 
 		if (imax > 1) {
 			var first = parts[0];
-			if (first === '$c' || first === '$') {
+			if (first === 'this' || first === '$c' || first === '$') {
 				if (parts[1] === 'attr') {
 					return;
 				}
