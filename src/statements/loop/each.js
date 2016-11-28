@@ -67,7 +67,8 @@
 		}
 	});
 	
-	var EachStatement = class_create({
+	var EachStatement = class_create(LoopStatementProto, {
+		compoName: '+each',
 		constructor: function EachStatement(node, attr) {
 			this.expression = node.expression;
 			this.nodes = node.nodes;
@@ -77,15 +78,10 @@
 			
 			this.node = node;
 			this.components = node.components;
-		},
-		compoName: '+each',
-		refresh: LoopStatementProto.refresh,
-		dispose: LoopStatementProto.dispose,
-		
+		},		
 		_getModel: function(compo) {
 			return compo.model;
-		},
-		
+		},		
 		_build: function(node, model, ctx, component) {
 			var fragment = document.createDocumentFragment();
 			

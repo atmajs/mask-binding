@@ -1,6 +1,8 @@
 var LoopStatementProto = {
+	ctx: null,
 	model: null,
 	parent: null,
+	binder: null,
 	refresh: function(value, method, args, result){
 		var i = 0,
 			x, imax;

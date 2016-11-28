@@ -18,10 +18,9 @@ var _getNodes,
 	};
 
 	_compo_initAndBind = function(compo, node, model, ctx, container, controller) {
-
 		compo.parent = controller;
 		compo.model = model;
-
+		compo.ctx = ctx;
 		compo.refresh = fn_proxy(compo.refresh, compo);
 		compo.binder = expression_createBinder(
 			compo.expr || compo.expression,
@@ -30,8 +29,6 @@ var _getNodes,
 			controller,
 			compo.refresh
 		);
-
-
 		expression_bind(compo.expr || compo.expression, model, ctx, controller, compo.binder);
 	};
 
