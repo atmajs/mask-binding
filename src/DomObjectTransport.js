@@ -150,8 +150,7 @@ var DomObjectTransport;
 					var els = provider.element.options,
 						imax = els.length,
 						i = -1;
-					while (++i < imax) {
-						/* jshint eqeqeq: false */
+					while (++i < imax) {  
 						if (els[i].value == val) {
 							els[i].selected = true;
 						}
@@ -171,9 +170,15 @@ var DomObjectTransport;
 			objectWay: {
 				get: objectWay.get,
 				set: DateTimeDelegate.objSet(function(a, b){
+					var offset = a.getTimezoneOffset();
 					a.setFullYear(b.getFullYear());
 					a.setMonth(b.getMonth());
 					a.setDate(b.getDate());
+					var diff = offset - a.getTimezoneOffset();
+					if (diff !== 0) {
+						var h = (diff / 60) | 0;
+						a.setHours(a.getHours() + h);
+					}
 				})
 			}
 		},
