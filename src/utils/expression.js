@@ -5,6 +5,7 @@ var expression_eval,
 	expression_unbind,
 	expression_createBinder,
 	expression_createListener,
+	expression_callFn,
 
 	expression_parse,
 	expression_varRefs
@@ -89,6 +90,31 @@ var expression_eval,
 
 	}
 
+	expression_callFn = function (accessor, model, ctx, ctr, args) {
+		var dot = accessor.indexOf('.');
+		if (dot === -1) {
+			var ctx = model,
+				fn = ctx[accessor];
+			if (fn != null) {
+				return fn_apply(fn, ctx, args);
+			}
+			ctx = ctr;
+			fn = ctx[accessor];
+			if (fn != null)
+				return fn_apply(fn, ctx, args);
+
+			throw Error(accessor + ' is not a function');
+		}
+		var path = accessor.substring(0, dot),
+			key = accessor.substring(dot + 1);
+
+		var ctx = expression_eval_strict(path, model, ctx, ctr);
+		var fn = ctx && ctx[key];
+		if (fn != null) {
+			return fn_apply(fn, ctx, args);
+		}		
+		throw Error(accessor + ' is not a function');
+	};
 	/**
 	 * expression_bind only fires callback, if some of refs were changed,
 	 * but doesnt supply new expression value
@@ -101,28 +127,6 @@ var expression_eval,
 
 			fn.apply(this, args);
 		});
-		////var locks = 0;
-		////return function binder() {
-		////	if (++locks > 1) {
-		////		locks = 0;
-		////		log_warn('<mask:bind:expression> Concurent binder detected', expr);
-		////		return;
-		////	}
-		////
-		////	var value = expression_eval(expr, model, cntx, controller);
-		////	if (arguments.length > 1) {
-		////		var args = _Array_slice.call(arguments);
-		////
-		////		args[0] = value;
-		////		callback.apply(this, args);
-		////
-		////	} else {
-		////
-		////		callback(value);
-		////	}
-		////
-		////	locks--;
-		////};
 	};
 
 	expression_createListener = function(callback){
@@ -130,7 +134,7 @@ var expression_eval,
 		return function(){
 			if (++locks > 1) {
 				locks = 0;
-				log_warn('<listener:expression> concurent binder');
+				log_warn('<listener:expression> concurrent binder');
 				return;
 			}
 			callback.apply(this, _Array_slice.call(arguments));

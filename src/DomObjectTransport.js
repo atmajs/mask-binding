@@ -13,11 +13,15 @@ var DomObjectTransport;
 				);
 			}
 
-			var obj = getAccessorObject_(provider, getter);
-			if (obj == null)
-				return null;
-
-			return obj[getter](expression, provider.model, provider.ctr.parent);
+			var ctr = provider.ctr.parent,
+				model = provider.model;
+			return expression_callFn(
+				getter, 
+				provider.model,
+				provider.ctx,
+				ctr,
+				[ expression, model, ctr ]
+			);			
 		},
 		set: function(obj, property, value, provider) {
 			var setter = provider.objSetter;
@@ -25,15 +29,14 @@ var DomObjectTransport;
 				obj_setProperty(obj, property, value);
 				return;
 			}
-			var ctx = getAccessorObject_(provider, setter);
-			if (ctx == null)
-				return;
-
-			ctx[setter](
-				property
-				, value
-				, provider.model
-				, provider.ctr.parent
+			var ctr = provider.ctr.parent,
+				model = provider.model;
+			return expression_callFn(
+				setter, 
+				provider.model,
+				provider.ctx,
+				ctr,
+				[ value, property, model, ctr ]
 			);
 		}
 	};
