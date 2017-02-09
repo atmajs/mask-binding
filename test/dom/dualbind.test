@@ -80,7 +80,7 @@ UTest({
 				
 				return model.foo.toUpperCase();
 			}),
-			setFoo: assert.await(function(expression, value, model_, compo_){
+			setFoo: assert.await(function(value, expression, model_, compo_){
 				eq_(model_, model);
 				eq_(compo_, compo);
 				eq_(expression, 'foo');
