@@ -153,8 +153,10 @@ var DomObjectTransport;
 					var els = provider.element.options,
 						imax = els.length,
 						i = -1;
-					while (++i < imax) {  
+					while (++i < imax) {
+						/* jshint eqeqeq: false */
 						if (els[i].value == val) {
+							/* jshint eqeqeq: true */
 							els[i].selected = true;
 						}
 					}

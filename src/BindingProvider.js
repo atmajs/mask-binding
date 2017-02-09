@@ -183,7 +183,7 @@ var CustomProviders,
 			}
 			this.locked = true;
 
-			if (x == null) {
+			if (x == null || this.objGetter != null) {
 				x = this.objectWay.get(this, this.expression);
 			}
 
