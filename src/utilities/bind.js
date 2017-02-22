@@ -25,9 +25,9 @@
 				attr = attr_strReplace(currentAttr, current_, value);
 
 			if (attr == null || attr === '') {
-				el.setAttribute(attrName, attr);
-			} else {
 				el.removeAttribute(attrName);
+			} else {
+				el.setAttribute(attrName, attr);
 			}
 			current_ = value;
 		};
