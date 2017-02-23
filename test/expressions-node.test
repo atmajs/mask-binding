@@ -514,6 +514,93 @@ include
 					model.baz.qux.setFullYear(2015);
 					setTimeout(done, 50);
 				}
+			},
+
+			'removing and adding observers': {
+				'!should add deeper observer, outer, then removes the deeper and calls once' () {
+					var model = {
+						event: {
+							date: {
+								year: 1
+							}
+						}
+					};					
+					obj_addObserver(
+						model, 
+						'event.date', 
+						assert.avoid('Inner fn should be removed')
+					);					
+					obj_addObserver(
+						model, 
+						'event', 
+						assert.avoid('Outer fn never calls')
+					);
+					obj_removeObserver(
+						model, 
+						'event.date'
+					);
+					var innerFn = sinon.spy();
+					obj_addObserver(
+						model, 
+						'event.date', 
+						innerFn
+					);
+
+					is_(model.__observers['event'][0], 'Function');
+					is_(model.__observers['event.date'][0], 'Function');
+					is_(model.event.__observers['date'][0], 'Function');
+
+					var fn_near_self = model.__observers['event.date'][0];
+					var fn_near_date = model.event.__observers['date'][0];
+					eq_(fn_near_date, fn_near_self);
+
+					model.event.date = { year: 3};
+					eq_(innerFn.callCount, 1, 'Inner fn should be called once');
+					deepEq_(innerFn.args[0], [{year: 3}]);	
+				},
+				'!should add outer observer, deeper, then removes the deeper and calls once' () {
+					var model = {
+						event: {
+							date: {
+								year: 1
+							}
+						}
+					};
+					obj_addObserver(
+						model, 
+						'event', 
+						assert.await(1)
+					);
+					obj_addObserver(
+						model, 
+						'event.date', 
+						assert.avoid('Inner fn should be removed')
+					);					
+					obj_removeObserver(
+						model, 
+						'event.date'
+					);
+					var innerFn = sinon.spy();
+					obj_addObserver(
+						model, 
+						'event.date', 
+						innerFn
+					);
+
+					//is_(model.__observers['event'][0], 'Function');
+					//is_(model.__observers['event.date'][0], 'Function');
+					//is_(model.event.__observers['date'][0], 'Function');
+
+					//console.log(model.__observers['event.date'][0] === model.event.__observers['date'][0])
+
+					model.event.date = { year: 3};
+					eq_(innerFn.callCount, 1, 'Inner fn should be called once');
+					deepEq_(innerFn.args[0], [{year: 3}]);					
+
+					model.event = { date: { year: 4 } };
+					eq_(innerFn.callCount, 2, 'Inner fn should be called twice');
+					deepEq_(innerFn.args[1], [{year: 4}]);	
+				}
 			}
 		})
 

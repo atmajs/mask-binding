@@ -22,6 +22,9 @@ var obj_addObserver,
 				x = obj;
 
 			if (pushClosest(obj[parts[0]], parts, 1, cb)) {
+				/* We have added a callback as close as possible to the observle property owner
+				 * But also add the cb to myself to listen different object path level setters
+				 */
 				var cbs = pushListener_(obj, property, cb);
 				if (cbs.length === 1) {
 					var arr = parts.splice(0, i);
@@ -352,7 +355,7 @@ var obj_addObserver,
 				}
 
 				obj_sub_notifyListeners(obj, property, oldVal);
-				obj_deep_notifyListeners(obj, chain, oldVal, currentVal);
+				obj_deep_notifyListeners(obj, chain, oldVal, currentVal, cbs);
 			},
 			configurable: true,
 			enumerable : true
@@ -457,10 +460,11 @@ var obj_addObserver,
 
 	var obj_deep_notifyListeners;
 	(function () {
-		obj_deep_notifyListeners = function (obj, chain, oldVal, currentVal) {
+		obj_deep_notifyListeners = function (obj, chain, oldVal, currentVal, fns) {
 			var i = 0,
 				imax = chain.length,
-				ctx = obj;
+				ctx = obj,
+				arr = fns.slice(0);
 			
 			do {
 				ctx = ctx[chain[i]];
@@ -479,7 +483,12 @@ var obj_addObserver,
 				}
 
 				for (var j = 0; j < cbs.length; j++) {
-					cbs[j](currentVal);
+					var cb = cbs[j]
+					if (arr.indexOf(cb) !== -1) {
+						continue;
+					}
+					cb(currentVal);
+					arr.push(cb);
 				}
 			}
 			while(++i < imax - 1);
