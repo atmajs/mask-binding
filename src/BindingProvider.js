@@ -25,8 +25,8 @@ var CustomProviders,
 			this.element = element;
 			this.value = attr.value;
 			this.property = attr.property;
-			this.domSetter = attr.setter || attr['dom-setter'];
-			this.domGetter = attr.getter || attr['dom-getter'];
+			this.domSetter = attr['dom-setter'] || attr.setter;
+			this.domGetter = attr['dom-getter'] || attr.getter;
 			this.objSetter = attr['obj-setter'];
 			this.objGetter = attr['obj-getter'];
 
@@ -193,7 +193,7 @@ var CustomProviders,
 				console.log('[BindingProvider] objectChanged -', x);
 			}
 			if (this.signal_objectChanged) {
-				signal_emitOut(this.ctr, this.signal_objectChanged, [x]);
+				__Compo.signal.emitOut(this.ctr, this.signal_objectChanged, this.ctr, [x]);
 			}
 			if (this.pipe_objectChanged) {
 				var pipe = this.pipe_objectChanged;
@@ -241,7 +241,7 @@ var CustomProviders,
 					console.log('[BindingProvider] domChanged -', value);
 				}
 				if (this.signal_domChanged != null) {
-					signal_emitOut(this.ctr, this.signal_domChanged, [value]);
+					__Compo.signal.emitOut(this.ctr, this.signal_domChanged, this.ctr, [value]);					
 				}
 				if (this.pipe_domChanged != null) {
 					var pipe = this.pipe_domChanged;
@@ -345,20 +345,6 @@ var CustomProviders,
 		provider.objectChanged();
 		return provider;
 	}
-
-	function signal_emitOut(ctr, signal, args) {
-		if (ctr == null)
-			return;
-
-		var slots = ctr.slots;
-		if (slots != null && typeof slots[signal] === 'function') {
-			if (slots[signal].apply(ctr, args) === false)
-				return;
-		}
-
-		signal_emitOut(ctr.parent, signal, args);
-	}
-
 
 	obj_extend(BindingProvider, {
 		addObserver: obj_addObserver,

@@ -10,6 +10,7 @@ var DomObjectTransport;
 					, provider.model
 					, provider.ctx
 					, provider.ctr
+					, provider.node
 				);
 			}
 
