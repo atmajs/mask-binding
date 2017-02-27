@@ -17,7 +17,6 @@ var CustomProviders,
 			var attr = ctr.attr,
 				type;
 
-			this.node = ctr; // backwards compat.
 			this.ctr = ctr;
 			this.ctx = null;
 
