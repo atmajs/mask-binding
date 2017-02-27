@@ -147,6 +147,9 @@ var compo_fragmentInsert,
 		var i = path.indexOf('.');
 		if (i !== -1) {
 			key = path.substring(0, i);
+			if (key.charCodeAt(key.length - 1) === 63 /*?*/) {
+				key = key.slice(0, -1);
+			}
 		}
 		while (ctr != null) {
 			if (ctr.scope != null && ctr.scope.hasOwnProperty(key)) {
