@@ -89,33 +89,31 @@ var CustomProviders,
 
 			// Send signal on OBJECT or DOM change
 			if (attr['x-signal']) {
-				var signal = signal_parse(attr['x-signal'], null, 'dom')[0],
-					signalType = signal && signal.type;
-
-				switch(signalType){
-					case 'dom':
-					case 'object':
-						this['signal_' + signalType + 'Changed'] = signal.signal;
-						break;
-					default:
+				var signals = signal_parse(attr['x-signal'], null, 'dom'),
+					i = signals.length;
+				while (--i > -1) {
+					var signal = signals[i],
+						signalType = signal && signal.type;
+					if (signalType !== 'dom' && signalType !== 'object') {
 						log_error('Signal typs is not supported', signal);
-						break;
+						continue;
+					}
+					this['signal_' + signalType + 'Changed'] = signal.signal;
 				}
 			}
 
 			// Send PIPED signal on OBJECT or DOM change
 			if (attr['x-pipe-signal']) {
-				var signal = signal_parse(attr['x-pipe-signal'], true, 'dom')[0],
-					signalType = signal && signal.type;
-
-				switch(signalType){
-					case 'dom':
-					case 'object':
-						this['pipe_' + signalType + 'Changed'] = signal;
-						break;
-					default:
-						log_error('Pipe type is not supported');
-						break;
+				var signals = signal_parse(attr['x-pipe-signal'], true, 'dom'),
+					i = signals.length;
+				while (--i > -1) {
+					var signal = signals[i],
+						signalType = signal && signal.type;
+					if (signalType !== 'dom' && signalType !== 'object') {
+						log_error('Pipe type is not supported', signal);
+						continue;
+					}
+					this['pipe_' + signalType + 'Changed'] = signal;
 				}
 			}
 
