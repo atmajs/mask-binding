@@ -8,7 +8,8 @@ var expression_eval,
 	expression_callFn,
 
 	expression_parse,
-	expression_varRefs
+	expression_varRefs,
+	expression_getObservable
 	;
 
 (function(){
@@ -142,7 +143,77 @@ var expression_eval,
 		}
 	};
 
+	(function () {
+		// [ObjectHost, Property]
+		var tuple = [null, null];
+		expression_getObservable = function (accessor, model, ctr) {
+			var result = get(accessor, model, ctr);
+			if (result == null) {
+				error_withCompo('Observable host is undefined or is not allowed: ' + accessor.toString(), ctr);
+			}
+			return result;
+		};
+		function get(accessor, model, ctr) {
+			if (accessor == null)
+				return;
+
+			if (typeof accessor === 'object') {
+				var obj = expression_eval_strict(accessor.accessor, model, null, ctr);
+				if (obj == null || typeof obj !== 'object') {
+					return null;
+				}
+				tuple[0] = obj;
+				tuple[1] = accessor.ref;
+				return tuple;
+			}
+			var property = accessor,
+				parts = property.split('.'),
+				imax = parts.length;
+
+			if (imax > 1) {
+				var first = parts[0];
+				if (first === 'this' || first === '$c' || first === '$') {
+					if (parts[1] === 'attr') {
+						return null;
+					}
+					// Controller Observer
+					var owner  = _getObservable_Controller(ctr, parts[1]);
+					var cutIdx = first.length + 1;
+					tuple[0] = owner;
+					tuple[1] = property.substring(cutIdx);
+					return tuple;
+				}
+				if (first === '$scope') {
+					// Controller Observer
+					var scope = _getObservable_Scope(ctr, parts[1]);
+					var cutIdx = 6 + 1;
+					tuple[0] = scope;
+					tuple[1] = property.substring(cutIdx);
+					return tuple;
+				}
+				if ('$a' === first || '$ctx' === first || '_' === first || '$u' === first)
+					return null;
+			}
+
+			var obj = null;
+			if (_isDefined(model, parts[0])) {
+				obj = model;
+			}
+			if (obj == null) {
+				obj = _getObservable_Scope(ctr, parts[0]);
+			}
+			if (obj == null) {
+				obj = model;
+			}
+			tuple[0] = obj;
+			tuple[1] = property;
+			return tuple;
+		}
+	}());
+	
 	function _toggleObserver(mutatorFn, model, ctr, accessor, callback) {
+		
+		/*
 		if (accessor == null)
 			return;
 
@@ -193,7 +264,12 @@ var expression_eval,
 		}
 		if (obj == null) {
 			obj = model;
-		}
+		} 
+		*/
+		var tuple = expression_getObservable(accessor, model, ctr);
+		if (tuple == null) return;
+		var obj = tuple[0],
+			property = tuple[1];
 
 		mutatorFn(obj, property, callback);
 	}

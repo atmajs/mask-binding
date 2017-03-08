@@ -218,19 +218,10 @@ var CustomProviders,
 			var error = this.validate(value);
 			if (error == null) {
 				this.dismiss = 1;
-				var obj = this.model;
-				var prop = this.value;
-				if (prop.charCodeAt(0) === 36 /*$*/) {
-					var i = prop.indexOf('.');
-					if (i !== -1) {
-						var key = prop.substring(0, i);
-						if (key === '$scope') {
-							prop = prop.substring(i + 1);
-							obj = compo_getScopeFor(this.ctr.parent, prop);
-						}
-					}
-				}
 
+				var tuple = expression_getObservable(this.value, this.model, this.ctr.parent);
+				var obj = tuple[0];
+				var prop = tuple[1];
 				this.objectWay.set(obj, prop, value, this);
 				this.dismiss = 0;
 
