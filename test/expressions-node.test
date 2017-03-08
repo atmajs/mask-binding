@@ -517,7 +517,7 @@ include
 			},
 
 			'removing and adding observers': {
-				'!should add deeper observer, outer, then removes the deeper and calls once' () {
+				'should add deeper observer, outer, then removes the deeper and calls once' () {
 					var model = {
 						event: {
 							date: {
@@ -558,7 +558,7 @@ include
 					eq_(innerFn.callCount, 1, 'Inner fn should be called once');
 					deepEq_(innerFn.args[0], [{year: 3}]);	
 				},
-				'!should add outer observer, deeper, then removes the deeper and calls once' () {
+				'should add outer observer, deeper, then removes the deeper and calls once' () {
 					var model = {
 						event: {
 							date: {
@@ -587,12 +587,6 @@ include
 						innerFn
 					);
 
-					//is_(model.__observers['event'][0], 'Function');
-					//is_(model.__observers['event.date'][0], 'Function');
-					//is_(model.event.__observers['date'][0], 'Function');
-
-					//console.log(model.__observers['event.date'][0] === model.event.__observers['date'][0])
-
 					model.event.date = { year: 3};
 					eq_(innerFn.callCount, 1, 'Inner fn should be called once');
 					deepEq_(innerFn.args[0], [{year: 3}]);					
@@ -600,8 +594,51 @@ include
 					model.event = { date: { year: 4 } };
 					eq_(innerFn.callCount, 2, 'Inner fn should be called twice');
 					deepEq_(innerFn.args[1], [{year: 4}]);	
+				},
+				'!should add deeper observer when child is null, add deeper, then removes the deeper and calls once' () {
+					var model = {
+						chart: null
+					};
+					var colorSpy = sinon.spy();
+					obj_addObserver(
+						model, 
+						'chart.color', 
+						colorSpy
+					);
+
+					var chartSpy = sinon.spy();
+					obj_addObserver(
+						model, 
+						'chart', 
+						chartSpy
+					);					
+					
+					var colorSpy2 = sinon.spy();
+					obj_addObserver(
+						model, 
+						'chart.color', 
+						colorSpy2
+					);
+
+					
+					
+					model.chart = { color: 'cyan' };
+					model.chart = { color: 'red' };
+					deepEq_(chartSpy.args[0], [{ color: 'cyan'}]);	
+					deepEq_(colorSpy.args[0], [ 'cyan' ]);
+					deepEq_(colorSpy2.args[0], [ 'cyan' ]);
+
+
+					deepEq_(chartSpy.args[1], [{ color: 'red'}]);	
+					deepEq_(colorSpy.args[1], [ 'red' ]);
+					deepEq_(colorSpy2.args[1], [ 'red' ]);
+
+					model.chart.color = 'green';
+					deepEq_(colorSpy.args[2], [ 'green' ]);
+					deepEq_(colorSpy2.args[2], [ 'green' ]);
+							
 				}
-			}
+			},
 		})
 
 	})

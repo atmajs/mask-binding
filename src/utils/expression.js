@@ -189,7 +189,7 @@ var expression_eval,
 			obj = model;
 		}
 		if (obj == null) {
-			obj = _getObservable_Scope(ctr, parts[0], imax);
+			obj = _getObservable_Scope(ctr, parts[0]);
 		}
 		if (obj == null) {
 			obj = model;
@@ -198,17 +198,6 @@ var expression_eval,
 		mutatorFn(obj, property, callback);
 	}
 
-	function _getObservable_Scope_(ctr, parts, imax){
-		var scope;
-		while(ctr != null){
-			scope = ctr.scope;
-			if (scope != null && _isDefined(scope, parts[0]))
-				return scope;
-
-			ctr = ctr.parent;
-		}
-		return null;
-	}
 	function _getObservable_Controller(ctr_, key) {
 		var ctr = ctr_;
 		while(ctr != null){
@@ -222,7 +211,7 @@ var expression_eval,
 		var ctr = ctr_, scope;
 		while(ctr != null){
 			scope = ctr.scope;
-			if (scope != null && scope[property] !== void 0) {
+			if (_isDefined(scope, property)) {
 				return scope;
 			}
 			ctr = ctr.parent;
@@ -230,7 +219,7 @@ var expression_eval,
 		return null;
 	}
 	function _isDefined(obj_, key){
-		return obj_ != null && obj_[key] !== void 0;
+		return obj_ != null && key in obj_;
 	}
 
 
