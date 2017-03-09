@@ -148,8 +148,9 @@ var expression_eval,
 		var tuple = [null, null];
 		expression_getObservable = function (accessor, model, ctr) {
 			var result = get(accessor, model, ctr);
-			if (result == null) {
+			if (result == null || result[0] == null) {
 				error_withCompo('Observable host is undefined or is not allowed: ' + accessor.toString(), ctr);
+				return null;
 			}
 			return result;
 		};
@@ -211,66 +212,13 @@ var expression_eval,
 		}
 	}());
 	
-	function _toggleObserver(mutatorFn, model, ctr, accessor, callback) {
-		
-		/*
-		if (accessor == null)
-			return;
-
-		if (typeof accessor === 'object') {
-			var obj = expression_eval_strict(accessor.accessor, model, null, ctr);
-			if (obj == null || typeof obj !== 'object') {
-				console.error('Binding failed to an object over accessor', accessor.ref);
-				return;
-			}
-			mutatorFn(obj, accessor.ref, callback);
-			return;
-		}
-
-		// string;
-		var property = accessor,
-			parts = property.split('.'),
-			imax = parts.length;
-
-		if (imax > 1) {
-			var first = parts[0];
-			if (first === 'this' || first === '$c' || first === '$') {
-				if (parts[1] === 'attr') {
-					return;
-				}
-				// Controller Observer
-				var owner  = _getObservable_Controller(ctr, parts[1]);
-				var cutIdx = first.length + 1;
-				mutatorFn(owner, property.substring(cutIdx), callback);
-				return;
-			}
-			if (first === '$scope') {
-				// Controller Observer
-				var scope = _getObservable_Scope(ctr, parts[1]);
-				var cutIdx = 6 + 1;
-				mutatorFn(scope, property.substring(cutIdx), callback);
-				return;
-			}
-			if ('$a' === first || '$ctx' === first || '_' === first || '$u' === first)
-				return;
-		}
-
-		var obj = null;
-		if (_isDefined(model, parts[0])) {
-			obj = model;
-		}
-		if (obj == null) {
-			obj = _getObservable_Scope(ctr, parts[0]);
-		}
-		if (obj == null) {
-			obj = model;
-		} 
-		*/
+	function _toggleObserver(mutatorFn, model, ctr, accessor, callback) {		
 		var tuple = expression_getObservable(accessor, model, ctr);
 		if (tuple == null) return;
 		var obj = tuple[0],
 			property = tuple[1];
 
+		if (obj == null) return;
 		mutatorFn(obj, property, callback);
 	}
 
@@ -294,7 +242,11 @@ var expression_eval,
 		}
 		return null;
 	}
-	function _isDefined(obj_, key){
+	function _isDefined(obj_, key_){
+		var key = key_;
+		if (key.charCodeAt(key.length - 1) === 63 /*?*/) {
+			key = key.slice(0, -1);
+		}
 		return obj_ != null && key in obj_;
 	}
 

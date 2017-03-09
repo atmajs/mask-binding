@@ -63,7 +63,6 @@ var CustomProviders,
 							this.domWay = x.domWay;
 							break;
 						}
-
 						this.property = 'element.value';
 						break;
 					case 'TEXTAREA':
@@ -152,8 +151,9 @@ var CustomProviders,
 			}
 
 
-			if (attr.expression) {
-				this.expression = attr.expression;
+			var expression = attr.expression || ctr.expression;
+			if (expression) {
+				this.expression = expression;
 				if (this.value == null && bindingType !== 'single') {
 					var refs = expression_varRefs(this.expression);
 					if (typeof refs === 'string') {
