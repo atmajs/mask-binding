@@ -92,7 +92,7 @@ var expression_eval,
 		if (tuple != null) {
 			var obj = tuple[0],
 				path = tuple[1];
-						
+
 			return obj_callFn(obj, path, args);
 		}
 		return null;

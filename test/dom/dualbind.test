@@ -183,25 +183,75 @@ UTest({
 		eq_(foo.scope.__observers.letter.length, 0);
 	},
 	'mappings': {
-		'!should map to object' () {
+		'should map to dom and to object' () {
 			var template = `
 				define Foo {
 					function upperCaseLetter (c) {
-						return c.toUpperCase();
+						return c.toUpperCase()
 					}
-					
+					function appendSlash (str) {
+						return str + '/'
+					}
+
 					input > dualbind (letter)						
-						map-to-dom='this.upperCaseLetter';
+						map-to-dom='this.upperCaseLetter'
+						map-to-obj='this.appendSlash';
 				};		
 				Foo;
 			`;
 			
-			var app = Compo.initialize(template, { letter: 'f' });
-			app
+			'> to dom'
+			var foo = Compo.initialize(template, { letter: 'f' });
+			foo
 				.$
 				.filter('input')
 				.eq_('length', 1)
 				.eq_('val', 'F');
+
+			'> to letter'
+			foo.model.letter = 'q';
+			foo
+				.$
+				.filter('input')
+				.val('q')
+				.change();
+
+			eq_(foo.model.letter, 'q/');
+		},
+		'should map to dom and to object using own methods' () {
+			var template = `
+				define FooOwn {
+					input > dualbind (letter)						
+						map-to-dom='this.upperCaseLetter'
+						map-to-obj='this.appendSlash' {
+							function upperCaseLetter (c) {
+								return c.toUpperCase()
+							}
+							function appendSlash (str) {
+								return str + '/'
+							}
+						}
+				};		
+				FooOwn;
+			`;
+			
+			'> to dom'
+			var foo = Compo.initialize(template, { letter: 'f' });
+			foo
+				.$
+				.filter('input')
+				.eq_('length', 1)
+				.eq_('val', 'F');
+
+			'> to letter'
+			foo.model.letter = 'q';
+			foo
+				.$
+				.filter('input')
+				.val('q')
+				.change();
+
+			eq_(foo.model.letter, 'q/');
 		}
 	} 
 })

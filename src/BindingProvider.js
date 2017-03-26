@@ -240,7 +240,7 @@ var CustomProviders,
 			if (error == null) {
 				this.dismiss = 1;
 
-				var tuple = expression_getHost(this.value, this.model, this.ctr.parent);
+				var tuple = expression_getHost(this.value, this.model, null, this.ctr.parent);
 				if (tuple != null) {
 					var obj = tuple[0],
 						prop = tuple[1];
