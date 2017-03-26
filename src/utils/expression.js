@@ -9,7 +9,7 @@ var expression_eval,
 
 	expression_parse,
 	expression_varRefs,
-	expression_getObservable
+	expression_getHost
 	;
 
 (function(){
@@ -25,96 +25,77 @@ var expression_eval,
 		return x == null ? '' : x;
 	};
 
-	expression_bind = function(expr, model, ctx, ctr, callback) {
+	expression_bind = function(expr, model, ctx, ctr, cb) {
 		if (expr === '.') {
 			if (model != null) {
-				obj_addMutatorObserver(model, callback);
+				obj_addMutatorObserver(model, cb);
 			}
 			return;
 		}
-
-		var ast = expression_parse(expr, false),
-			vars = expression_varRefs(ast, model, ctx, ctr),
-			obj, ref;
-
-		if (vars == null)
-			return;
-
-		if (typeof vars === 'string') {
-			_toggleObserver(obj_addObserver, model, ctr, vars, callback);
-			return;
-		}
-
-		var isArray = vars.length != null && typeof vars.splice === 'function',
-			imax = isArray === true ? vars.length : 1,
-			i = 0,
-			x, prop;
-
-		for (; i < imax; i++) {
-			x = isArray === true ? vars[i] : vars;
-			_toggleObserver(obj_addObserver, model, ctr, x, callback);
-		}
+		toggleExpressionsBindings(
+			obj_addObserver,
+			expr, 
+			model, 
+			ctr, 
+			cb
+		);
 	};
 
-	expression_unbind = function(expr, model, ctr, callback) {
-
-		if (typeof ctr === 'function')
-			log_warn('[mask.binding] - expression unbind(expr, model, controller, callback)');
-
+	expression_unbind = function(expr, model, ctr, cb) {
 		if (expr === '.') {
 			if (model != null) {
-				obj_removeMutatorObserver(model, callback);
+				obj_removeMutatorObserver(model, cb);
 			}
 			return;
 		}
+		toggleExpressionsBindings(
+			obj_removeObserver, 
+			expr, 
+			model, 
+			ctr, 
+			cb
+		);
+	};
 
-		var vars = expression_varRefs(expr, model, null, ctr),
-			x, ref;
-
-		if (vars == null)
+	function toggleExpressionsBindings (fn, expr, model, ctr, cb) {
+		var mix = expression_varRefs(expr, model, null, ctr);
+		if (mix == null) return null;
+		if (typeof mix === 'string') {
+			_toggleObserver(fn, model, ctr, mix, cb);
 			return;
-
-		if (typeof vars === 'string') {
-			_toggleObserver(obj_removeObserver, model, ctr, vars, callback);
-			return;
+		}		
+		var arr = mix,
+			imax = arr.length,
+			i = -1;
+		while (++i < imax) {
+			var accs = arr[i];
+			if (typeof accs === 'string')
+			if (accs.charCodeAt(0) === 95 /*_*/ && accs.charCodeAt(0) === 46 /*.*/) {
+				continue;
+			}
+			else if (typeof accs === 'object') {
+				if (accs.ref === '_') {
+					continue;
+				}
+			}
+			_toggleObserver(fn, model, ctr, accs, cb);
 		}
-
-		var isArray = vars.length != null && typeof vars.splice === 'function',
-			imax = isArray === true ? vars.length : 1,
-			i = 0,
-			x;
-
-		for (; i < imax; i++) {
-			x = isArray === true ? vars[i] : vars;
-			_toggleObserver(obj_removeObserver, model, ctr, x, callback);
-		}
-
 	}
 
 	expression_callFn = function (accessor, model, ctx, ctr, args) {
-		var dot = accessor.indexOf('.');
-		if (dot === -1) {
-			var ctx = model,
-				fn = ctx[accessor];
-			if (fn != null) {
-				return fn_apply(fn, ctx, args);
-			}
-			ctx = ctr;
-			fn = ctx[accessor];
-			if (fn != null)
-				return fn_apply(fn, ctx, args);
-
-			throw Error(accessor + ' is not a function');
+		var tuple = expression_getHost(
+			accessor, 
+			model, 
+			ctx, 
+			ctr
+		);
+		if (tuple != null) {
+			var obj = tuple[0],
+				path = tuple[1];
+						
+			return obj_callFn(obj, path, args);
 		}
-		var path = accessor.substring(0, dot),
-			key = accessor.substring(dot + 1);
-
-		var ctx = expression_eval_strict(path, model, ctx, ctr);
-		var fn = ctx && ctx[key];
-		if (fn != null) {
-			return fn_apply(fn, ctx, args);
-		}		
-		throw Error(accessor + ' is not a function');
+		return null;
 	};
 	/**
 	 * expression_bind only fires callback, if some of refs were changed,
@@ -146,15 +127,15 @@ var expression_eval,
 	(function () {
 		// [ObjectHost, Property]
 		var tuple = [null, null];
-		expression_getObservable = function (accessor, model, ctr) {
-			var result = get(accessor, model, ctr);
+		expression_getHost = function (accessor, model, ctx, ctr) {
+			var result = get(accessor, model, ctx, ctr);
 			if (result == null || result[0] == null) {
 				error_withCompo('Observable host is undefined or is not allowed: ' + accessor.toString(), ctr);
 				return null;
 			}
 			return result;
 		};
-		function get(accessor, model, ctr) {
+		function get(accessor, model, ctx, ctr) {
 			if (accessor == null)
 				return;
 
@@ -174,11 +155,8 @@ var expression_eval,
 			if (imax > 1) {
 				var first = parts[0];
 				if (first === 'this' || first === '$c' || first === '$') {
-					if (parts[1] === 'attr') {
-						return null;
-					}
 					// Controller Observer
-					var owner  = _getObservable_Controller(ctr, parts[1]);
+					var owner  = _getObservable_Controller(ctr, parts[1]);					
 					var cutIdx = first.length + 1;
 					tuple[0] = owner;
 					tuple[1] = property.substring(cutIdx);
@@ -191,9 +169,7 @@ var expression_eval,
 					tuple[0] = scope;
 					tuple[1] = property.substring(cutIdx);
 					return tuple;
-				}
-				if ('$a' === first || '$ctx' === first || '_' === first || '$u' === first)
-					return null;
+				}				
 			}
 
 			var obj = null;
@@ -213,7 +189,7 @@ var expression_eval,
 	}());
 	
 	function _toggleObserver(mutatorFn, model, ctr, accessor, callback) {		
-		var tuple = expression_getObservable(accessor, model, ctr);
+		var tuple = expression_getHost(accessor, model, null, ctr);
 		if (tuple == null) return;
 		var obj = tuple[0],
 			property = tuple[1];

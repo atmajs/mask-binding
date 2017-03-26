@@ -595,7 +595,7 @@ include
 					eq_(innerFn.callCount, 2, 'Inner fn should be called twice');
 					deepEq_(innerFn.args[1], [{year: 4}]);	
 				},
-				'!should add deeper observer when child is null, add deeper, then removes the deeper and calls once' () {
+				'should add deeper observer when child is null, add deeper, then removes the deeper and calls once' () {
 					var model = {
 						chart: null
 					};

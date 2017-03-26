@@ -70,7 +70,7 @@ UTest({
 				;
 		},
 
-		'!+if array length' () {
+		'+if array length' () {
 			var model = { users: [] };
 			var template = `
 				span {
@@ -137,9 +137,9 @@ UTest({
 						.eq_('text', 'bangbaz')
 						;
 
-					has_(doc.body.innerHTML, 'expression');
+					'> should have serialized template for if and else'
 					has_(doc.body.innerHTML, '.falseContainer');
-					has_(doc.body.innerHTML, 'nodes:');
+					has_(doc.body.innerHTML, ".trueContainer>'bang'");
 					has_(doc.body.innerHTML, '"foo":true');
 
 

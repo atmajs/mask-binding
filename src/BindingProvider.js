@@ -28,6 +28,8 @@ var CustomProviders,
 			this.domGetter = attr['dom-getter'] || attr.getter;
 			this.objSetter = attr['obj-setter'];
 			this.objGetter = attr['obj-getter'];
+			this.mapToObj = attr['map-to-obj'];
+			this.mapToDom = attr['map-to-dom'];
 
 			/* Convert to an instance, e.g. Number, on domchange event */
 			this['typeof'] = attr['typeof'] || null;
@@ -183,6 +185,15 @@ var CustomProviders,
 			if (x == null || this.objGetter != null) {
 				x = this.objectWay.get(this, this.expression);
 			}
+			if (this.mapToDom != null) {
+				x = expression_callFn(
+					this.mapToDom, 
+					this.model, 
+					null, 
+					this.ctr,
+					[ x ]
+				);
+			}
 
 			this.domWay.set(this, x);
 
@@ -199,13 +210,14 @@ var CustomProviders,
 
 			this.locked = false;
 		},
-		domChanged: function(event, value) {
+		domChanged: function(event, val_) {
 			if (this.locked === true) {
 				log_warn('Concurance change detected', this);
 				return;
 			}
 			this.locked = true;
 
+			var value = val_;
 			if (value == null)
 				value = this.domWay.get(this);
 
@@ -214,17 +226,26 @@ var CustomProviders,
 				var Converter = window[typeof_];
 				value = Converter(value);
 			}
+			if (this.mapToObj != null) {
+				value = expression_callFn(
+					this.mapToObj, 
+					this.model, 
+					null, 
+					this.ctr, 
+					[ value ]
+				);
+			}
 
 			var error = this.validate(value);
 			if (error == null) {
 				this.dismiss = 1;
 
-				var tuple = expression_getObservable(this.value, this.model, this.ctr.parent);
+				var tuple = expression_getHost(this.value, this.model, this.ctr.parent);
 				if (tuple != null) {
 					var obj = tuple[0],
 						prop = tuple[1];
 					this.objectWay.set(obj, prop, value, this);					
-				}
+				}	
 				
 				this.dismiss = 0;
 				if (this.log) {

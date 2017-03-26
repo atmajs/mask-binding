@@ -2,7 +2,7 @@ UTest({
 	'input text' () {
 		var model = { foo: 'Foo' };
 		var Ctor = Compo({
-			template: "input > :dualbind value=foo",
+			template: "input > dualbind value=foo",
 			model: model,
 		});
 		var compo = mask.Compo.initialize(Ctor);
@@ -35,7 +35,7 @@ UTest({
 	'input date (debounced)' (done) {
 		var model = { foo: new Date(2014, 1, 1) };
 		var Ctor = Compo({
-			template: "input type=date > :dualbind value=foo",
+			template: "input type=date > dualbind value=foo",
 			model: model,
 		});
 		var compo = mask.Compo.initialize(Ctor);
@@ -89,7 +89,7 @@ UTest({
 			})
 		};
 		var Ctor = Compo({
-			template: "input > :dualbind value=foo obj-getter=getFoo obj-setter=setFoo",
+			template: "input > dualbind value=foo obj-getter=getFoo obj-setter=setFoo",
 			model: model,
 		});
 		var compo = mask.Compo.initialize(Ctor);
@@ -121,7 +121,7 @@ UTest({
 			template: `
 				:transformer >
 					input >
-						:dualbind value=foo dom-getter=getValue dom-setter=setValue;
+						dualbind value=foo dom-getter=getValue dom-setter=setValue;
 			`,
 			model: model,
 		});
@@ -149,8 +149,7 @@ UTest({
 				var letter = 'A';
 				
 				input > dualbind value='$scope.letter';
-			};
-			
+			};		
 			Foo;
 		`;
 		
@@ -182,5 +181,27 @@ UTest({
 		
 		app.remove();
 		eq_(foo.scope.__observers.letter.length, 0);
-	}
+	},
+	'mappings': {
+		'!should map to object' () {
+			var template = `
+				define Foo {
+					function upperCaseLetter (c) {
+						return c.toUpperCase();
+					}
+					
+					input > dualbind (letter)						
+						map-to-dom='this.upperCaseLetter';
+				};		
+				Foo;
+			`;
+			
+			var app = Compo.initialize(template, { letter: 'f' });
+			app
+				.$
+				.filter('input')
+				.eq_('length', 1)
+				.eq_('val', 'F');
+		}
+	} 
 })

@@ -10,7 +10,8 @@
 		Dom = mask.Dom;
 
 	var log_warn  = console.warn.bind(console),
-		log_error = console.error.bind(console);
+		log_error = console.error.bind(console),
+		error_withCompo = log_error;
 
 	// import /ref-utils/lib/utils.embed.js
 
