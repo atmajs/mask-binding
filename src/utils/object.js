@@ -6,13 +6,11 @@ var obj_callFn;
 			return call(obj, path, args);
 		}
 		var host = obj,
-			i = -1, start;
-		while (host !== null) {
-			start = i;
+			i = -1;
+		while (host != null && i !== end) {
+			var start = i;
 			i = path.indexOf('.', i);
-			if (i === end)
-				break;
-
+			
 			var key = path.substring(start + 1, i);
 			host = host[key];
 		}

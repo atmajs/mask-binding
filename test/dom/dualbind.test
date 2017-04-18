@@ -142,6 +142,66 @@ UTest({
 		// changed value
 		eq_(model.foo, 'john');
 	},
+
+	'Dom and Object getter/setters' (done) {
+		var model = {
+			foo: {
+				isPublished: function () {
+					return this.publishedState
+				},
+				setPublished: function (val) {
+					this.publishedState = val;
+				},
+				publishedState: true
+			}
+		};
+		mask.define('BooleanType', Compo({
+			tagName: 'input',
+			getBool: function (el) {
+				if (el.value === 'YES') return true;
+				if (el.value === 'NO') return false;
+				return null;				
+			},
+			setBool: function (val, el) {				
+				is_(val, 'Boolean');
+				el.value = val ? 'YES' : 'NO';				
+			}
+		}));
+
+		var Ctor = Compo({
+			template: `
+				BooleanType {
+					dualbind (foo.publishedState) 
+						dom-getter=getBool 
+						dom-setter=setBool
+						obj-getter='foo.isPublished'
+						obj-setter='foo.setPublished'
+				}
+			`,
+			model: model,
+		});
+		
+		var compo = mask.Compo.initialize(Ctor);
+		
+		var input = compo.$[0];
+		
+		setTimeout(function () {
+			
+			model.foo.publishedState = false;
+			eq_(compo.$.val(), 'NO');
+
+			model.foo.publishedState = true;
+			eq_(compo.$.val(), 'YES');
+			
+			compo.$.val('NO').trigger('change');
+			eq_(model.foo.publishedState, false);
+
+			compo.$.val('YES').trigger('change');
+			eq_(model.foo.publishedState, true);
+
+			done();
+		}, 50);
+	},
 	
 	'should bind to scope' () {
 		var template = `
