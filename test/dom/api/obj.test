@@ -173,5 +173,23 @@ UTest({
 			eq(model_Count, -1);
 			eq(obj_Count, -1);			
 		},
+		'(hosts) observable object with different hosts' () {
+			var obj = {
+				Foo: {
+					text: 'hello'
+				}
+			};
+			var objA = mask.obj.extend({}, obj);
+			var objB = mask.obj.extend({}, obj);
+			var spyA = sinon.spy();
+			var spyB = sinon.spy();
+
+			mask.obj.addObserver(objA, 'Foo.text', spyA);
+			mask.obj.addObserver(objB, 'Foo.text', spyB);
+
+			obj.Foo.text = 'world';
+			eq_(spyA.callCount, 1);
+			eq_(spyB.callCount, 1);
+		}
 	}
 })
