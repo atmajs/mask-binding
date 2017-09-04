@@ -199,7 +199,11 @@ var obj_getProperty,
 			imax = chain.length,
 			i = -1;
 		while ( obj != null && ++i < imax ) {
-			obj = obj[chain[i]];
+			var key = chain[i];
+			if (key.charCodeAt(key.length - 1) === 63 /*?*/) {
+				key = key.slice(0, -1);
+			}
+			obj = obj[key];
 		}
 		return obj;
 	};
@@ -211,10 +215,14 @@ var obj_getProperty,
 			key;
 		while ( ++i < imax ) {
 			key = chain[i];
-			if (obj[key] == null)
-				obj[key] = {};
-
-			obj = obj[key];
+			if (key.charCodeAt(key.length - 1) === 63 /*?*/) {
+				key = key.slice(0, -1);
+			}
+			var x = obj[key];
+			if (x == null) {
+				x = obj[key] = {};
+			}
+			obj = x;
 		}
 		obj[chain[i]] = val;
 	};
@@ -588,7 +596,7 @@ var error_createClass,
 			rowNum  = cursor[2],
 			str = '';
 		if (filename != null) {
-			str += str_format(' at {0}({1}:{2})\n', filename, lineNum, rowNum);
+			str += str_format(' at {0}:{1}:{2}\n', filename, lineNum, rowNum);
 		}
 		return str + error_formatCursor(lines, lineNum, rowNum);
 	};
@@ -686,7 +694,11 @@ var error_createClass,
 // source /src/class/Dfr.js
 var class_Dfr;
 (function(){
-	class_Dfr = function(){};
+	class_Dfr = function(mix){
+		if (typeof mix === 'function') {
+			return class_Dfr.run(mix);
+		}
+	};
 	class_Dfr.prototype = {
 		_isAsync: true,
 		_done: null,
@@ -812,9 +824,9 @@ var class_Dfr;
 				return function(){
 					if (fn != null) {
 						var override = fn.apply(this, arguments);
-						if (override != null) {
-							if (isDeferred(override) === true) {
-								override.pipe(dfr);
+						if (override != null && override !== dfr) {
+							if (isDeferred(override)) {
+								override.then(delegate(dfr, 'resolve'), delegate(dfr, 'reject'));
 								return;
 							}
 
@@ -862,6 +874,39 @@ var class_Dfr;
 		);
 		return dfr;
 	};
+	class_Dfr.all = function(promises){
+		var dfr = new class_Dfr,
+			arr = new Array(promises.length),
+			wait = promises.length,
+			error = null;
+		if (wait === 0) {
+			return dfr.resolve(arr);
+		}
+		function tick (index) {
+			if (error != null) {
+				return;
+			}
+			var args = _Array_slice.call(arguments, 1);
+			arr.splice.apply(arr, [index, 0].concat(args));
+			if (--wait === 0) {
+				dfr.resolve(arr);
+			}
+		}
+		function onReject (err) {
+			dfr.reject(error = err);
+		}
+		var imax = promises.length,
+			i = -1;
+		while(++i < imax){
+			var x = promises[i];
+			if (x == null || x.then == null) {
+				tick(i, x);
+				continue;
+			}
+			x.then(tick.bind(null, i), onReject);
+		}		
+		return dfr; 
+	};
 
 	// PRIVATE
 
@@ -899,15 +944,10 @@ var class_Dfr;
 		arr.length = 0;
 	}
 	function isDeferred(x){
-		if (x == null || typeof x !== 'object')
-			return false;
-
-		if (x instanceof class_Dfr)
-			return true;
-
-		return typeof x.done === 'function'
-			&& typeof x.fail === 'function'
-			;
+		return x != null 
+			&& typeof x === 'object' 
+			&& is_Function(x.then)
+		;
 	}
 }());
 

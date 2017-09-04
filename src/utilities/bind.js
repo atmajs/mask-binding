@@ -32,6 +32,11 @@
 			current_ = value;
 		};
 	}
+	function refresherDelegate_ATTR_PROP(el, property, currentValue) {
+		return function(value){			
+			obj_setProperty(el, property, value);
+		};
+	}
 	function refresherDelegate_ATTR_COMPO(ctr, attrName, currentValue) {
 		var current_ = currentValue;
 		return function(val){
@@ -47,22 +52,14 @@
 			ctr.attr[attrName] = val;
 		};
 	}
-	function refresherDelegate_PROP(element, attrName, currentValue) {
-		return function(value){
-			switch(typeof element[attrName]) {
-				case 'boolean':
-					currentValue = element[attrName] = !!value;
-					return;
-				case 'number':
-					currentValue = element[attrName] = Number(value);
-					return;
-				case 'string':
-					currentValue = element[attrName] = attr_strReplace(element[attrName], currentValue, value);
-					return;
-				default:
-					log_warn('Unsupported elements property type', attrName);
-					return;
+	function refresherDelegate_PROP_COMPO(ctr, property, currentValue) {
+		var current_ = currentValue;
+		return function(val){
+			if (current_ === val) {
+				return;
 			}
+			current_ = val;
+			obj_setProperty(ctr, property, val);
 		};
 	}
 
@@ -78,13 +75,19 @@
 				case 'selected':
 				case 'selectedIndex':
 					if (attrName in element) {
-						return refresherDelegate_PROP(element, attrName, currentValue);
+						return refresherDelegate_ATTR_PROP(element, attrName, currentValue);
 					}
 			}
 			return refresherDelegate_ATTR(element, attrName, currentValue);
 		}
+		if ('prop' === type) {
+			return refresherDelegate_PROP(element, attrName, currentValue);
+		}
 		if ('compo-attr' === type) {
 			return refresherDelegate_ATTR_COMPO(ctr, attrName, currentValue)
+		}
+		if ('compo-prop' === type) {
+			return refresherDelegate_PROP_COMPO(ctr, attrName, currentValue)
 		}
 		throw Error('Unexpected binder type: ' + type);
 	}

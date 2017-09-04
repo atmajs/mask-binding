@@ -202,7 +202,11 @@
 				imax = chain.length,
 				i = -1;
 			while ( obj != null && ++i < imax ) {
-				obj = obj[chain[i]];
+				var key = chain[i];
+				if (key.charCodeAt(key.length - 1) === 63 /*?*/) {
+					key = key.slice(0, -1);
+				}
+				obj = obj[key];
 			}
 			return obj;
 		};
@@ -214,10 +218,14 @@
 				key;
 			while ( ++i < imax ) {
 				key = chain[i];
-				if (obj[key] == null)
-					obj[key] = {};
-	
-				obj = obj[key];
+				if (key.charCodeAt(key.length - 1) === 63 /*?*/) {
+					key = key.slice(0, -1);
+				}
+				var x = obj[key];
+				if (x == null) {
+					x = obj[key] = {};
+				}
+				obj = x;
 			}
 			obj[chain[i]] = val;
 		};
@@ -512,9 +520,22 @@
 				if (Proto == null)
 					Proto = {};
 	
-				var Ctor = Proto.hasOwnProperty('constructor')
-					? Proto.constructor
-					: function ClassCtor () {};
+				var Ctor;
+	
+				if (Proto.hasOwnProperty('constructor')) {
+					Ctor = Proto.constructor;
+					if (Ctor.prototype === void 0) {
+						var es6Method = Ctor;
+						Ctor = function ClassCtor () {
+							var imax = arguments.length, i = -1, args = new Array(imax);
+							while (++i < imax) args[i] = arguments[i];
+							return es6Method.apply(this, args);
+						};
+					}
+				}
+				else {
+					Ctor = function ClassCtor () {};
+				}
 	
 				var i = args.length,
 					BaseCtor, x;
@@ -578,7 +599,7 @@
 				rowNum  = cursor[2],
 				str = '';
 			if (filename != null) {
-				str += str_format(' at {0}({1}:{2})\n', filename, lineNum, rowNum);
+				str += str_format(' at {0}:{1}:{2}\n', filename, lineNum, rowNum);
 			}
 			return str + error_formatCursor(lines, lineNum, rowNum);
 		};
@@ -676,7 +697,11 @@
 	// source /src/class/Dfr.js
 	var class_Dfr;
 	(function(){
-		class_Dfr = function(){};
+		class_Dfr = function(mix){
+			if (typeof mix === 'function') {
+				return class_Dfr.run(mix);
+			}
+		};
 		class_Dfr.prototype = {
 			_isAsync: true,
 			_done: null,
@@ -802,9 +827,9 @@
 					return function(){
 						if (fn != null) {
 							var override = fn.apply(this, arguments);
-							if (override != null) {
-								if (isDeferred(override) === true) {
-									override.pipe(dfr);
+							if (override != null && override !== dfr) {
+								if (isDeferred(override)) {
+									override.then(delegate(dfr, 'resolve'), delegate(dfr, 'reject'));
 									return;
 								}
 	
@@ -852,6 +877,39 @@
 			);
 			return dfr;
 		};
+		class_Dfr.all = function(promises){
+			var dfr = new class_Dfr,
+				arr = new Array(promises.length),
+				wait = promises.length,
+				error = null;
+			if (wait === 0) {
+				return dfr.resolve(arr);
+			}
+			function tick (index) {
+				if (error != null) {
+					return;
+				}
+				var args = _Array_slice.call(arguments, 1);
+				arr.splice.apply(arr, [index, 0].concat(args));
+				if (--wait === 0) {
+					dfr.resolve(arr);
+				}
+			}
+			function onReject (err) {
+				dfr.reject(error = err);
+			}
+			var imax = promises.length,
+				i = -1;
+			while(++i < imax){
+				var x = promises[i];
+				if (x == null || x.then == null) {
+					tick(i, x);
+					continue;
+				}
+				x.then(tick.bind(null, i), onReject);
+			}		
+			return dfr; 
+		};
 	
 		// PRIVATE
 	
@@ -889,15 +947,10 @@
 			arr.length = 0;
 		}
 		function isDeferred(x){
-			if (x == null || typeof x !== 'object')
-				return false;
-	
-			if (x instanceof class_Dfr)
-				return true;
-	
-			return typeof x.done === 'function'
-				&& typeof x.fail === 'function'
-				;
+			return x != null 
+				&& typeof x === 'object' 
+				&& is_Function(x.then)
+			;
 		}
 	}());
 	
@@ -988,303 +1041,303 @@
 	// end:source /src/class/EventEmitter.js
 	// source /src/class/Uri.es6
 	"use strict";
-
-var class_Uri;
-(function () {
-
-	class_Uri = class_create({
-		protocol: null,
-		value: null,
-		path: null,
-		file: null,
-		extension: null,
-
-		constructor: function constructor(uri) {
-			if (uri == null) {
+	
+	var class_Uri;
+	(function () {
+	
+		class_Uri = class_create({
+			protocol: null,
+			value: null,
+			path: null,
+			file: null,
+			extension: null,
+	
+			constructor: function constructor(uri) {
+				if (uri == null) {
+					return this;
+				}if (util_isUri(uri)) {
+					return uri.combine("");
+				}uri = normalize_uri(uri);
+	
+				this.value = uri;
+	
+				parse_protocol(this);
+				parse_host(this);
+	
+				parse_search(this);
+				parse_file(this);
+	
+				// normilize path - "/some/path"
+				this.path = normalize_pathsSlashes(this.value);
+	
+				if (/^[\w]+:\//.test(this.path)) {
+					this.path = "/" + this.path;
+				}
 				return this;
-			}if (util_isUri(uri)) {
-				return uri.combine("");
-			}uri = normalize_uri(uri);
-
-			this.value = uri;
-
-			parse_protocol(this);
-			parse_host(this);
-
-			parse_search(this);
-			parse_file(this);
-
-			// normilize path - "/some/path"
-			this.path = normalize_pathsSlashes(this.value);
-
-			if (/^[\w]+:\//.test(this.path)) {
-				this.path = "/" + this.path;
-			}
-			return this;
-		},
-		cdUp: function cdUp() {
-			var path = this.path;
-			if (path == null || path === "" || path === "/") {
+			},
+			cdUp: function cdUp() {
+				var path = this.path;
+				if (path == null || path === "" || path === "/") {
+					return this;
+				}
+	
+				// win32 - is base drive
+				if (/^\/?[a-zA-Z]+:\/?$/.test(path)) {
+					return this;
+				}
+	
+				this.path = path.replace(/\/?[^\/]+\/?$/i, "");
 				return this;
-			}
-
-			// win32 - is base drive
-			if (/^\/?[a-zA-Z]+:\/?$/.test(path)) {
-				return this;
-			}
-
-			this.path = path.replace(/\/?[^\/]+\/?$/i, "");
-			return this;
-		},
-		/**
+			},
+			/**
 	   * '/path' - relative to host
 	   * '../path', 'path','./path' - relative to current path
 	   */
-		combine: function combine(path) {
-
-			if (util_isUri(path)) {
-				path = path.toString();
-			}
-
-			if (!path) {
-				return util_clone(this);
-			}
-
-			if (rgx_win32Drive.test(path)) {
-				return new class_Uri(path);
-			}
-
-			var uri = util_clone(this);
-
-			uri.value = path;
-
-			parse_search(uri);
-			parse_file(uri);
-
-			if (!uri.value) {
+			combine: function combine(path) {
+	
+				if (util_isUri(path)) {
+					path = path.toString();
+				}
+	
+				if (!path) {
+					return util_clone(this);
+				}
+	
+				if (rgx_win32Drive.test(path)) {
+					return new class_Uri(path);
+				}
+	
+				var uri = util_clone(this);
+	
+				uri.value = path;
+	
+				parse_search(uri);
+				parse_file(uri);
+	
+				if (!uri.value) {
+					return uri;
+				}
+	
+				path = uri.value.replace(/^\.\//i, "");
+	
+				if (path[0] === "/") {
+					uri.path = path;
+					return uri;
+				}
+	
+				while (/^(\.\.\/?)/ig.test(path)) {
+					uri.cdUp();
+					path = path.substring(3);
+				}
+	
+				uri.path = normalize_pathsSlashes(util_combinePathes(uri.path, path));
+	
 				return uri;
-			}
-
-			path = uri.value.replace(/^\.\//i, "");
-
-			if (path[0] === "/") {
-				uri.path = path;
-				return uri;
-			}
-
-			while (/^(\.\.\/?)/ig.test(path)) {
-				uri.cdUp();
-				path = path.substring(3);
-			}
-
-			uri.path = normalize_pathsSlashes(util_combinePathes(uri.path, path));
-
-			return uri;
-		},
-		toString: function toString() {
-			var protocol = this.protocol ? this.protocol + "://" : "";
-			var path = util_combinePathes(this.host, this.path, this.file) + (this.search || "");
-			var str = protocol + path;
-
-			if (!(this.file || this.search)) {
-				str += "/";
-			}
-			return str;
-		},
-		toPathAndQuery: function toPathAndQuery() {
-			return util_combinePathes(this.path, this.file) + (this.search || "");
-		},
-		/**
+			},
+			toString: function toString() {
+				var protocol = this.protocol ? this.protocol + "://" : "";
+				var path = util_combinePathes(this.host, this.path, this.file) + (this.search || "");
+				var str = protocol + path;
+	
+				if (!(this.file || this.search)) {
+					str += "/";
+				}
+				return str;
+			},
+			toPathAndQuery: function toPathAndQuery() {
+				return util_combinePathes(this.path, this.file) + (this.search || "");
+			},
+			/**
 	   * @return Current Uri Path{String} that is relative to @arg1 Uri
 	   */
-		toRelativeString: function toRelativeString(uri) {
-			if (typeof uri === "string") uri = new class_Uri(uri);
-
-			if (this.path.indexOf(uri.path) === 0) {
-				// host folder
-				var p = this.path ? this.path.replace(uri.path, "") : "";
-				if (p[0] === "/") p = p.substring(1);
-
-				return util_combinePathes(p, this.file) + (this.search || "");
-			}
-
-			// sub folder
-			var current = this.path.split("/"),
-			    relative = uri.path.split("/"),
-			    commonpath = "",
-			    i = 0,
-			    length = Math.min(current.length, relative.length);
-
-			for (; i < length; i++) {
-				if (current[i] === relative[i]) continue;
-
-				break;
-			}
-
-			if (i > 0) commonpath = current.splice(0, i).join("/");
-
-			if (commonpath) {
-				var sub = "",
-				    path = uri.path,
-				    forward;
-				while (path) {
-					if (this.path.indexOf(path) === 0) {
-						forward = this.path.replace(path, "");
-						break;
-					}
-					path = path.replace(/\/?[^\/]+\/?$/i, "");
-					sub += "../";
+			toRelativeString: function toRelativeString(uri) {
+				if (typeof uri === "string") uri = new class_Uri(uri);
+	
+				if (this.path.indexOf(uri.path) === 0) {
+					// host folder
+					var p = this.path ? this.path.replace(uri.path, "") : "";
+					if (p[0] === "/") p = p.substring(1);
+	
+					return util_combinePathes(p, this.file) + (this.search || "");
 				}
-				return util_combinePathes(sub, forward, this.file);
+	
+				// sub folder
+				var current = this.path.split("/"),
+				    relative = uri.path.split("/"),
+				    commonpath = "",
+				    i = 0,
+				    length = Math.min(current.length, relative.length);
+	
+				for (; i < length; i++) {
+					if (current[i] === relative[i]) continue;
+	
+					break;
+				}
+	
+				if (i > 0) commonpath = current.splice(0, i).join("/");
+	
+				if (commonpath) {
+					var sub = "",
+					    path = uri.path,
+					    forward;
+					while (path) {
+						if (this.path.indexOf(path) === 0) {
+							forward = this.path.replace(path, "");
+							break;
+						}
+						path = path.replace(/\/?[^\/]+\/?$/i, "");
+						sub += "../";
+					}
+					return util_combinePathes(sub, forward, this.file);
+				}
+	
+				return this.toString();
+			},
+	
+			toLocalFile: function toLocalFile() {
+				var path = util_combinePathes(this.host, this.path, this.file);
+	
+				return util_win32Path(path);
+			},
+			toLocalDir: function toLocalDir() {
+				var path = util_combinePathes(this.host, this.path, "/");
+	
+				return util_win32Path(path);
+			},
+			toDir: function toDir() {
+				var str = this.protocol ? this.protocol + "://" : "";
+	
+				return str + util_combinePathes(this.host, this.path, "/");
+			},
+			isRelative: function isRelative() {
+				return !(this.protocol || this.host);
+			},
+			getName: function getName() {
+				return this.file.replace("." + this.extension, "");
 			}
-
-			return this.toString();
-		},
-
-		toLocalFile: function toLocalFile() {
-			var path = util_combinePathes(this.host, this.path, this.file);
-
-			return util_win32Path(path);
-		},
-		toLocalDir: function toLocalDir() {
-			var path = util_combinePathes(this.host, this.path, "/");
-
-			return util_win32Path(path);
-		},
-		toDir: function toDir() {
-			var str = this.protocol ? this.protocol + "://" : "";
-
-			return str + util_combinePathes(this.host, this.path, "/");
-		},
-		isRelative: function isRelative() {
-			return !(this.protocol || this.host);
-		},
-		getName: function getName() {
-			return this.file.replace("." + this.extension, "");
+		});
+	
+		var rgx_protocol = /^([a-zA-Z]+):\/\//,
+		    rgx_extension = /\.([\w\d]+)$/i,
+		    rgx_win32Drive = /(^\/?\w{1}:)(\/|$)/,
+		    rgx_fileWithExt = /([^\/]+(\.[\w\d]+)?)$/i;
+	
+		function util_isUri(object) {
+			return object && typeof object === "object" && typeof object.combine === "function";
 		}
-	});
-
-	var rgx_protocol = /^([a-zA-Z]+):\/\//,
-	    rgx_extension = /\.([\w\d]+)$/i,
-	    rgx_win32Drive = /(^\/?\w{1}:)(\/|$)/,
-	    rgx_fileWithExt = /([^\/]+(\.[\w\d]+)?)$/i;
-
-	function util_isUri(object) {
-		return object && typeof object === "object" && typeof object.combine === "function";
-	}
-
-	function util_combinePathes() {
-		var args = arguments,
-		    str = "";
-		for (var i = 0, x, imax = arguments.length; i < imax; i++) {
-			x = arguments[i];
-			if (!x) continue;
-
-			if (!str) {
-				str = x;
-				continue;
+	
+		function util_combinePathes() {
+			var args = arguments,
+			    str = "";
+			for (var i = 0, x, imax = arguments.length; i < imax; i++) {
+				x = arguments[i];
+				if (!x) continue;
+	
+				if (!str) {
+					str = x;
+					continue;
+				}
+	
+				if (str[str.length - 1] !== "/") str += "/";
+	
+				str += x[0] === "/" ? x.substring(1) : x;
 			}
-
-			if (str[str.length - 1] !== "/") str += "/";
-
-			str += x[0] === "/" ? x.substring(1) : x;
+			return str;
 		}
-		return str;
-	}
-
-	function normalize_pathsSlashes(str) {
-
-		if (str[str.length - 1] === "/") {
-			return str.substring(0, str.length - 1);
-		}
-		return str;
-	}
-
-	function util_clone(source) {
-		var uri = new class_Uri(),
-		    key;
-		for (key in source) {
-			if (typeof source[key] === "string") {
-				uri[key] = source[key];
+	
+		function normalize_pathsSlashes(str) {
+	
+			if (str[str.length - 1] === "/") {
+				return str.substring(0, str.length - 1);
 			}
+			return str;
 		}
-		return uri;
-	}
-
-	function normalize_uri(str) {
-		return str.replace(/\\/g, "/").replace(/^\.\//, "")
-
-		// win32 drive path
-		.replace(/^(\w+):\/([^\/])/, "/$1:/$2");
-	}
-
-	function util_win32Path(path) {
-		if (rgx_win32Drive.test(path) && path[0] === "/") {
-			return path.substring(1);
-		}
-		return path;
-	}
-
-	function parse_protocol(obj) {
-		var match = rgx_protocol.exec(obj.value);
-
-		if (match == null && obj.value[0] === "/") {
-			obj.protocol = "file";
-		}
-
-		if (match == null) {
-			return;
-		}obj.protocol = match[1];
-		obj.value = obj.value.substring(match[0].length);
-	}
-
-	function parse_host(obj) {
-		if (obj.protocol == null) {
-			return;
-		}if (obj.protocol === "file") {
-			var match = rgx_win32Drive.exec(obj.value);
-			if (match) {
-				obj.host = match[1];
-				obj.value = obj.value.substring(obj.host.length);
+	
+		function util_clone(source) {
+			var uri = new class_Uri(),
+			    key;
+			for (key in source) {
+				if (typeof source[key] === "string") {
+					uri[key] = source[key];
+				}
 			}
-			return;
+			return uri;
 		}
-
-		var pathStart = obj.value.indexOf("/", 2);
-
-		obj.host = ~pathStart ? obj.value.substring(0, pathStart) : obj.value;
-
-		obj.value = obj.value.replace(obj.host, "");
-	}
-
-	function parse_search(obj) {
-		var question = obj.value.indexOf("?");
-		if (question === -1) {
-			return;
-		}obj.search = obj.value.substring(question);
-		obj.value = obj.value.substring(0, question);
-	}
-
-	function parse_file(obj) {
-		var match = rgx_fileWithExt.exec(obj.value),
-		    file = match == null ? null : match[1];
-
-		if (file == null) {
-			return;
+	
+		function normalize_uri(str) {
+			return str.replace(/\\/g, "/").replace(/^\.\//, "")
+	
+			// win32 drive path
+			.replace(/^(\w+):\/([^\/])/, "/$1:/$2");
 		}
-		obj.file = file;
-		obj.value = obj.value.substring(0, obj.value.length - file.length);
-		obj.value = normalize_pathsSlashes(obj.value);
-
-		match = rgx_extension.exec(file);
-		obj.extension = match == null ? null : match[1];
-	}
-
-	class_Uri.combinePathes = util_combinePathes;
-	class_Uri.combine = util_combinePathes;
-})();
-/*args*/
-//# sourceMappingURL=Uri.es6.map
+	
+		function util_win32Path(path) {
+			if (rgx_win32Drive.test(path) && path[0] === "/") {
+				return path.substring(1);
+			}
+			return path;
+		}
+	
+		function parse_protocol(obj) {
+			var match = rgx_protocol.exec(obj.value);
+	
+			if (match == null && obj.value[0] === "/") {
+				obj.protocol = "file";
+			}
+	
+			if (match == null) {
+				return;
+			}obj.protocol = match[1];
+			obj.value = obj.value.substring(match[0].length);
+		}
+	
+		function parse_host(obj) {
+			if (obj.protocol == null) {
+				return;
+			}if (obj.protocol === "file") {
+				var match = rgx_win32Drive.exec(obj.value);
+				if (match) {
+					obj.host = match[1];
+					obj.value = obj.value.substring(obj.host.length);
+				}
+				return;
+			}
+	
+			var pathStart = obj.value.indexOf("/", 2);
+	
+			obj.host = ~pathStart ? obj.value.substring(0, pathStart) : obj.value;
+	
+			obj.value = obj.value.replace(obj.host, "");
+		}
+	
+		function parse_search(obj) {
+			var question = obj.value.indexOf("?");
+			if (question === -1) {
+				return;
+			}obj.search = obj.value.substring(question);
+			obj.value = obj.value.substring(0, question);
+		}
+	
+		function parse_file(obj) {
+			var match = rgx_fileWithExt.exec(obj.value),
+			    file = match == null ? null : match[1];
+	
+			if (file == null) {
+				return;
+			}
+			obj.file = file;
+			obj.value = obj.value.substring(0, obj.value.length - file.length);
+			obj.value = normalize_pathsSlashes(obj.value);
+	
+			match = rgx_extension.exec(file);
+			obj.extension = match == null ? null : match[1];
+		}
+	
+		class_Uri.combinePathes = util_combinePathes;
+		class_Uri.combine = util_combinePathes;
+	})();
+	/*args*/
+	//# sourceMappingURL=Uri.es6.map
 	// end:source /src/class/Uri.es6
 	// end:source /ref-utils/lib/utils.embed.js
 	// source /src/helper/Meta.js
