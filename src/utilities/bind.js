@@ -105,9 +105,9 @@
 		mode: 'partial',
 		current: null,
 		element: null,
-		nodeRenderStart: function(expr, model, ctx, element, controller){
+		nodeRenderStart: function(expr, model, ctx, el, ctr, type, node){
 
-			var current = expression_eval(expr, model, ctx, controller);
+			var current = expression_eval(expr, model, ctx, ctr, node);
 
 			// though we apply value's to `this` context, but it is only for immediat use
 			// in .node() function, as `this` context is a static object that share all bind
@@ -134,8 +134,8 @@
 			return el;
 		},
 
-		attrRenderStart: function(expr, model, ctx, element, controller){
-			return (this.current = expression_eval(expr, model, ctx, controller));
+		attrRenderStart: function(expr, model, ctx, el, ctr, type, node){
+			return (this.current = expression_eval(expr, model, ctx, ctr, node));
 		},
 		attr: function(expr, model, ctx, element, controller, attrName, type){
 			bind(
