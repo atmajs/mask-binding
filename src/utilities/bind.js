@@ -18,6 +18,7 @@
 			el.textContent = value;
 		};
 	}
+	/** Attributes */
 	function refresherDelegate_ATTR(el, attrName, currentValue) {
 		var current_ = currentValue;
 		return function(value){
@@ -30,11 +31,6 @@
 				el.setAttribute(attrName, attr);
 			}
 			current_ = value;
-		};
-	}
-	function refresherDelegate_ATTR_PROP(el, property, currentValue) {
-		return function(value){			
-			obj_setProperty(el, property, value);
 		};
 	}
 	function refresherDelegate_ATTR_COMPO(ctr, attrName, currentValue) {
@@ -50,6 +46,31 @@
 				return;
 			}
 			ctr.attr[attrName] = val;
+		};
+	}
+	function refresherDelegate_ATTR_PROP(element, attrName, currentValue) {
+		return function(value){
+			switch(typeof element[attrName]) {
+				case 'boolean':
+					currentValue = element[attrName] = !!value;
+					return;
+				case 'number':
+					currentValue = element[attrName] = Number(value);
+					return;
+				case 'string':
+					currentValue = element[attrName] = attr_strReplace(element[attrName], currentValue, value);
+					return;
+				default:
+					log_warn('Unsupported elements property type', attrName);
+					return;
+			}
+		};
+	}
+
+	/** Properties */
+	function refresherDelegate_PROP_NODE(el, property, currentValue) {
+		return function(value){			
+			obj_setProperty(el, property, value);
 		};
 	}
 	function refresherDelegate_PROP_COMPO(ctr, property, currentValue) {
@@ -81,7 +102,7 @@
 			return refresherDelegate_ATTR(element, attrName, currentValue);
 		}
 		if ('prop' === type) {
-			return refresherDelegate_PROP(element, attrName, currentValue);
+			return refresherDelegate_PROP_NODE(element, attrName, currentValue);
 		}
 		if ('compo-attr' === type) {
 			return refresherDelegate_ATTR_COMPO(ctr, attrName, currentValue)
