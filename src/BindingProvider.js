@@ -29,6 +29,7 @@ var CustomProviders,
             this.objGetter = attr['obj-getter'];
             this.mapToObj = attr['map-to-obj'];
             this.mapToDom = attr['map-to-dom'];
+            this.changeEvent = attr['change-event'] || 'change';
 
             /* Convert to an instance, e.g. Number, on domchange event */
             this['typeof'] = attr['typeof'] || null;
@@ -330,10 +331,7 @@ var CustomProviders,
 
             if (!attr['dom-slot'] && !attr['change-pipe-event']) {
                 var element = provider.element,
-                    /*
-                     * @obsolete: attr name : 'changeEvent'
-                     */
-                    eventType = attr['change-event'] || attr.changeEvent || 'input',
+                    eventType = provider.changeEvent,
                     onDomChange = provider.domChanged.bind(provider);
 
                 __dom_addEventListener(element, eventType, onDomChange);
