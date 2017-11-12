@@ -42,7 +42,7 @@ var CustomProviders,
             this.locked = false;
 
             var isCompoBinder = ctr.node.parent.tagName === ctr.parent.compoName;
-            if (isCompoBinder) {
+            if (isCompoBinder && (element.nodeType !== 1 || element.tagName !== 'INPUT')) {
                 if (this.domSetter == null) this.domSetter = 'setValue';
                 if (this.domGetter == null) this.domGetter = 'getValue';
                 if (attr['dom-slot'] == null) attr['dom-slot'] = 'input';
