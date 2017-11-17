@@ -125,16 +125,17 @@ var obj_addObserver,
 			}
 		}
 
-		var obs = obj_ensureObserversProperty(obj, property),
-			val = obj_getProperty(obj, property);
-		if (callback === void 0) {
-			// callback not provided -> remove all observers
-			obs.length = 0;
-		} else {
-			arr_remove(obs, callback);
+		var obs = obj_getObserversProperty(obj, property);
+		if (obs != null) {
+			if (callback === void 0) {
+				// callback not provided -> remove all observers
+				obs.length = 0;
+			} else {
+				arr_remove(obs, callback);
+			}
 		}
-
-		var mutators = getSelfMutators(val);
+		var val = obj_getProperty(obj, property),
+			mutators = getSelfMutators(val);
 		if (mutators != null)
 			objMutator_removeObserver(val, mutators, callback)
 
@@ -170,6 +171,10 @@ var obj_addObserver,
 		}
 	};
 
+	var obj_getObserversProperty = function (obj, type){
+		var obs = obj[prop_OBS];
+		return obs == null ? null : obs[type];		
+	};
 	obj_ensureObserversProperty = function(obj, type){
 		var obs = obj[prop_OBS];
 		if (obs == null) {
@@ -194,6 +199,7 @@ var obj_addObserver,
 			: arr
 			;
 	};
+
 	var obj_ensureRebindersProperty = function(obj){
 		var hash = obj[prop_REBINDERS];
 		if (hash == null) {
@@ -597,7 +603,10 @@ var obj_addObserver,
 			obs[obs.length++] = cb;
 		};
 		objMutator_removeObserver = function(obj, mutators, cb){
-			var obs = obj_ensureObserversProperty(obj, prop_MUTATORS);
+			var obs = obj_getObserversProperty(obj, prop_MUTATORS);
+			if (obs == null) {
+				return;
+			}
 			if (cb === void 0) {
 				obs.length = 0;
 				return;
