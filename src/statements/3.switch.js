@@ -18,13 +18,15 @@
 			var value = expression_eval(this.expression, model, ctx, ctr);
 
 			resolveNodes(value, this.nodes, model, ctx, ctr);
+			var nodes = _nodes,
+				index = _index;
 
-			if (_nodes == null)
+			if (nodes == null) {
 				return null;
+			}
 
-			this.attr[attr_SWITCH] = _index;
-
-			return compo_renderElements(_nodes, model, ctx, container, ctr, children);
+			this.attr[attr_SWITCH] = index;
+			return compo_renderElements(nodes, model, ctx, container, ctr, children);
 		},
 
 		renderEnd: function(els, model, ctx, container, ctr){
@@ -64,49 +66,40 @@
 		refresh: function(value) {
 
 			var compo = this,
-				switch_ = compo.Switch,
-
-				imax = switch_.length,
-				i = -1,
-				expr,
-				item, index = 0;
-
-			var currentIndex = compo.index,
+				Switch = compo.Switch,
 				model = compo.model,
 				ctx = compo.ctx,
 				ctr = compo.controller
 				;
 
 			resolveNodes(value, compo.nodes, model, ctx, ctr);
+			var nodes = _nodes,
+				index = _index;
 
-			if (_index === currentIndex)
+			if (index === compo.index) {
 				return;
+			}
+			if (compo.index != null) {
+				els_toggleVisibility(Switch[compo.index], false);
+			}
 
-			if (currentIndex != null)
-				els_toggleVisibility(switch_[currentIndex], false);
-
-			if (_index == null) {
-				compo.index = null;
+			compo.index = index;			
+			if (index == null) {
 				return;
 			}
 
-			this.index = _index;
-
-			var elements = switch_[_index];
+			var elements = Switch[index];
 			if (elements != null) {
 				els_toggleVisibility(elements, true);
 				return;
 			}
 
-			var frag = mask.render(_nodes, model, ctx, null, ctr);
-			var els = frag.nodeType === Node.DOCUMENT_FRAGMENT_NODE
-				? _Array_slice.call(frag.childNodes)
-				: frag
+			var result = mask.render(nodes, model, ctx, null, ctr);
+			Switch[index] = result.nodeType === Node.DOCUMENT_FRAGMENT_NODE
+				? _Array_slice.call(result.childNodes)
+				: result
 				;
-
-			dom_insertBefore(frag, compo.placeholder);
-
-			switch_[_index] = els;
+			dom_insertBefore(result, compo.placeholder);
 		},
 		dispose: function(){
 			expression_unbind(
